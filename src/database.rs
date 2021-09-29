@@ -64,13 +64,14 @@ CREATE TABLE IF NOT EXISTS emails (
   year INTEGER NOT NULL,
   month INTEGER NOT NULL,
   day INTEGER NOT NULL,
-  kind TEXT NOT NULL
+  kind TEXT NOT NULL,
+  subject TEXT NOT NULL
 );"#;
         connection.execute(&emails_table, params![])?;
         let errors_table = r#"
 CREATE TABLE IF NOT EXISTS errors (
   message TEXT NOT NULL,
-  path TEXT NOT NULL,
+  path TEXT NOT NULL
 );"#;
         connection.execute(&errors_table, params![])?;
         Ok(())
@@ -85,9 +86,12 @@ fn insert_mail(connection: &Connection, entry: &EmailEntry) -> Result<()> {
     let month = entry.datetime.date().month();
     let day = entry.datetime.date().day();
     let kind = entry.parser.to_string();
-    let sql = "INSERT INTO emails (path, domain, local_part, year, month, day, kind) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    let subject = entry.subject.to_string();
+    let sql = "INSERT INTO emails (path, domain, local_part, year, month, day, kind, subject) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     let mut prepared = connection.prepare(sql)?;
-    prepared.execute(params![path, domain, local_part, year, month, day, kind])?;
+    prepared.execute(params![
+        path, domain, local_part, year, month, day, kind, subject
+    ])?;
     Ok(())
 }
 
