@@ -26,6 +26,10 @@ enum GmailDBError {
     #[error("Missing folder argument")]
     MissingFolder,
 }
+// ________________________________________________________
+// Executed in  355.52 secs    fish           external
+// usr time  121.22 secs   95.00 micros  121.22 secs
+// sys time  456.33 secs  598.00 micros  456.33 secs
 
 fn main() -> Result<()> {
     setup();
@@ -73,11 +77,11 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn process_email(path: &str) -> Result<()> {
-    let entry = emails::RawEmailEntry::new(&path);
-    let mail = emails::read_email(&entry).unwrap();
-    Ok(())
-}
+//fn process_email(path: &str) -> Result<()> {
+//    let entry = emails::RawEmailEntry::new(&path);
+//    let mail = emails::read_email(&entry).unwrap();
+//    Ok(())
+//}
 
 enum FolderProgress {
     Total(usize),
@@ -90,7 +94,7 @@ fn process_folder(folder: &str) -> Result<crossbeam_channel::Receiver<Result<Opt
     let folder = folder.to_owned();
 
     std::thread::spawn(move || {
-        let emails = match emails::Emails::new(&folder) {
+        let emails = match emails::read_folders(&folder) {
             Ok(n) => n,
             Err(e) => {
                 tx.send(Err(e)).unwrap();
@@ -103,11 +107,11 @@ fn process_folder(folder: &str) -> Result<crossbeam_channel::Receiver<Result<Opt
 
         println!("Done Loading {} emails", &total);
 
-        let mut database = Database::new().expect("Expect a valid database");
+        let database = Database::new().expect("Expect a valid database");
 
-        let sender = database.process();
+        emails::process_emails(emails, Arc::new(Mutex::new(database)), tx.clone());
 
-        use database::DBMessage;
+        /*use database::DBMessage;
         emails
             .emails
             .par_iter()
@@ -121,15 +125,15 @@ fn process_folder(folder: &str) -> Result<crossbeam_channel::Receiver<Result<Opt
                 } {
                     tracing::info!("Error Inserting into Database: {:?}", &e);
                 }
-            });
+            });*/
 
-        sender.send(database::DBMessage::Done).unwrap();
-        while !sender.is_empty() {
-            println!("left in sqlite: {}", sender.len());
-            sleep(Duration::from_millis(20));
-        }
-        tx.send(Ok(None)).unwrap();
+        //sender.send(database::DBMessage::Done).unwrap();
+        //while !sender.is_empty() {
+        //    //println!("left in sqlite: {}", sender.len());
+        //    sleep(Duration::from_millis(50));
+        //}
     });
+    //tx.send(Ok(None)).unwrap();
     Ok(rx)
 }
 

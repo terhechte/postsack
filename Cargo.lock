@@ -279,11 +279,13 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "crossbeam-channel",
+ "crossbeam-deque",
  "email-address-parser",
  "email-parser",
  "eyre",
  "flate2",
  "lazy_static",
+ "num_cpus",
  "rayon",
  "regex",
  "rusqlite",

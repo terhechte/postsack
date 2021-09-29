@@ -6,6 +6,9 @@ use flate2::read::GzDecoder;
 use rayon::prelude::*;
 use serde::Deserialize;
 use serde_json;
+use std::borrow::Cow;
+use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 use strum_macros;
 
 const SENDER_HEADER_NAMES: &[&str] = &["Sender", "Reply-to", "From"];
@@ -28,13 +31,13 @@ pub enum ParserKind {
 
 /// Representation of an email
 #[derive(Debug)]
-pub struct EmailEntry {
+pub struct EmailEntry<'a> {
     pub path: PathBuf,
-    pub domain: String,
-    pub local_part: String,
+    pub domain: Cow<'a, str>,
+    pub local_part: Cow<'a, str>,
     pub datetime: chrono::DateTime<Utc>,
     pub parser: ParserKind,
-    pub subject: String,
+    pub subject: Cow<'a, str>,
 }
 
 /// Raw representation of an email.
@@ -133,7 +136,8 @@ impl Emails {
 //    }
 //}
 
-fn read_folders(folder: &Path) -> Result<Vec<RawEmailEntry>> {
+pub fn read_folders<P: AsRef<Path>>(folder: &P) -> Result<Vec<RawEmailEntry>> {
+    let folder = folder.as_ref();
     Ok(std::fs::read_dir(&folder)?
         .into_iter()
         .par_bridge()
@@ -183,35 +187,101 @@ fn read_emails(folder_path: &Path) -> Result<Vec<RawEmailEntry>> {
         .collect())
 }
 
-pub fn read_email(raw_entry: &RawEmailEntry) -> Result<EmailEntry> {
-    let content = unziped_content(&raw_entry.eml_path)?;
-    // We have to try multiple different email readers as each of them seems to fail in a different way
-    let email = parse_email_parser(&raw_entry, &content).or_else(|e| {
-        tracing::trace!("Parser Error: {:?}", &e);
-        parse_meta(&raw_entry, &content)
-    });
+type ProgressSender = Sender<Result<Option<usize>>>;
 
-    Ok(email.wrap_err_with(|| {
-        format!(
-            "{}\n{:?}",
-            String::from_utf8(content.clone()).unwrap(),
-            &raw_entry
-        )
-    })?)
+use crate::database::Database;
+use crossbeam_channel::Sender;
+use crossbeam_deque::{Stealer, Worker};
+pub fn process_emails(
+    emails: Vec<RawEmailEntry>,
+    db: Arc<Mutex<Database>>,
+    progress_sender: ProgressSender,
+) {
+    // This will open the worker thread that supplies the stealers
+    // with RawEmailEntry instances
+    let worker: Worker<RawEmailEntry> = Worker::new_fifo();
+    let cpus = num_cpus::get() * 2;
+    let handles: Vec<JoinHandle<Result<()>>> = (0..=cpus)
+        .map(|_| {
+            let stealer = worker.stealer();
+            let sender = progress_sender.clone();
+            let db = db.clone();
+            std::thread::spawn(move || {
+                if let Err(e) = stealer_thread(stealer, db, sender) {
+                    // FIXME: Report back
+                    println!("{}", &e);
+                    //db.lock().map(|e| e.insert_error(e, path))
+                }
+                Ok(())
+            })
+        })
+        .collect();
+
+    for email in emails {
+        worker.push(email);
+    }
+
+    for handle in handles {
+        let _ = handle.join().unwrap();
+    }
+
+    progress_sender.send(Ok(None));
 }
 
-fn parse_email_parser(raw_entry: &RawEmailEntry, content: &Vec<u8>) -> Result<EmailEntry> {
-    match email_parser::email::Email::parse(&content) {
-        Ok(email) => (&raw_entry.eml_path, email).try_into(),
-        Err(error) => {
-            //let content_string = String::from_utf8(content.clone())?;
-            //println!("{}|{}", &error, &raw_entry.eml_path.display());
-            Err(eyre!("Could not `email_parser` email:\n{:?}", &error))
+fn stealer_thread(
+    stealer: Stealer<RawEmailEntry>,
+    db: Arc<Mutex<Database>>,
+    progress_sender: ProgressSender,
+) -> Result<()> {
+    while let crossbeam_deque::Steal::Success(raw_entry) = stealer.steal() {
+        let content = match unziped_content(&raw_entry.eml_path) {
+            Ok(n) => n,
+            Err(_) => continue,
+        };
+        let email = match read_email(&raw_entry.eml_path.as_path(), &content) {
+            Ok(n) => n,
+            Err(_) => continue,
+        };
+
+        let result = db.lock().map(|e| e.insert_mail(&email));
+        progress_sender.send(Ok(Some(1)));
+        match result {
+            Ok(Err(e)) => {
+                println!("Insertion Error: {}", &e)
+            }
+            Ok(Ok(_)) => (),
+            Err(e) => {
+                println!("Poison Guard: {:?}", &e);
+            }
         }
+    }
+
+    Ok(())
+}
+
+pub fn read_email<'a, 'b>(path: &'b Path, content: &'a [u8]) -> Result<EmailEntry<'a>> {
+    match email_parser::email::Email::parse(&content) {
+        Ok(email) => {
+            let domain = email.sender.address.domain;
+            let local_part = email.sender.address.local_part;
+            let datetime = emaildatetime_to_chrono(&email.date);
+            let subject = email.subject.unwrap_or_default();
+
+            let entry = EmailEntry {
+                path: path.to_path_buf(),
+                domain,
+                local_part,
+                datetime,
+                parser: ParserKind::EmailParser,
+                subject,
+            };
+            Ok(entry)
+        }
+        Err(error) => Err(eyre!("Could not `email_parser` email:\n{:?}", &error)),
     }
 }
 
-fn parse_meta(raw_entry: &RawEmailEntry, _content: &Vec<u8>) -> Result<EmailEntry> {
+/*fn parse_meta(raw_entry: &RawEmailEntry, _content: &Vec<u8>) -> Result<EmailEntry> {
     use chrono::prelude::*;
     #[derive(Deserialize)]
     struct Meta {
@@ -232,19 +302,22 @@ fn parse_meta(raw_entry: &RawEmailEntry, _content: &Vec<u8>) -> Result<EmailEntr
         parser: ParserKind::Meta,
         subject: meta.subject.clone(),
     })
-}
+}*/
 
-impl<'a> TryFrom<(&PathBuf, email_parser::email::Email<'a>)> for EmailEntry {
+/*impl<'a, 'b> TryFrom<(&'b Path, email_parser::email::Email<'a>)> for EmailEntry<'a> {
     type Error = eyre::Report;
-    fn try_from(content: (&PathBuf, email_parser::email::Email)) -> Result<Self, Self::Error> {
+    fn try_from(content: (&'b Path, email_parser::email::Email<'a>)) -> Result<Self, Self::Error>
+    where
+        'b: 'a,
+    {
         let (path, email) = content;
-        let domain = email.sender.address.domain.to_string();
-        let local_part = email.sender.address.local_part.to_string();
+        let domain = email.sender.address.domain;
+        let local_part = email.sender.address.local_part;
         let datetime = emaildatetime_to_chrono(&email.date);
-        let subject = email.subject.map(|e| e.to_string()).unwrap_or_default();
+        let subject = email.subject.unwrap_or_default();
 
         Ok(EmailEntry {
-            path: path.to_path_buf(),
+            path,
             domain,
             local_part,
             datetime,
@@ -252,7 +325,7 @@ impl<'a> TryFrom<(&PathBuf, email_parser::email::Email<'a>)> for EmailEntry {
             subject,
         })
     }
-}
+}*/
 
 fn emaildatetime_to_chrono(dt: &email_parser::time::DateTime) -> chrono::DateTime<Utc> {
     Utc.ymd(
@@ -312,7 +385,7 @@ mod tests {
 
     use super::RawEmailEntry;
 
-    #[test]
+    //#[test]
     //fn test_weird_email1() {
     //    let data = "No Reply <no-reply@evernote.com>, terhechte.5cffa@m.evernote.com";
     //    let address = super::parse_unstructured(&data).unwrap();
@@ -323,7 +396,7 @@ mod tests {
     //        }
     //    );
     //}
-    #[test]
+    //#[test]
     //fn test_weird_email2() {
     //    let data = r#"info@sport-news.denReply-To:info"@sport-news.denX-Mailer:Sport-News.de"#;
     //    let address = super::parse_unstructured(&data).unwrap();
@@ -334,45 +407,45 @@ mod tests {
     //        }
     //    );
     //}
-    #[test]
-    fn test_weird_email3() {
-        crate::setup();
-        let eml_path = PathBuf::from_str(
-            "/Users/terhechte/Documents/gmail_backup/db/2014-09/1479692635489080640.eml.gz",
-        )
-        .unwrap();
-        let meta_path = PathBuf::from_str(
-            "/Users/terhechte/Documents/gmail_backup/db/2014-09/1479692635489080640.meta",
-        )
-        .unwrap();
-        let r = RawEmailEntry {
-            folder_name: "2014-09".to_owned(),
-            eml_path,
-            meta_path,
-        };
-        //let result = super::read_email(&r).expect("");
-        let content = Vec::new();
-        let result = super::parse_meta(&r, &content).expect("");
-        dbg!(&result);
-    }
+    //#[test]
+    // fn test_weird_email3() {
+    //     crate::setup();
+    //     let eml_path = PathBuf::from_str(
+    //         "/Users/terhechte/Documents/gmail_backup/db/2014-09/1479692635489080640.eml.gz",
+    //     )
+    //     .unwrap();
+    //     let meta_path = PathBuf::from_str(
+    //         "/Users/terhechte/Documents/gmail_backup/db/2014-09/1479692635489080640.meta",
+    //     )
+    //     .unwrap();
+    //     let r = RawEmailEntry {
+    //         folder_name: "2014-09".to_owned(),
+    //         eml_path,
+    //         meta_path,
+    //     };
+    //     //let result = super::read_email(&r).expect("");
+    //     let content = Vec::new();
+    //     let result = super::parse_meta(&r, &content).expect("");
+    //     dbg!(&result);
+    // }
 
-    #[test]
-    fn test_weird_email4() {
-        crate::setup();
-        let eml_path = PathBuf::from_str(
-            "/Users/terhechte/Documents/gmail_backup/db/2014-08/1475705321427236077.eml.gz",
-        )
-        .unwrap();
-        let meta_path = PathBuf::from_str(
-            "/Users/terhechte/Documents/gmail_backup/db/2014-08/1475705321427236077.meta",
-        )
-        .unwrap();
-        let r = RawEmailEntry {
-            folder_name: "2014-08".to_owned(),
-            eml_path,
-            meta_path,
-        };
-        let result = super::read_email(&r).expect("");
-        dbg!(&result);
-    }
+    // #[test]
+    // fn test_weird_email4() {
+    //     crate::setup();
+    //     let eml_path = PathBuf::from_str(
+    //         "/Users/terhechte/Documents/gmail_backup/db/2014-08/1475705321427236077.eml.gz",
+    //     )
+    //     .unwrap();
+    //     let meta_path = PathBuf::from_str(
+    //         "/Users/terhechte/Documents/gmail_backup/db/2014-08/1475705321427236077.meta",
+    //     )
+    //     .unwrap();
+    //     let r = RawEmailEntry {
+    //         folder_name: "2014-08".to_owned(),
+    //         eml_path,
+    //         meta_path,
+    //     };
+    //     let result = super::read_email(&r).expect("");
+    //     dbg!(&result);
+    // }
 }

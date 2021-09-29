@@ -8,14 +8,14 @@ use rusqlite::{self, params, Connection, Error, Row};
 
 #[derive(Debug)]
 pub struct Database {
-    connection: Option<Connection>,
+    connection: Connection,
 }
 
-pub enum DBMessage {
-    Mail(EmailEntry),
+/*pub enum DBMessage<'a> {
+    Mail(EmailEntry<'a>),
     Error(Report, PathBuf),
     Done,
-}
+}*/
 
 impl Database {
     /// Create a in-memory db.
@@ -27,11 +27,35 @@ impl Database {
         //    println!("SQL: {}", &n);
         //}));
         Ok(Database {
-            connection: Some(connection),
+            connection: connection,
         })
     }
 
-    pub fn process(&mut self) -> Sender<DBMessage> {
+    pub fn insert_mail(&self, entry: &EmailEntry) -> Result<()> {
+        let path = entry.path.display().to_string();
+        let domain = &entry.domain;
+        let local_part = &entry.local_part;
+        let year = entry.datetime.date().year();
+        let month = entry.datetime.date().month();
+        let day = entry.datetime.date().day();
+        let kind = entry.parser.to_string();
+        let subject = entry.subject.to_string();
+        let sql = r#"INSERT INTO emails (path, domain, local_part, year, month, day, kind, subject) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#;
+        let mut prepared = self.connection.prepare(sql)?;
+        prepared.execute(params![
+            path, domain, local_part, year, month, day, kind, subject
+        ])?;
+        Ok(())
+    }
+
+    pub fn insert_error(&self, message: &Report, path: &PathBuf) -> Result<()> {
+        let sql = "INSERT INTO errors (message, path) VALUES (?, ?)";
+        let mut prepared = self.connection.prepare(sql)?;
+        prepared.execute(params![message.to_string(), path.display().to_string()])?;
+        Ok(())
+    }
+
+    /*pub fn process(&mut self) -> Sender<DBMessage<'static>> {
         let (sender, receiver) = unbounded();
         let connection = self.connection.take().unwrap();
         std::thread::spawn(move || loop {
@@ -53,7 +77,7 @@ impl Database {
             //}
         });
         sender
-    }
+    }*/
 
     fn create_tables(connection: &Connection) -> Result<()> {
         let emails_table = r#"
@@ -76,30 +100,6 @@ CREATE TABLE IF NOT EXISTS errors (
         connection.execute(&errors_table, params![])?;
         Ok(())
     }
-}
-
-fn insert_mail(connection: &Connection, entry: &EmailEntry) -> Result<()> {
-    let path = entry.path.display().to_string();
-    let domain = &entry.domain;
-    let local_part = &entry.local_part;
-    let year = entry.datetime.date().year();
-    let month = entry.datetime.date().month();
-    let day = entry.datetime.date().day();
-    let kind = entry.parser.to_string();
-    let subject = entry.subject.to_string();
-    let sql = "INSERT INTO emails (path, domain, local_part, year, month, day, kind, subject) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    let mut prepared = connection.prepare(sql)?;
-    prepared.execute(params![
-        path, domain, local_part, year, month, day, kind, subject
-    ])?;
-    Ok(())
-}
-
-fn insert_error(connection: &Connection, message: &Report, path: &PathBuf) -> Result<()> {
-    let sql = "INSERT INTO errors (message, path) VALUES (?, ?)";
-    let mut prepared = connection.prepare(sql)?;
-    prepared.execute(params![message.to_string(), path.display().to_string()])?;
-    Ok(())
 }
 
 pub trait RowConversion: Sized {

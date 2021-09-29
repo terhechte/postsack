@@ -23,3 +23,5 @@ serde = { version = "*", features = ["derive"]}
 strum = "0.21"
 strum_macros = "0.21"
 crossbeam-channel = "0.5.1"
+crossbeam-deque = "0.8.1"
+num_cpus = "1.13.0"
