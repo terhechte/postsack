@@ -118,13 +118,33 @@ impl Database {
 
 fn insert_mail(statement: &mut Statement, entry: &EmailEntry) -> Result<()> {
     let path = entry.path.display().to_string();
-    let domain = &entry.domain;
-    let local_part = &entry.local_part;
     let year = entry.datetime.date().year();
     let month = entry.datetime.date().month();
     let day = entry.datetime.date().day();
-    let subject = entry.subject.to_string();
-    statement.execute(params![path, domain, local_part, year, month, day, subject])?;
+    let e = entry;
+    let to_name = e.to_first.as_ref().map(|e| &e.0);
+    let to_address = e.to_first.as_ref().map(|e| &e.1);
+    let meta_tags = e.meta.as_ref().map(|e| e.tags_string());
+    let meta_is_seen = e.meta.as_ref().map(|e| e.is_seen);
+    let p = params![
+        path,
+        e.sender_domain,
+        e.sender_local_part,
+        e.sender_name,
+        year,
+        month,
+        day,
+        e.subject,
+        e.to_count,
+        e.to_group,
+        to_name,
+        to_address,
+        e.is_reply,
+        e.is_send,
+        meta_tags,
+        meta_is_seen
+    ];
+    statement.execute(p)?;
     tracing::trace!("Insert Mail {}", &path);
     Ok(())
 }

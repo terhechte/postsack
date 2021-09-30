@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json;
 
 use crate::filesystem::RawEmailEntry;
+use crate::types::EmailMeta;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Meta {
@@ -24,7 +25,17 @@ impl Meta {
     }
 }
 
-fn parse_meta(raw_entry: &RawEmailEntry, _content: &Vec<u8>) -> Result<Meta> {
+impl From<Meta> for EmailMeta {
+    fn from(meta: Meta) -> Self {
+        let is_seen = meta.is_seen();
+        EmailMeta {
+            tags: meta.labels,
+            is_seen,
+        }
+    }
+}
+
+pub fn parse_meta(raw_entry: &RawEmailEntry) -> Result<Meta> {
     let content = match raw_entry.read_gmail_meta() {
         None => bail!("No Gmail Meta Information Available"),
         Some(content) => content?,

@@ -13,13 +13,18 @@ tracing-subscriber = "0.2.24"
 rusqlite = {version = "0.25.3", features = ["chrono", "trace"]}
 regex = "1.5.3"
 flate2 = "1.0.22"
-email-parser = { git = "https://github.com/terhechte/email-parser", features = ["sender", "from", "date", "subject", "mime", "allow-duplicate-headers"]}
+email-parser = { git = "https://github.com/terhechte/email-parser", features = ["sender", "to", "in-reply-to", "date", "subject", "mime", "allow-duplicate-headers"]}
 rayon = "1.5.1"
 chrono = "0.4.19"
 lazy_static = "*"
 serde_json = "*"
 serde = { version = "*", features = ["derive"]}
 crossbeam-channel = "0.5.1"
+
+[features]
+default = []
+# Trace all SQL Queries
+trace-sql = []
 
 #[profile.release]
 #lto = "fat"
