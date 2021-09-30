@@ -1,11 +1,5 @@
-```
-Read: 632383, Processed: 632383, Inserted: 632382
+# Gmail DB
 
+## Fast
 
-________________________________________________________
-Executed in  147.18 secs    fish           external
-   usr time   91.38 secs  157.00 micros   91.38 secs
-   sys time  193.30 secs  899.00 micros  193.30 secs
-```
-
-4301 Emails per Second!
+It currently parses 632383 emails in ~160 seconds, so roughly `4.000` emails per second. This excludes (for now) attachments.

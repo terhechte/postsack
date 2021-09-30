@@ -20,11 +20,17 @@ lazy_static = "*"
 serde_json = "*"
 serde = { version = "*", features = ["derive"]}
 crossbeam-channel = "0.5.1"
+eframe = { version = "*", optional = true}
+rsql_builder = "0.1.2"
 
 [features]
-default = []
+default = ["gui"]
 # Trace all SQL Queries
 trace-sql = []
+gui = ["eframe"]
+
+[profile.dev]
+split-debuginfo = "unpacked"
 
 #[profile.release]
 #lto = "fat"
