@@ -1,6 +1,9 @@
-use std::{path::PathBuf, thread::JoinHandle};
+use std::{
+    path::{Path, PathBuf},
+    thread::JoinHandle,
+};
 
-use crate::emails::EmailEntry;
+use crate::types::EmailEntry;
 use chrono::Datelike;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use eyre::{Report, Result};
@@ -19,9 +22,9 @@ pub enum DBMessage {
 
 impl Database {
     /// Create a in-memory db.
-    pub fn new() -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         //let mut connection = Connection::open_in_memory()?;
-        let connection = Connection::open("/tmp/db.sql")?;
+        let connection = Connection::open(path.as_ref())?;
         connection
             .pragma_update(None, "journal_mode", &"memory")
             .unwrap();
@@ -37,7 +40,23 @@ impl Database {
         })
     }
 
-    pub fn process(&mut self) -> (Sender<DBMessage>, JoinHandle<Result<usize>>) {
+    /// Begin the data import.
+    /// This will consume the `Database`. A new one has to be opened
+    /// afterwards in order to support multi-threading.
+    /// Returns an input `Sender` and a `JoinHandle`.
+    /// The `Sender` is used to submit work to the database via `DBMessage`
+    /// cases. The `JoinHandle` is used to wait for database completion.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let db = Database::new("db.sqlite").unwrap();
+    /// let (sender, handle) = db.import();
+    /// sender.send(DBMessage::Mail(m1)).unwrap();
+    /// sender.send(DBMessage::Mail(m2)).unwrap();
+    /// handle.join().unwrap();
+    /// ```
+    pub fn import(mut self) -> (Sender<DBMessage>, JoinHandle<Result<usize>>) {
         let (sender, receiver) = unbounded();
         let mut connection = self.connection.take().unwrap();
         let handle = std::thread::spawn(move || {

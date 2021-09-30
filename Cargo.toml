@@ -16,15 +16,12 @@ flate2 = "1.0.22"
 email-parser = { git = "https://github.com/terhechte/email-parser", features = ["sender", "from", "date", "subject", "mime", "allow-duplicate-headers"]}
 rayon = "1.5.1"
 chrono = "0.4.19"
-email-address-parser = "1.0.3"
 lazy_static = "*"
 serde_json = "*"
 serde = { version = "*", features = ["derive"]}
-strum = "0.21"
-strum_macros = "0.21"
 crossbeam-channel = "0.5.1"
 
-[profile.release]
-lto = "fat"
-codegen-units = 1
-panic = "abort"
+#[profile.release]
+#lto = "fat"
+#codegen-units = 1
+#panic = "abort"
