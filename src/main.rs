@@ -1,34 +1,15 @@
-use core::num;
-use eyre::{bail, Result};
-use rayon::prelude::*;
-use std::io::prelude::*;
-use std::thread::JoinHandle;
-use std::{io, path::PathBuf};
-use thiserror;
-use tracing_subscriber::EnvFilter;
-
-use crossbeam_channel;
-use std::path::Path;
-use std::sync::{Arc, Mutex};
-
+use eyre::Result;
 use std::{
     io::{stdout, Write},
     thread::sleep,
     time::Duration,
 };
-
-use crate::database::Database;
+use tracing_subscriber::EnvFilter;
 
 mod database;
 mod filesystem;
 mod parse;
 mod types;
-
-#[derive(Debug, thiserror::Error)]
-enum GmailDBError {
-    #[error("Missing folder argument")]
-    MissingFolder,
-}
 
 fn main() -> Result<()> {
     setup();

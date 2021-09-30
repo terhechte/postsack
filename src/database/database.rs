@@ -1,40 +1,38 @@
+use chrono::Datelike;
+use crossbeam_channel::{unbounded, Sender};
+use eyre::{Report, Result};
+use rusqlite::{self, params, Connection, Statement};
+
 use std::{
     path::{Path, PathBuf},
     thread::JoinHandle,
 };
 
+use super::{sql::*, DBMessage};
 use crate::types::EmailEntry;
-use chrono::Datelike;
-use crossbeam_channel::{unbounded, Receiver, Sender};
-use eyre::{Report, Result};
-use rusqlite::{self, params, Connection, Error, Row, Statement, Transaction};
 
 #[derive(Debug)]
 pub struct Database {
     connection: Option<Connection>,
 }
 
-pub enum DBMessage {
-    Mail(EmailEntry),
-    Error(Report, PathBuf),
-    Done,
-}
-
 impl Database {
-    /// Create a in-memory db.
+    /// Open database at path `Path`.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
-        //let mut connection = Connection::open_in_memory()?;
-        let connection = Connection::open(path.as_ref())?;
-        connection
-            .pragma_update(None, "journal_mode", &"memory")
-            .unwrap();
-        connection
-            .pragma_update(None, "synchronous", &"OFF")
-            .unwrap();
+        #[allow(unused_mut)]
+        let mut connection = Connection::open(path.as_ref())?;
+
+        // Improve the insertion performance.
+        connection.pragma_update(None, "journal_mode", &"memory")?;
+        connection.pragma_update(None, "synchronous", &"OFF")?;
+
         Self::create_tables(&connection)?;
-        //connection.trace(Some(|n| {
-        //    println!("SQL: {}", &n);
-        //}));
+
+        #[cfg(feature = "trace-sql")]
+        connection.trace(Some(|query| {
+            tracing::trace!("SQL: {}", &query);
+        }));
+
         Ok(Database {
             connection: Some(connection),
         })
@@ -58,14 +56,17 @@ impl Database {
     /// ```
     pub fn import(mut self) -> (Sender<DBMessage>, JoinHandle<Result<usize>>) {
         let (sender, receiver) = unbounded();
+
+        // Import can only be called *once* on a database created with `new`.
+        // Therefore there should always be a value to unwrap;
         let mut connection = self.connection.take().unwrap();
         let handle = std::thread::spawn(move || {
             let mut counter = 0;
             {
-                let transaction = connection.transaction().unwrap();
-                let sql = "INSERT INTO emails (path, domain, local_part, year, month, day, subject) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                let transaction = connection.transaction()?;
                 {
-                    let mut prepared = transaction.prepare(sql).unwrap();
+                    let mut mail_prepared = transaction.prepare(QUERY_EMAILS)?;
+                    let mut error_prepared = transaction.prepare(QUERY_ERRORS)?;
                     loop {
                         let next = match receiver.recv() {
                             Ok(n) => n,
@@ -74,29 +75,26 @@ impl Database {
                                 panic!("should not happen");
                             }
                         };
-                        let result = match next {
+                        match next {
                             DBMessage::Mail(mail) => {
                                 counter += 1;
-                                insert_mail(&transaction, &mut prepared, &mail)
+                                insert_mail(&mut mail_prepared, &mail)
                             }
                             DBMessage::Error(report, path) => {
-                                insert_error(&transaction, &report, &path)
+                                insert_error(&mut error_prepared, &report, &path)
                             }
                             DBMessage::Done => {
                                 tracing::trace!("Received DBMessage::Done");
                                 break;
                             }
-                        };
-                        result.unwrap();
-                        //if let Err(e) = result {
-                        //    tracing::error!("SQL Error: {:?}", &e);
-                        //}
+                        }?;
                     }
                 }
                 if let Err(e) = transaction.commit() {
                     return Err(eyre::eyre!("Transaction Error: {:?}", &e));
                 }
             }
+            // In case closing the database fails, we try again until we succeed
             let mut c = connection;
             loop {
                 tracing::trace!("Attempting close");
@@ -112,32 +110,13 @@ impl Database {
     }
 
     fn create_tables(connection: &Connection) -> Result<()> {
-        let emails_table = r#"
-CREATE TABLE IF NOT EXISTS emails (
-  path TEXT NOT NULL,
-  domain TEXT NOT NULL,
-  local_part TEXT NOT NULL,
-  year INTEGER NOT NULL,
-  month INTEGER NOT NULL,
-  day INTEGER NOT NULL,
-  subject TEXT NOT NULL
-);"#;
-        connection.execute(&emails_table, params![])?;
-        let errors_table = r#"
-CREATE TABLE IF NOT EXISTS errors (
-  message TEXT NOT NULL,
-  path TEXT NOT NULL
-);"#;
-        connection.execute(&errors_table, params![])?;
+        connection.execute(TBL_EMAILS, params![])?;
+        connection.execute(TBL_ERRORS, params![])?;
         Ok(())
     }
 }
 
-fn insert_mail(
-    transaction: &Transaction,
-    statement: &mut Statement,
-    entry: &EmailEntry,
-) -> Result<()> {
+fn insert_mail(statement: &mut Statement, entry: &EmailEntry) -> Result<()> {
     let path = entry.path.display().to_string();
     let domain = &entry.domain;
     let local_part = &entry.local_part;
@@ -145,35 +124,13 @@ fn insert_mail(
     let month = entry.datetime.date().month();
     let day = entry.datetime.date().day();
     let subject = entry.subject.to_string();
-    let r = statement.execute(params![path, domain, local_part, year, month, day, subject])?;
-    tracing::trace!("Insert Mail [{}] {}", r, &path);
+    statement.execute(params![path, domain, local_part, year, month, day, subject])?;
+    tracing::trace!("Insert Mail {}", &path);
     Ok(())
 }
 
-fn insert_error(transaction: &Transaction, message: &Report, path: &PathBuf) -> Result<()> {
-    let sql = "INSERT INTO errors (message, path) VALUES (?, ?)";
+fn insert_error(statement: &mut Statement, message: &Report, path: &PathBuf) -> Result<()> {
+    statement.execute(params![message.to_string(), path.display().to_string()])?;
     tracing::trace!("Insert Error {}", &path.display());
-    let mut prepared = transaction.prepare(sql)?;
-    prepared.execute(params![message.to_string(), path.display().to_string()])?;
     Ok(())
 }
-
-pub trait RowConversion: Sized {
-    fn from_row<'stmt>(row: &Row<'stmt>) -> Result<Self, Error>;
-    fn to_row(&self) -> Result<String, Error>;
-}
-
-/*impl RowConversion for EmailEntry {
-fn from_row<'stmt>(row: &Row<'stmt>) -> Result<Self, Error> {
-    let path: String = row.get("path")?;
-    let domain: String = row.get("domain")?;
-    let local_part: String = row.get("local_part")?;
-    let year: usize = row.get("year")?;
-    let month: usize = row.get("month")?;
-    let day: usize = row.get("day")?;
-    let created = email_parser::time::DateTime::
-    Ok(EmailEntry {
-        path, domain, local_part, year, month, day
-    })
-}
-*/
