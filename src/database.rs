@@ -1,10 +1,10 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, thread::JoinHandle};
 
 use crate::emails::EmailEntry;
 use chrono::Datelike;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use eyre::{Report, Result};
-use rusqlite::{self, params, Connection, Error, Row};
+use rusqlite::{self, params, Connection, Error, Row, Statement, Transaction};
 
 #[derive(Debug)]
 pub struct Database {
@@ -21,7 +21,13 @@ impl Database {
     /// Create a in-memory db.
     pub fn new() -> Result<Self> {
         //let mut connection = Connection::open_in_memory()?;
-        let mut connection = Connection::open("/tmp/db.sql")?;
+        let connection = Connection::open("/tmp/db.sql")?;
+        connection
+            .pragma_update(None, "journal_mode", &"memory")
+            .unwrap();
+        connection
+            .pragma_update(None, "synchronous", &"OFF")
+            .unwrap();
         Self::create_tables(&connection)?;
         //connection.trace(Some(|n| {
         //    println!("SQL: {}", &n);
@@ -31,28 +37,59 @@ impl Database {
         })
     }
 
-    pub fn process(&mut self) -> Sender<DBMessage> {
+    pub fn process(&mut self) -> (Sender<DBMessage>, JoinHandle<Result<usize>>) {
         let (sender, receiver) = unbounded();
-        let connection = self.connection.take().unwrap();
-        std::thread::spawn(move || loop {
-            let next = match receiver.recv() {
-                Ok(n) => n,
-                Err(e) => {
-                    println!("Receiver error: {:?}", &e);
-                    std::process::exit(0);
+        let mut connection = self.connection.take().unwrap();
+        let handle = std::thread::spawn(move || {
+            let mut counter = 0;
+            {
+                let transaction = connection.transaction().unwrap();
+                let sql = "INSERT INTO emails (path, domain, local_part, year, month, day, subject) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                {
+                    let mut prepared = transaction.prepare(sql).unwrap();
+                    loop {
+                        let next = match receiver.recv() {
+                            Ok(n) => n,
+                            Err(e) => {
+                                println!("Receiver error: {:?}", &e);
+                                panic!("should not happen");
+                            }
+                        };
+                        let result = match next {
+                            DBMessage::Mail(mail) => {
+                                counter += 1;
+                                insert_mail(&transaction, &mut prepared, &mail)
+                            }
+                            DBMessage::Error(report, path) => {
+                                insert_error(&transaction, &report, &path)
+                            }
+                            DBMessage::Done => {
+                                tracing::trace!("Received DBMessage::Done");
+                                break;
+                            }
+                        };
+                        result.unwrap();
+                        //if let Err(e) = result {
+                        //    tracing::error!("SQL Error: {:?}", &e);
+                        //}
+                    }
                 }
-            };
-            let result = match next {
-                DBMessage::Mail(mail) => insert_mail(&connection, &mail),
-                DBMessage::Error(report, path) => insert_error(&connection, &report, &path),
-                DBMessage::Done => break,
-            };
-            result.unwrap();
-            //if let Err(e) = result {
-            //    tracing::error!("SQL Error: {:?}", &e);
-            //}
+                if let Err(e) = transaction.commit() {
+                    return Err(eyre::eyre!("Transaction Error: {:?}", &e));
+                }
+            }
+            let mut c = connection;
+            loop {
+                tracing::trace!("Attempting close");
+                match c.close() {
+                    Ok(_n) => break,
+                    Err((a, _b)) => c = a,
+                }
+            }
+            tracing::trace!("Finished SQLITE: {}", &counter);
+            Ok(counter)
         });
-        sender
+        (sender, handle)
     }
 
     fn create_tables(connection: &Connection) -> Result<()> {
@@ -64,7 +101,6 @@ CREATE TABLE IF NOT EXISTS emails (
   year INTEGER NOT NULL,
   month INTEGER NOT NULL,
   day INTEGER NOT NULL,
-  kind TEXT NOT NULL,
   subject TEXT NOT NULL
 );"#;
         connection.execute(&emails_table, params![])?;
@@ -78,26 +114,27 @@ CREATE TABLE IF NOT EXISTS errors (
     }
 }
 
-fn insert_mail(connection: &Connection, entry: &EmailEntry) -> Result<()> {
+fn insert_mail(
+    transaction: &Transaction,
+    statement: &mut Statement,
+    entry: &EmailEntry,
+) -> Result<()> {
     let path = entry.path.display().to_string();
     let domain = &entry.domain;
     let local_part = &entry.local_part;
     let year = entry.datetime.date().year();
     let month = entry.datetime.date().month();
     let day = entry.datetime.date().day();
-    let kind = entry.parser.to_string();
     let subject = entry.subject.to_string();
-    let sql = "INSERT INTO emails (path, domain, local_part, year, month, day, kind, subject) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    let mut prepared = connection.prepare(sql)?;
-    prepared.execute(params![
-        path, domain, local_part, year, month, day, kind, subject
-    ])?;
+    let r = statement.execute(params![path, domain, local_part, year, month, day, subject])?;
+    tracing::trace!("Insert Mail [{}] {}", r, &path);
     Ok(())
 }
 
-fn insert_error(connection: &Connection, message: &Report, path: &PathBuf) -> Result<()> {
+fn insert_error(transaction: &Transaction, message: &Report, path: &PathBuf) -> Result<()> {
     let sql = "INSERT INTO errors (message, path) VALUES (?, ?)";
-    let mut prepared = connection.prepare(sql)?;
+    tracing::trace!("Insert Error {}", &path.display());
+    let mut prepared = transaction.prepare(sql)?;
     prepared.execute(params![message.to_string(), path.display().to_string()])?;
     Ok(())
 }

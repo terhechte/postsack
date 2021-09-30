@@ -2,6 +2,7 @@ use core::num;
 use eyre::{bail, Result};
 use rayon::prelude::*;
 use std::io::prelude::*;
+use std::thread::JoinHandle;
 use std::{io, path::PathBuf};
 use thiserror;
 use tracing_subscriber::EnvFilter;
@@ -31,7 +32,7 @@ fn main() -> Result<()> {
     setup();
     let arguments: Vec<String> = std::env::args().collect();
     let folder = arguments.get(1).ok_or(GmailDBError::MissingFolder)?;
-    let receiver = process_folder(&folder)?;
+    let (receiver, handle) = process_folder(&folder)?;
     let mut stdout = stdout();
 
     let mut total: Option<usize> = None;
@@ -53,7 +54,8 @@ fn main() -> Result<()> {
                 };
                 counter += value;
             }
-            print!("\rProcessing {}/{}...", counter, total);
+            // FIXME: Bring back
+            //print!("\rProcessing {}/{}...", counter, total);
         } else {
             match receiver.recv()? {
                 Err(e) => {
@@ -68,8 +70,18 @@ fn main() -> Result<()> {
         stdout.flush().unwrap();
         sleep(Duration::from_millis(20));
     }
+    let result = handle.join().map_err(|op| eyre::eyre!("{:?}", &op))??;
+
+    println!(
+        "Read: {}, Processed: {}, Inserted: {}",
+        total.unwrap_or_default(),
+        counter,
+        result
+    );
+
     println!();
     //process_email(&folder)?;
+    tracing::trace!("Exit Program");
     Ok(())
 }
 
@@ -84,28 +96,32 @@ enum FolderProgress {
     Parsed,
 }
 
-fn process_folder(folder: &str) -> Result<crossbeam_channel::Receiver<Result<Option<usize>>>> {
+type ProcessReceiver = crossbeam_channel::Receiver<Result<Option<usize>>>;
+
+fn process_folder(folder: &str) -> Result<(ProcessReceiver, JoinHandle<Result<usize>>)> {
     // We return the status
     let (tx, rx) = crossbeam_channel::bounded(100);
     let folder = folder.to_owned();
 
-    std::thread::spawn(move || {
-        let emails = match emails::Emails::new(&folder) {
-            Ok(n) => n,
-            Err(e) => {
-                tx.send(Err(e)).unwrap();
-                return;
-            }
-        };
+    let handle = std::thread::spawn(move || {
+        let emails = emails::Emails::new(&folder)?;
+
+        //{
+        //    Ok(n) => n,
+        //    Err(e) => {
+        //        tx.send(Err(e)).unwrap();
+        //        return;
+        //    }
+        //};
         let total = emails.len();
 
         tx.send(Ok(Some(total))).unwrap();
 
         println!("Done Loading {} emails", &total);
 
-        let mut database = Database::new().expect("Expect a valid database");
+        let mut database = Database::new()?;
 
-        let sender = database.process();
+        let (sender, handle) = database.process();
 
         use database::DBMessage;
         emails
@@ -124,18 +140,29 @@ fn process_folder(folder: &str) -> Result<crossbeam_channel::Receiver<Result<Opt
             });
 
         sender.send(database::DBMessage::Done).unwrap();
-        while !sender.is_empty() {
-            println!("left in sqlite: {}", sender.len());
-            sleep(Duration::from_millis(20));
-        }
+        //while !sender.is_empty() {
+        //    println!("left in sqlite: {}", sender.len());
+        //    sleep(Duration::from_millis(20));
+        //}
+        tracing::trace!("Send none");
         tx.send(Ok(None)).unwrap();
+        //sleep(Duration::from_millis(200000));
+        tracing::info!("Waiting for SQLite to finish");
+        match handle.join() {
+            Ok(Ok(count)) => Ok(count),
+            Ok(Err(e)) => Err(e),
+            Err(e) => Err(eyre::eyre!("Join Error: {:?}", &e)),
+        }
+        //handle
+        //    .join()
+        //    .map_err(|op| )
     });
-    Ok(rx)
+    Ok((rx, handle))
 }
 
 fn setup() {
     if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "error")
+        std::env::set_var("RUST_LOG", "info")
     }
     tracing_subscriber::fmt::fmt()
         .with_env_filter(EnvFilter::from_default_env())

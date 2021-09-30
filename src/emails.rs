@@ -33,7 +33,6 @@ pub struct EmailEntry {
     pub domain: String,
     pub local_part: String,
     pub datetime: chrono::DateTime<Utc>,
-    pub parser: ParserKind,
     pub subject: String,
 }
 
@@ -180,6 +179,7 @@ fn read_emails(folder_path: &Path) -> Result<Vec<RawEmailEntry>> {
                     .to_path_buf(),
             })
         })
+        //.take(50)
         .collect())
 }
 
@@ -206,7 +206,7 @@ fn parse_email_parser(raw_entry: &RawEmailEntry, content: &Vec<u8>) -> Result<Em
         Err(error) => {
             //let content_string = String::from_utf8(content.clone())?;
             //println!("{}|{}", &error, &raw_entry.eml_path.display());
-            Err(eyre!("Could not `email_parser` email:\n{:?}", &error))
+            Err(eyre!("Could not parse email: {:?}", &error))
         }
     }
 }
@@ -229,7 +229,6 @@ fn parse_meta(raw_entry: &RawEmailEntry, _content: &Vec<u8>) -> Result<EmailEntr
         domain: parsed.get_domain().to_owned(),
         local_part: parsed.get_local_part().to_owned(),
         datetime,
-        parser: ParserKind::Meta,
         subject: meta.subject.clone(),
     })
 }
@@ -248,7 +247,6 @@ impl<'a> TryFrom<(&PathBuf, email_parser::email::Email<'a>)> for EmailEntry {
             domain,
             local_part,
             datetime,
-            parser: ParserKind::EmailParser,
             subject,
         })
     }

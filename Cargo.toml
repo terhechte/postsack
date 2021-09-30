@@ -23,3 +23,8 @@ serde = { version = "*", features = ["derive"]}
 strum = "0.21"
 strum_macros = "0.21"
 crossbeam-channel = "0.5.1"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
