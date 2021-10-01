@@ -1,15 +1,16 @@
 use chrono::Datelike;
 use crossbeam_channel::{unbounded, Sender};
-use eyre::{Report, Result};
+use eyre::{bail, Report, Result};
 use rusqlite::{self, params, Connection, Statement};
 
+use core::panic;
 use std::{
     path::{Path, PathBuf},
     thread::JoinHandle,
 };
 
-use super::{sql::*, DBMessage};
-use crate::types::EmailEntry;
+use super::{query_result::QueryResult, sql::*, DBMessage};
+use crate::{database::RowConversion, types::EmailEntry};
 
 #[derive(Debug)]
 pub struct Database {
@@ -36,6 +37,26 @@ impl Database {
         Ok(Database {
             connection: Some(connection),
         })
+    }
+
+    pub fn query<'a>(&self, query: super::query::Query<'a>) -> Result<Vec<QueryResult<'a>>> {
+        use rusqlite::params_from_iter;
+        let c = match &self.connection {
+            Some(n) => n,
+            None => bail!("No connection to database available in query"),
+        };
+        let (sql, values) = query.to_sql();
+        let mut stmt = c.prepare(&sql)?;
+        let mut query_results = Vec::new();
+
+        let p = params_from_iter(values.iter());
+
+        let mut rows = stmt.query(p)?;
+        while let Some(row) = rows.next()? {
+            let result = QueryResult::grouped_from_row(&query.group_by, &row)?;
+            query_results.push(result);
+        }
+        Ok(query_results)
     }
 
     /// Begin the data import.
@@ -121,6 +142,7 @@ fn insert_mail(statement: &mut Statement, entry: &EmailEntry) -> Result<()> {
     let year = entry.datetime.date().year();
     let month = entry.datetime.date().month();
     let day = entry.datetime.date().day();
+    let timestamp = entry.datetime.timestamp();
     let e = entry;
     let to_name = e.to_first.as_ref().map(|e| &e.0);
     let to_address = e.to_first.as_ref().map(|e| &e.1);
@@ -134,6 +156,7 @@ fn insert_mail(statement: &mut Statement, entry: &EmailEntry) -> Result<()> {
         year,
         month,
         day,
+        timestamp,
         e.subject,
         e.to_count,
         e.to_group,

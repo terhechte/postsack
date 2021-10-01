@@ -40,22 +40,51 @@ pub enum GroupByField {
     IsSend,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+impl<'a> ValueField<'a> {
+    pub fn as_field(&self) -> GroupByField {
+        use GroupByField::*;
+        match self {
+            ValueField::SenderDomain(_) => SenderDomain,
+            ValueField::SenderLocalPart(_) => SenderLocalPart,
+            ValueField::SenderName(_) => SenderName,
+            ValueField::Year(_) => Year,
+            ValueField::Month(_) => Month,
+            ValueField::Day(_) => Day,
+            ValueField::ToGroup(_) => ToGroup,
+            ValueField::ToName(_) => ToName,
+            ValueField::ToAddress(_) => ToAddress,
+            ValueField::IsReply(_) => IsReply,
+            ValueField::IsSend(_) => IsSend,
+        }
+    }
+}
+
+/*impl GroupByField {
+    pub fn make_str<'a>(value: &'a str, field: GroupByField) -> ValueField<'a> {
+        use GroupByField::*;
+        match field {
+            SenderDomain => ValueField::SenderDomain(value.into()),
+            _ => panic!(),
+        }
+    }
+}*/
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ValueField<'a> {
-    SenderDomain(&'a str),
-    SenderLocalPart(&'a str),
-    SenderName(&'a str),
+    SenderDomain(Cow<'a, str>),
+    SenderLocalPart(Cow<'a, str>),
+    SenderName(Cow<'a, str>),
     Year(usize),
     Month(usize),
     Day(usize),
-    ToGroup(&'a str),
-    ToName(&'a str),
-    ToAddress(&'a str),
+    ToGroup(Cow<'a, str>),
+    ToName(Cow<'a, str>),
+    ToAddress(Cow<'a, str>),
     IsReply(bool),
     IsSend(bool),
 }
 
-trait DynamicType<'a> {
+pub trait DynamicType<'a> {
     type BoolType;
     type StrType;
     type UsizeType;
@@ -69,7 +98,7 @@ trait DynamicType<'a> {
 
 impl<'a> DynamicType<'a> for ValueField<'a> {
     type BoolType = &'a bool;
-    type StrType = &'a str;
+    type StrType = Cow<'a, str>;
     type UsizeType = &'a usize;
 
     fn is_str(&self) -> bool {
@@ -94,7 +123,7 @@ impl<'a> DynamicType<'a> for ValueField<'a> {
         use ValueField::*;
         match self {
             SenderDomain(a) | SenderLocalPart(a) | SenderName(a) | ToGroup(a) | ToName(a)
-            | ToAddress(a) => a,
+            | ToAddress(a) => a.clone(),
             _ => panic!(),
         }
     }
@@ -118,7 +147,7 @@ impl<'a> DynamicType<'a> for ValueField<'a> {
 
 impl<'a> DynamicType<'a> for &VecOfMinOne<ValueField<'a>> {
     type BoolType = Vec<bool>;
-    type StrType = Vec<&'a str>;
+    type StrType = Vec<Cow<'a, str>>;
     type UsizeType = Vec<usize>;
     fn is_str(&self) -> bool {
         self.inner[0].is_str()
@@ -198,8 +227,8 @@ impl From<&GroupByField> for &str {
 }
 
 pub struct Query<'a> {
-    filters: &'a [Filter<'a>],
-    group_by: &'a [GroupByField],
+    pub filters: &'a [Filter<'a>],
+    pub group_by: &'a [GroupByField],
 }
 
 impl<'a> Query<'a> {
@@ -232,20 +261,21 @@ impl<'a> Query<'a> {
             whr
         };
 
-        let group_by = {
-            let group_by_fields: Vec<&str> = self.group_by.iter().map(|e| e.into()).collect();
-            format!("GROUP BY {}", group_by_fields.join(", "))
-        };
+        let group_by_fields: Vec<&str> = self.group_by.iter().map(|e| e.into()).collect();
+        let group_by = format!("GROUP BY {}", &group_by_fields.join(", "));
 
         // If we have a group by, we always include the count
         let header = if self.group_by.is_empty() {
-            "SELECT * FROM emails"
+            "SELECT * FROM emails".to_owned()
         } else {
-            "SELECT count(path), * FROM emails"
+            format!(
+                "SELECT count(path) as amount, {} FROM emails",
+                group_by_fields.join(", ")
+            )
         };
 
         let (sql, values) = rsql_builder::B::prepare(
-            rsql_builder::B::new_sql(header)
+            rsql_builder::B::new_sql(&header)
                 .push_build(&mut conditions)
                 .push_sql(&group_by),
         );
@@ -263,8 +293,8 @@ mod tests {
         let value = format!("bx");
         let query = Query {
             filters: &[
-                Filter::Is(ValueField::ToName("bam")),
-                Filter::Like(ValueField::SenderName(&value)),
+                Filter::Is(ValueField::ToName("bam".into())),
+                Filter::Like(ValueField::SenderName(value.into())),
                 Filter::Like(ValueField::Year(2323)),
             ],
             group_by: &[GroupByField::Month],

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS emails (
   year INTEGER NOT NULL,
   month INTEGER NOT NULL,
   day INTEGER NOT NULL,
+  timestamp INTEGER NOT NULL,
   subject TEXT NOT NULL,
   to_count INTEGER NOT NULL,
   to_group TEXT NULL,
@@ -28,7 +29,7 @@ pub const QUERY_EMAILS: &str = r#"
 INSERT INTO emails
     (
         path, sender_domain, sender_local_part, sender_name,
-        year, month, day, subject,
+        year, month, day, timestamp, subject,
         to_count, to_group, to_name, to_address,
         is_reply, is_send,
         meta_tags, meta_is_seen
@@ -36,7 +37,7 @@ INSERT INTO emails
 VALUES
     (
         ?, ?, ?, ?,
-        ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?,
         ?, ?

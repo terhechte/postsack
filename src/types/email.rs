@@ -9,9 +9,15 @@ pub struct EmailMeta {
     pub is_seen: bool,
 }
 
+const TAG_SEP: &str = ":|:";
+
 impl EmailMeta {
+    pub fn from(is_seen: bool, tag_string: &str) -> Self {
+        let tags = tag_string.split(TAG_SEP).map(|e| e.to_string()).collect();
+        EmailMeta { tags, is_seen }
+    }
     pub fn tags_string(&self) -> String {
-        self.tags.join(":|:")
+        self.tags.join(TAG_SEP)
     }
 }
 
