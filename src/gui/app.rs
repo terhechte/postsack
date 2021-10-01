@@ -16,7 +16,7 @@ struct Link {
 
 pub struct MyApp {
     config: Config,
-    link: Option<Result<Link>>,
+    link: Option<Link>,
     state: State,
     partitions: Vec<Partitions>,
     error: Option<Report>,
@@ -51,24 +51,28 @@ impl epi::App for MyApp {
         _frame: &mut Frame<'_>,
         _storage: Option<&dyn Storage>,
     ) {
-        let link = run(&self.config).map(|(input_sender, output_receiver, handle)| Link {
+        let (input_sender, output_receiver, handle) = match run(&self.config) {
+            Ok(n) => n,
+            Err(e) => {
+                self.error = Some(e);
+                return;
+            }
+        };
+
+        input_sender.send(self.state.clone());
+
+        self.link = Some(Link {
             input_sender,
             output_receiver,
             handle,
         });
-
-        if let Ok(l) = &link {
-            l.input_sender.send(self.state.clone());
-        }
-
-        self.link = Some(link);
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
         // If we have a selection, load the next one
         if let Some(partition) = self.partitions.last() {
             if let Some(sel) = &partition.selected {
-                if let Some(Ok(ref link)) = self.link {
+                if let Some(ref link) = self.link {
                     link.input_sender.send(self.state.clone());
                 }
                 self.is_rendering = true;
@@ -76,7 +80,7 @@ impl epi::App for MyApp {
         }
 
         // Receive new data
-        if let Some(Ok(ref link)) = self.link {
+        if let Some(ref link) = self.link {
             match link.output_receiver.try_recv() {
                 Ok(Ok(p)) => {
                     self.partitions.push(p);

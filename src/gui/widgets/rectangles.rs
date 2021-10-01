@@ -19,15 +19,15 @@ fn partition_to_color(partition: &Partition) -> Rgba {
 
 fn rectangles_ui(ui: &mut egui::Ui, partitions: &mut Partitions) -> egui::Response {
     let size = ui.available_size();
-    let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::click());
+    let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::hover());
 
     // let visuals = ui.style().interact_selectable(&response, true);
 
     partitions.update_layout(rect);
 
     for item in &partitions.items {
-        if ui.put(item.layout_rect(), rectangle(&item)).clicked() {
-            dbg!("clicked");
+        let item_response = ui.put(item.layout_rect(), rectangle(&item));
+        if item_response.clicked() {
             partitions.selected = Some(item.clone());
             response.mark_changed();
         }
