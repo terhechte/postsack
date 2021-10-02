@@ -1,7 +1,8 @@
 use std::collections::hash_map::DefaultHasher;
 
 use crate::cluster_engine::{Engine, IntoRequest, Partition};
-use eframe::egui::{self, Align2, Rgba, Stroke, TextStyle, Widget};
+use eframe::egui::{self, epaint::Galley, Pos2, Rgba, Stroke, TextStyle, Widget};
+use num_format::{Locale, ToFormattedString};
 
 fn partition_to_color(partition: &Partition) -> Rgba {
     let mut hasher = DefaultHasher::new();
@@ -68,23 +69,36 @@ fn rectangle_ui(ui: &mut egui::Ui, partition: &Partition) -> egui::Response {
     let painter = ui.painter();
 
     painter.rect(rect, 0.0, color, stroke);
-    let center = rect.center();
+    let mut center = rect.center();
 
-    let label = format!("{}\n{}", &partition.field.value(), &partition.count);
+    let align_bottom = |galley: &std::sync::Arc<Galley>, center: &mut Pos2, spacing: f32| {
+        let mut position = center.clone();
+        position.x -= galley.size.x / 2.0;
+        position.y -= galley.size.y / 2.0;
+        center.y += galley.size.y + spacing;
+        if galley.size.x < rect.width() && galley.size.y < rect.height() {
+            Some(position)
+        } else {
+            None
+        }
+    };
 
-    let style = TextStyle::Body;
-
-    let galley = painter.layout_multiline(style, label.clone(), 32.0);
-    if galley.size.x < rect.width() && galley.size.y < rect.height() {
-        // Can't just paint the galley as it has no `anchor` prop..
-        painter.text(
-            center,
-            Align2::CENTER_CENTER,
-            &label,
-            style,
-            Rgba::BLACK.into(),
-        );
+    // Write the label and the amount
+    {
+        let text = format!("{}", partition.field.value());
+        let galley = painter.layout_no_wrap(TextStyle::Body, text);
+        if let Some(center) = align_bottom(&galley, &mut center, 2.0) {
+            painter.galley(center, galley, Rgba::BLACK.into());
+        }
     }
+    {
+        let text = partition.count.to_formatted_string(&Locale::en);
+        let galley = painter.layout_no_wrap(TextStyle::Small, text);
+        if let Some(center) = align_bottom(&galley, &mut center, 5.0) {
+            painter.galley(center, galley, Rgba::BLACK.into());
+        }
+    }
+    let label = format!("{}\n{}", &partition.field.value(), &partition.count);
 
     response.on_hover_text(&label)
 }
