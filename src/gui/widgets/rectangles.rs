@@ -1,7 +1,6 @@
 use std::collections::hash_map::DefaultHasher;
 
-use super::super::app::CanvasState;
-use crate::canvas_calc::{Partition, Partitions};
+use crate::cluster_engine::{Engine, IntoRequest, Partition};
 use eframe::egui::{self, Align2, Rgba, Stroke, TextStyle, Widget};
 
 fn partition_to_color(partition: &Partition) -> Rgba {
@@ -18,56 +17,37 @@ fn partition_to_color(partition: &Partition) -> Rgba {
     )
 }
 
-pub struct Rectangles<'a> {
-    pub partitions: &'a mut Partitions,
-    pub select_next: &'a mut Option<Partition>,
+pub struct Rectangles<'a, S: IntoRequest> {
+    engine: &'a mut Engine,
+    state: &'a S,
 }
 
-impl<'a> Widget for Rectangles<'a> {
+impl<'a, S: IntoRequest> Rectangles<'a, S> {
+    pub fn new(engine: &'a mut Engine, state: &'a S) -> Self {
+        Rectangles { engine, state }
+    }
+}
+
+impl<'a, S: IntoRequest> Widget for Rectangles<'a, S> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         let size = ui.available_size();
         let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::hover());
 
-        // let visuals = ui.style().interact_selectable(&response, true);
+        let items = match self.engine.items_with_size(rect) {
+            Some(n) => n.to_owned(),
+            None => return response,
+        };
 
-        self.partitions.update_layout(rect);
-
-        for item in &self.partitions.items {
+        for item in items {
             let item_response = ui.put(item.layout_rect(), rectangle(&item));
             if item_response.clicked() {
-                //self.partitions.selected = Some(item.clone());
-                *self.select_next = Some(item.clone());
-                //*should_query = true;
+                self.engine.select_partition(item.clone(), self.state);
                 response.mark_changed();
             }
         }
 
         response
     }
-}
-
-fn rectangles_ui(ui: &mut egui::Ui, partitions: &mut Partitions) -> egui::Response {
-    let size = ui.available_size();
-    let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::hover());
-
-    // let visuals = ui.style().interact_selectable(&response, true);
-
-    partitions.update_layout(rect);
-
-    for item in &partitions.items {
-        let item_response = ui.put(item.layout_rect(), rectangle(&item));
-        if item_response.clicked() {
-            partitions.selected = Some(item.clone());
-            //*should_query = true;
-            response.mark_changed();
-        }
-    }
-
-    response
-}
-
-pub fn rectangles(partitions: &mut Partitions) -> impl egui::Widget + '_ {
-    move |ui: &mut egui::Ui| rectangles_ui(ui, partitions)
 }
 
 fn rectangle_ui(ui: &mut egui::Ui, partition: &Partition) -> egui::Response {

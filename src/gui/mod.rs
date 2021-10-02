@@ -1,4 +1,5 @@
 use crate::types::Config;
+use eframe::{self, egui, epi};
 
 mod app;
 pub(crate) mod state;
@@ -6,5 +7,31 @@ pub(crate) mod widgets;
 
 pub fn run_gui(config: Config) {
     let options = eframe::NativeOptions::default();
-    eframe::run_native(Box::new(app::MyApp::new(&config)), options);
+    let app: Box<dyn epi::App> = match app::MyApp::new(&config) {
+        Ok(n) => Box::new(n),
+        Err(e) => Box::new(ErrorApp(e)),
+    };
+    eframe::run_native(app, options);
+}
+
+struct ErrorApp(eyre::Report);
+impl epi::App for ErrorApp {
+    fn name(&self) -> &str {
+        "Error"
+    }
+
+    fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
+        let text = format!("Error:\n{}", &self.0);
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.centered_and_justified(|ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add(eframe::egui::Label::new(text));
+                    if ui.button("Close").clicked() {
+                        std::process::exit(0);
+                    }
+                });
+            });
+        });
+        frame.set_window_size(ctx.used_size());
+    }
 }

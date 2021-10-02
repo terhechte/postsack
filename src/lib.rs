@@ -1,6 +1,6 @@
 use tracing_subscriber::EnvFilter;
 
-mod canvas_calc;
+mod cluster_engine;
 pub mod database;
 pub mod filesystem;
 #[cfg(feature = "gui")]
