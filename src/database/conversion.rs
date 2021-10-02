@@ -1,18 +1,42 @@
+use std::convert::{TryFrom, TryInto};
 use std::str::FromStr;
 
 use chrono::prelude::*;
-use eyre::Result;
-use rusqlite::{self, Row};
+use eyre::{bail, eyre, Result};
+use rusqlite::{self, types, Row};
+use serde_json::{Number, Value};
 
 use super::query::{GroupByField, ValueField};
 use super::query_result::QueryResult;
 use crate::types::{EmailEntry, EmailMeta};
 
+/// rusqlite does offer Serde to Value conversion, but it
+/// converts everything to strings!
+pub fn json_to_value(input: &Value) -> Result<types::Value> {
+    let ok = match input {
+        Value::Number(n) if n.is_i64() => {
+            types::Value::Integer(n.as_i64().ok_or(eyre!("Invalid Number {:?}", n))?)
+        }
+        Value::Number(n) if n.is_u64() => {
+            let value = n.as_u64().ok_or(eyre!("Invalid Number {:?}", n))?;
+            let converted: i64 = value.try_into()?;
+            types::Value::Integer(converted)
+        }
+        Value::Number(n) if n.is_f64() => {
+            types::Value::Real(n.as_f64().ok_or(eyre!("Invalid Number {:?}", n))?)
+        }
+        Value::Bool(n) => types::Value::Integer(*n as i64),
+        Value::String(n) => types::Value::Text(n.clone()),
+        _ => bail!("Invalid type: {}", &input),
+    };
+    Ok(ok)
+}
+
 pub trait RowConversion<'a>: Sized {
     fn grouped_from_row<'stmt>(fields: &'a [GroupByField], row: &Row<'stmt>) -> Result<Self>;
 }
 
-impl<'a> RowConversion<'a> for QueryResult<'a> {
+impl<'a> RowConversion<'a> for QueryResult {
     fn grouped_from_row<'stmt>(fields: &'a [GroupByField], row: &Row<'stmt>) -> Result<Self> {
         let amount: usize = row.get("amount")?;
 

@@ -6,44 +6,25 @@
 //! Runs its own connection to the SQLite database.
 
 use std::convert::{TryFrom, TryInto};
-use std::fmt::Display;
 use std::thread::JoinHandle;
 
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use eframe::egui::Rect as EguiRect;
-use eyre::{bail, Report, Result};
+use eyre::{Report, Result};
 use treemap::{Mappable, Rect, TreemapLayout};
 
 use crate::database::{
-    query::{DynamicType, Filter, GroupByField, Query, ValueField},
+    query::{Filter, GroupByField, Query, ValueField},
     query_result::QueryResult,
     Database,
 };
 use crate::gui::state::State;
 use crate::types::Config;
 
-#[derive(Debug, Hash, Clone)]
-pub enum Value {
-    Number(usize),
-    String(String),
-    Bool(bool),
-}
-
-impl Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Value::Number(n) => f.write_str(&n.to_string()),
-            Value::Bool(n) => f.write_str(&n.to_string()),
-            Value::String(n) => f.write_str(&n),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Partition {
-    pub field: GroupByField,
+    pub field: ValueField,
     pub count: usize,
-    pub value: Value,
     /// A TreeMap Rect
     pub rect: Rect,
 }
@@ -105,9 +86,9 @@ impl Mappable for Partition {
     }
 }
 
-impl<'a> TryFrom<&'a QueryResult<'a>> for Partition {
+impl<'a> TryFrom<&'a QueryResult> for Partition {
     type Error = Report;
-    fn try_from(r: &'a QueryResult<'a>) -> Result<Self> {
+    fn try_from(r: &'a QueryResult) -> Result<Self> {
         // so far we can only support one group by at a time.
         // at least in here. The queries support it
         let field = r
@@ -115,17 +96,9 @@ impl<'a> TryFrom<&'a QueryResult<'a>> for Partition {
             .first()
             .ok_or(eyre::eyre!("No group by fields available"))?;
 
-        let value = match (field.is_bool(), field.is_str(), field.is_usize()) {
-            (true, false, false) => Value::Bool(*field.as_bool()),
-            (false, true, false) => Value::String(field.as_str().to_string()),
-            (false, false, true) => Value::Number(*field.as_usize()),
-            _ => bail!("Invalid field: {:?}", &field),
-        };
-
         Ok(Partition {
-            field: field.as_field(),
+            field: field.clone(),
             count: r.count,
-            value,
             rect: Rect::new(),
         })
     }
@@ -151,7 +124,11 @@ fn inner_loop(
     loop {
         let task = input_receiver.recv()?;
         let filters = convert_filters(&task);
-        let group_by = vec![GroupByField::Year];
+        let current_field = task
+            .group_by_stack
+            .last()
+            .ok_or(eyre::eyre!("No Group By Available"))?;
+        let group_by = vec![current_field.clone()];
         let query = Query {
             filters: &filters,
             group_by: &group_by,
@@ -162,7 +139,7 @@ fn inner_loop(
     }
 }
 
-fn calculate_partitions<'a>(result: &[QueryResult<'a>]) -> Result<Vec<Partition>> {
+fn calculate_partitions<'a>(result: &[QueryResult]) -> Result<Vec<Partition>> {
     let mut partitions = Vec::new();
     for r in result.iter() {
         let partition = r.try_into()?;
@@ -172,13 +149,22 @@ fn calculate_partitions<'a>(result: &[QueryResult<'a>]) -> Result<Vec<Partition>
     Ok(partitions)
 }
 
-fn convert_filters<'a>(state: &'a State) -> Vec<Filter<'a>> {
+fn convert_filters<'a>(state: &'a State) -> Vec<Filter> {
     let mut filters = Vec::new();
-    if let Some(ref n) = state.domain_filter {
-        filters.push(Filter::Like(ValueField::SenderDomain(n.into())));
+
+    if !state.domain_filter.is_empty() {
+        filters.push(Filter::Like(ValueField::SenderDomain(
+            state.domain_filter.clone().into(),
+        )));
     }
     if let Some(n) = state.year_filter {
         filters.push(Filter::Is(ValueField::Year(n)));
     }
+
+    // For each assigned partition, we use the term and value as an addition search
+    for field in &state.search_stack {
+        filters.push(Filter::Is(field.clone()));
+    }
+
     filters
 }

@@ -1,12 +1,13 @@
 use std::collections::hash_map::DefaultHasher;
 
+use super::super::app::CanvasState;
 use crate::canvas_calc::{Partition, Partitions};
-use eframe::egui::{self, Align2, Rgba, Stroke, TextStyle};
+use eframe::egui::{self, Align2, Rgba, Stroke, TextStyle, Widget};
 
 fn partition_to_color(partition: &Partition) -> Rgba {
     let mut hasher = DefaultHasher::new();
     use std::hash::{Hash, Hasher};
-    partition.value.hash(&mut hasher);
+    partition.field.hash(&mut hasher);
     let value = hasher.finish();
     let [r1, r2, g1, g2, b1, b2, _, _] = value.to_be_bytes();
 
@@ -15,6 +16,34 @@ fn partition_to_color(partition: &Partition) -> Rgba {
         (g1 as f32 + g2 as f32) / (u8::MAX as f32 * 2.0),
         (b1 as f32 + b2 as f32) / (u8::MAX as f32 * 2.0),
     )
+}
+
+pub struct Rectangles<'a> {
+    pub partitions: &'a mut Partitions,
+    pub select_next: &'a mut Option<Partition>,
+}
+
+impl<'a> Widget for Rectangles<'a> {
+    fn ui(self, ui: &mut egui::Ui) -> egui::Response {
+        let size = ui.available_size();
+        let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::hover());
+
+        // let visuals = ui.style().interact_selectable(&response, true);
+
+        self.partitions.update_layout(rect);
+
+        for item in &self.partitions.items {
+            let item_response = ui.put(item.layout_rect(), rectangle(&item));
+            if item_response.clicked() {
+                //self.partitions.selected = Some(item.clone());
+                *self.select_next = Some(item.clone());
+                //*should_query = true;
+                response.mark_changed();
+            }
+        }
+
+        response
+    }
 }
 
 fn rectangles_ui(ui: &mut egui::Ui, partitions: &mut Partitions) -> egui::Response {
@@ -29,6 +58,7 @@ fn rectangles_ui(ui: &mut egui::Ui, partitions: &mut Partitions) -> egui::Respon
         let item_response = ui.put(item.layout_rect(), rectangle(&item));
         if item_response.clicked() {
             partitions.selected = Some(item.clone());
+            //*should_query = true;
             response.mark_changed();
         }
     }
@@ -59,7 +89,7 @@ fn rectangle_ui(ui: &mut egui::Ui, partition: &Partition) -> egui::Response {
     painter.rect(rect, 0.0, color, stroke);
     let center = rect.center();
 
-    let label = format!("{}\n{}", &partition.value, &partition.count);
+    let label = format!("{}\n{}", &partition.field.value(), &partition.count);
 
     let style = TextStyle::Body;
 

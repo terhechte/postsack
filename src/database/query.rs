@@ -1,6 +1,5 @@
 use rsql_builder;
 use serde_json;
-use std::borrow::Cow;
 
 /// For In-Queries, we need a Vec of at least one, so we make a new type
 pub struct VecOfMinOne<T> {
@@ -18,11 +17,11 @@ impl<T> VecOfMinOne<T> {
     }
 }
 
-pub enum Filter<'a> {
-    Like(ValueField<'a>),
-    NotLike(ValueField<'a>),
-    Is(ValueField<'a>),
-    In(VecOfMinOne<ValueField<'a>>),
+pub enum Filter {
+    Like(ValueField),
+    NotLike(ValueField),
+    Is(ValueField),
+    In(VecOfMinOne<ValueField>),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -40,7 +39,7 @@ pub enum GroupByField {
     IsSend,
 }
 
-impl<'a> ValueField<'a> {
+impl<'a> ValueField {
     pub fn as_field(&self) -> GroupByField {
         use GroupByField::*;
         match self {
@@ -69,19 +68,48 @@ impl<'a> ValueField<'a> {
     }
 }*/
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum ValueField<'a> {
-    SenderDomain(Cow<'a, str>),
-    SenderLocalPart(Cow<'a, str>),
-    SenderName(Cow<'a, str>),
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+pub enum ValueField {
+    SenderDomain(String),
+    SenderLocalPart(String),
+    SenderName(String),
     Year(usize),
     Month(usize),
     Day(usize),
-    ToGroup(Cow<'a, str>),
-    ToName(Cow<'a, str>),
-    ToAddress(Cow<'a, str>),
+    ToGroup(String),
+    ToName(String),
+    ToAddress(String),
     IsReply(bool),
     IsSend(bool),
+}
+
+// FIXME: Maybe use `json-value` instead?
+impl ValueField {
+    pub fn value(&self) -> Value {
+        match (self.is_bool(), self.is_str(), self.is_usize()) {
+            (true, false, false) => Value::Bool(*self.as_bool()),
+            (false, true, false) => Value::String(self.as_str().to_string()),
+            (false, false, true) => Value::Number(*self.as_usize()),
+            _ => panic!("Invalid field: {:?}", &self),
+        }
+    }
+}
+
+#[derive(Debug, Hash, Clone)]
+pub enum Value {
+    Number(usize),
+    String(String),
+    Bool(bool),
+}
+
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Number(n) => f.write_str(&n.to_string()),
+            Value::Bool(n) => f.write_str(&n.to_string()),
+            Value::String(n) => f.write_str(&n),
+        }
+    }
 }
 
 pub trait DynamicType<'a> {
@@ -96,9 +124,9 @@ pub trait DynamicType<'a> {
     fn as_usize(&'a self) -> Self::UsizeType;
 }
 
-impl<'a> DynamicType<'a> for ValueField<'a> {
+impl<'a> DynamicType<'a> for ValueField {
     type BoolType = &'a bool;
-    type StrType = Cow<'a, str>;
+    type StrType = &'a str;
     type UsizeType = &'a usize;
 
     fn is_str(&self) -> bool {
@@ -119,11 +147,11 @@ impl<'a> DynamicType<'a> for ValueField<'a> {
         }
     }
 
-    fn as_str(&self) -> Self::StrType {
+    fn as_str(&'a self) -> Self::StrType {
         use ValueField::*;
         match self {
             SenderDomain(a) | SenderLocalPart(a) | SenderName(a) | ToGroup(a) | ToName(a)
-            | ToAddress(a) => a.clone(),
+            | ToAddress(a) => &a,
             _ => panic!(),
         }
     }
@@ -145,9 +173,9 @@ impl<'a> DynamicType<'a> for ValueField<'a> {
     }
 }
 
-impl<'a> DynamicType<'a> for &VecOfMinOne<ValueField<'a>> {
+impl<'a> DynamicType<'a> for &VecOfMinOne<ValueField> {
     type BoolType = Vec<bool>;
-    type StrType = Vec<Cow<'a, str>>;
+    type StrType = Vec<&'a str>;
     type UsizeType = Vec<usize>;
     fn is_str(&self) -> bool {
         self.inner[0].is_str()
@@ -169,8 +197,8 @@ impl<'a> DynamicType<'a> for &VecOfMinOne<ValueField<'a>> {
     }
 }
 
-impl<'a> From<&VecOfMinOne<ValueField<'a>>> for &'a str {
-    fn from(vector: &VecOfMinOne<ValueField<'a>>) -> Self {
+impl<'a> From<&VecOfMinOne<ValueField>> for &'a str {
+    fn from(vector: &VecOfMinOne<ValueField>) -> Self {
         use ValueField::*;
         match &vector.inner[0] {
             SenderDomain(_) => "sender_domain",
@@ -188,8 +216,8 @@ impl<'a> From<&VecOfMinOne<ValueField<'a>>> for &'a str {
     }
 }
 
-impl<'a> From<&'a ValueField<'a>> for &'a str {
-    fn from(field: &'a ValueField<'a>) -> Self {
+impl<'a> From<&'a ValueField> for &'a str {
+    fn from(field: &'a ValueField) -> Self {
         use ValueField::*;
         match field {
             SenderDomain(_) => "sender_domain",
@@ -227,7 +255,7 @@ impl From<&GroupByField> for &str {
 }
 
 pub struct Query<'a> {
-    pub filters: &'a [Filter<'a>],
+    pub filters: &'a [Filter],
     pub group_by: &'a [GroupByField],
 }
 
@@ -279,6 +307,9 @@ impl<'a> Query<'a> {
                 .push_build(&mut conditions)
                 .push_sql(&group_by),
         );
+
+        dbg!(&sql);
+        dbg!(&values);
 
         (sql, values)
     }

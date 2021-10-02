@@ -29,9 +29,10 @@ impl Database {
 
         Self::create_tables(&connection)?;
 
-        #[cfg(feature = "trace-sql")]
+        //#[cfg(feature = "trace-sql")]
         connection.trace(Some(|query| {
-            tracing::trace!("SQL: {}", &query);
+            //tracing::trace!("SQL: {}", &query);
+            println!("SQL: {}", &query);
         }));
 
         Ok(Database {
@@ -39,7 +40,7 @@ impl Database {
         })
     }
 
-    pub fn query<'a>(&self, query: super::query::Query<'a>) -> Result<Vec<QueryResult<'a>>> {
+    pub fn query<'a>(&self, query: super::query::Query<'a>) -> Result<Vec<QueryResult>> {
         use rusqlite::params_from_iter;
         let c = match &self.connection {
             Some(n) => n,
@@ -48,8 +49,12 @@ impl Database {
         let (sql, values) = query.to_sql();
         let mut stmt = c.prepare(&sql)?;
         let mut query_results = Vec::new();
+        let mut converted = Vec::new();
+        for value in values {
+            converted.push(super::conversion::json_to_value(&value)?);
+        }
 
-        let p = params_from_iter(values.iter());
+        let p = params_from_iter(converted.iter());
 
         let mut rows = stmt.query(p)?;
         while let Some(row) = rows.next()? {
