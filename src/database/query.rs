@@ -39,6 +39,25 @@ pub enum GroupByField {
     IsSend,
 }
 
+impl GroupByField {
+    pub fn as_str(&self) -> &str {
+        use GroupByField::*;
+        match self {
+            SenderDomain => "sender_domain",
+            SenderLocalPart => "sender_local_part",
+            SenderName => "sender_name",
+            Year => "year",
+            Month => "month",
+            Day => "day",
+            ToGroup => "to_group",
+            ToName => "to_name",
+            ToAddress => "to_address",
+            IsReply => "is_reply",
+            IsSend => "is_send",
+        }
+    }
+}
+
 impl<'a> ValueField {
     pub fn as_field(&self) -> GroupByField {
         use GroupByField::*;
@@ -235,24 +254,30 @@ impl<'a> From<&'a ValueField> for &'a str {
     }
 }
 
-impl From<&GroupByField> for &str {
-    fn from(field: &GroupByField) -> Self {
-        use GroupByField::*;
-        match field {
-            SenderDomain => "sender_domain",
-            SenderLocalPart => "sender_local_part",
-            SenderName => "sender_name",
-            Year => "year",
-            Month => "month",
-            Day => "day",
-            ToGroup => "to_group",
-            ToName => "to_name",
-            ToAddress => "to_address",
-            IsReply => "is_reply",
-            IsSend => "is_send",
+impl ValueField {
+    pub fn as_group_field(&self) -> GroupByField {
+        use ValueField::*;
+        match self {
+            SenderDomain(_) => GroupByField::SenderDomain,
+            SenderLocalPart(_) => GroupByField::SenderLocalPart,
+            SenderName(_) => GroupByField::SenderName,
+            Year(_) => GroupByField::Year,
+            Month(_) => GroupByField::Month,
+            Day(_) => GroupByField::Day,
+            ToGroup(_) => GroupByField::ToGroup,
+            ToName(_) => GroupByField::ToName,
+            ToAddress(_) => GroupByField::ToAddress,
+            IsReply(_) => GroupByField::IsReply,
+            IsSend(_) => GroupByField::IsSend,
         }
     }
 }
+
+//impl<'a> From<&'a GroupByField> for &'b str {
+//    fn from(field: &'a GroupByField) -> Self {
+//        field.as_str()
+//    }
+//}
 
 pub struct Query<'a> {
     pub filters: &'a [Filter],
@@ -289,7 +314,7 @@ impl<'a> Query<'a> {
             whr
         };
 
-        let group_by_fields: Vec<&str> = self.group_by.iter().map(|e| e.into()).collect();
+        let group_by_fields: Vec<&str> = self.group_by.iter().map(|e| e.as_str()).collect();
         let group_by = format!("GROUP BY {}", &group_by_fields.join(", "));
 
         // If we have a group by, we always include the count

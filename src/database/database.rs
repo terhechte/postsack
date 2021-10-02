@@ -32,7 +32,7 @@ impl Database {
         //#[cfg(feature = "trace-sql")]
         connection.trace(Some(|query| {
             //tracing::trace!("SQL: {}", &query);
-            println!("SQL: {}", &query);
+            //println!("SQL: {}", &query);
         }));
 
         Ok(Database {

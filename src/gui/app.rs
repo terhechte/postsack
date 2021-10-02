@@ -8,7 +8,7 @@ use super::widgets::Spinner;
 use crate::canvas_calc::{run, Handle, InputSender, OutputReciever, Partition, Partitions};
 use crate::types::Config;
 
-struct Link {
+pub struct Link {
     input_sender: InputSender,
     output_receiver: OutputReciever,
     handle: Handle,
@@ -26,6 +26,7 @@ pub struct MyApp {
     next_partition: Option<Partition>,
     error: Option<Report>,
     is_querying: bool,
+    should_recalculate: bool,
 }
 
 impl MyApp {
@@ -42,6 +43,7 @@ impl MyApp {
             //},
             error: None,
             is_querying: false,
+            should_recalculate: false,
         }
     }
 }
@@ -80,6 +82,12 @@ impl epi::App for MyApp {
             self.add_partition(next);
         }
 
+        // If we should recalculate
+        if self.should_recalculate {
+            Self::recalculate(&mut self.is_querying, &self.link, &self.state.clone());
+            self.should_recalculate = false;
+        }
+
         // Receive new data
         if let Some(ref link) = self.link {
             match link.output_receiver.try_recv() {
@@ -101,9 +109,10 @@ impl epi::App for MyApp {
             link,
             state,
             partitions,
-            is_querying: is_rendering,
+            is_querying,
             next_partition,
             error,
+            should_recalculate,
             ..
         } = self;
 
@@ -123,15 +132,46 @@ impl epi::App for MyApp {
         });
 
         egui::TopBottomPanel::top("my_panel").show(ctx, |ui| {
-            if state.group_by_stack.len() > 1 {
-                if ui.button("Back").clicked() {
-                    MyApp::remove_partition(state, partitions);
+            ui.horizontal(|ui| {
+                // BUG: This fails in a variety of ways. We need a better data structure
+                // for this and the state/groupfield...
+                for (index, mut stack_entry) in state.group_by_stack.iter_mut().enumerate() {
+                    match (
+                        partitions.len(),
+                        &partitions.get(index).map(|e| e.selected.as_ref()),
+                    ) {
+                        (n, Some(Some(value))) if dbg!(n) > 1 => {
+                            let label = egui::Label::new(format!(
+                                "{}: {}",
+                                &value.field.as_group_field().as_str(),
+                                value.field.value()
+                            ));
+                            ui.add(label);
+                        }
+                        _ => {
+                            let alternatives = State::all_group_by_fields();
+                            let p = egui::ComboBox::from_id_source(&index).show_index(
+                                ui,
+                                &mut stack_entry,
+                                alternatives.len(),
+                                |i| alternatives[i].as_str().to_string(),
+                            );
+                            if p.changed() {
+                                *should_recalculate = true;
+                            }
+                        }
+                    }
                 }
-            }
+                if state.group_by_stack.len() > 1 {
+                    if ui.button("Back").clicked() {
+                        MyApp::remove_partition(state, partitions);
+                    }
+                }
+            });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            match (partitions.last_mut(), *is_rendering) {
+            match (partitions.last_mut(), *is_querying) {
                 (_, true) | (None, false) => {
                     ui.centered_and_justified(|ui| {
                         ui.add(Spinner::new(egui::vec2(50.0, 50.0)));
@@ -155,7 +195,7 @@ impl epi::App for MyApp {
         // We do this because calling
         // ctx.request_repaint();
         // somehow didn't work..
-        if *is_rendering == true {
+        if *is_querying == true {
             ctx.request_repaint();
         }
     }
@@ -180,13 +220,9 @@ impl MyApp {
         let next = super::state::default_group_by_stack(index);
         self.state.group_by_stack.push(next);
 
-        // Submit it
-        if let Some(ref link) = self.link {
-            link.input_sender.send(self.state.clone());
-        }
-
         // Block UI & Wait for updates
         self.is_querying = true;
+        Self::recalculate(&mut self.is_querying, &self.link, &self.state.clone());
         Some(())
     }
 
@@ -195,5 +231,13 @@ impl MyApp {
         state.group_by_stack.remove(state.group_by_stack.len() - 1);
         partitions.remove(partitions.len() - 1);
         state.search_stack.remove(state.search_stack.len() - 1);
+    }
+
+    pub fn recalculate(is_querying: &mut bool, link: &Option<Link>, state: &State) {
+        // Submit it
+        if let Some(ref link) = link {
+            link.input_sender.send(state.clone());
+        }
+        *is_querying = true;
     }
 }

@@ -124,10 +124,8 @@ fn inner_loop(
     loop {
         let task = input_receiver.recv()?;
         let filters = convert_filters(&task);
-        let current_field = task
-            .group_by_stack
-            .last()
-            .ok_or(eyre::eyre!("No Group By Available"))?;
+        let fields = task.group_by_fields();
+        let current_field = fields.last().ok_or(eyre::eyre!("No Group By Available"))?;
         let group_by = vec![current_field.clone()];
         let query = Query {
             filters: &filters,

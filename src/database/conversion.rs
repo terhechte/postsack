@@ -46,41 +46,41 @@ impl<'a> RowConversion<'a> for QueryResult {
             match field {
                 // Str fields
                 SenderDomain => values.push(ValueField::SenderDomain(
-                    row.get::<&str, String>(field.into())?.into(),
+                    row.get::<&str, String>(field.as_str())?.into(),
                 )),
                 SenderLocalPart => values.push(ValueField::SenderLocalPart(
-                    row.get::<&str, String>(field.into())?.into(),
+                    row.get::<&str, String>(field.as_str())?.into(),
                 )),
                 SenderName => values.push(ValueField::SenderName(
-                    row.get::<&str, String>(field.into())?.into(),
+                    row.get::<&str, String>(field.as_str())?.into(),
                 )),
                 ToGroup => values.push(ValueField::ToGroup(
-                    row.get::<&str, String>(field.into())?.into(),
+                    row.get::<&str, String>(field.as_str())?.into(),
                 )),
                 ToName => values.push(ValueField::ToName(
-                    row.get::<&str, String>(field.into())?.into(),
+                    row.get::<&str, String>(field.as_str())?.into(),
                 )),
                 ToAddress => values.push(ValueField::ToAddress(
-                    row.get::<&str, String>(field.into())?.into(),
+                    row.get::<&str, String>(field.as_str())?.into(),
                 )),
 
                 // usize field
                 Year => values.push(ValueField::Year(
-                    row.get::<&str, usize>(field.into())?.into(),
+                    row.get::<&str, usize>(field.as_str())?.into(),
                 )),
                 Month => values.push(ValueField::Day(
-                    row.get::<&str, usize>(field.into())?.into(),
+                    row.get::<&str, usize>(field.as_str())?.into(),
                 )),
                 Day => values.push(ValueField::Day(
-                    row.get::<&str, usize>(field.into())?.into(),
+                    row.get::<&str, usize>(field.as_str())?.into(),
                 )),
 
                 // bool field
                 IsReply => values.push(ValueField::IsReply(
-                    row.get::<&str, bool>(field.into())?.into(),
+                    row.get::<&str, bool>(field.as_str())?.into(),
                 )),
                 IsSend => values.push(ValueField::IsSend(
-                    row.get::<&str, bool>(field.into())?.into(),
+                    row.get::<&str, bool>(field.as_str())?.into(),
                 )),
             }
         }
