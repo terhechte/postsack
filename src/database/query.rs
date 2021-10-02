@@ -77,16 +77,6 @@ impl<'a> ValueField {
     }
 }
 
-/*impl GroupByField {
-    pub fn make_str<'a>(value: &'a str, field: GroupByField) -> ValueField<'a> {
-        use GroupByField::*;
-        match field {
-            SenderDomain => ValueField::SenderDomain(value.into()),
-            _ => panic!(),
-        }
-    }
-}*/
-
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub enum ValueField {
     SenderDomain(String),
@@ -272,12 +262,6 @@ impl ValueField {
         }
     }
 }
-
-//impl<'a> From<&'a GroupByField> for &'b str {
-//    fn from(field: &'a GroupByField) -> Self {
-//        field.as_str()
-//    }
-//}
 
 pub struct Query<'a> {
     pub filters: &'a [Filter],

@@ -7,7 +7,7 @@ pub(crate) mod widgets;
 
 pub fn run_gui(config: Config) {
     let options = eframe::NativeOptions::default();
-    let app: Box<dyn epi::App> = match app::MyApp::new(&config) {
+    let app: Box<dyn epi::App> = match app::GmailDBApp::new(&config) {
         Ok(n) => Box::new(n),
         Err(e) => Box::new(ErrorApp(e)),
     };

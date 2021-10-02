@@ -8,14 +8,14 @@ use super::widgets::{self, Spinner};
 use crate::cluster_engine::Engine;
 use crate::types::Config;
 
-pub struct MyApp {
+pub struct GmailDBApp {
     _config: Config,
     state: State,
     engine: Engine,
     error: Option<Report>,
 }
 
-impl MyApp {
+impl GmailDBApp {
     pub fn new(config: &Config) -> Result<Self> {
         let engine = Engine::new(&config)?;
         let state = State::new();
@@ -28,7 +28,7 @@ impl MyApp {
     }
 }
 
-impl epi::App for MyApp {
+impl epi::App for GmailDBApp {
     fn name(&self) -> &str {
         "Gmail DB"
     }
@@ -80,11 +80,8 @@ impl epi::App for MyApp {
         // Resize the native window to be just the size we need it to be:
         frame.set_window_size(ctx.used_size());
 
-        // If we're waiting for a computation to succeed,
-        // we re-render again.
-        // We do this because calling
-        // ctx.request_repaint();
-        // somehow didn't work..
+        // If we're waiting for a computation to succeed, we re-render again.
+        // The initial plan of calling `ctx.request_repaint()` from a thread didn't work.
         if engine.is_busy() {
             ctx.request_repaint();
         }
