@@ -333,9 +333,6 @@ impl<'a> Query<'a> {
                 .push_sql(&group_by),
         );
 
-        dbg!(&sql);
-        dbg!(&values);
-
         (sql, values)
     }
 }

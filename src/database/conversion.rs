@@ -1,10 +1,10 @@
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 use std::str::FromStr;
 
 use chrono::prelude::*;
 use eyre::{bail, eyre, Result};
 use rusqlite::{self, types, Row};
-use serde_json::{Number, Value};
+use serde_json::Value;
 
 use super::query::{GroupByField, ValueField};
 use super::query_result::QueryResult;

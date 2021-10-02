@@ -5,18 +5,17 @@
 //! And finally uses a channel to submit the result back to the UI
 //! Runs its own connection to the SQLite database.
 
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 use std::thread::JoinHandle;
 
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use eyre::{Report, Result};
 
 use crate::database::{
-    query::{Filter, GroupByField, Query, ValueField},
+    query::{Filter, GroupByField, Query},
     query_result::QueryResult,
     Database,
 };
-use crate::gui::state::State;
 use crate::types::Config;
 
 use super::partitions::{Partition, Partitions};

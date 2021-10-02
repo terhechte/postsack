@@ -28,6 +28,7 @@ impl<'a, S: IntoRequest> Rectangles<'a, S> {
     }
 }
 
+#[allow(unused_must_use)]
 impl<'a, S: IntoRequest> Widget for Rectangles<'a, S> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         let size = ui.available_size();
@@ -52,7 +53,7 @@ impl<'a, S: IntoRequest> Widget for Rectangles<'a, S> {
 
 fn rectangle_ui(ui: &mut egui::Ui, partition: &Partition) -> egui::Response {
     let size = ui.available_size();
-    let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::click());
+    let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
 
     let visuals = ui.style().interact_selectable(&response, true);
 

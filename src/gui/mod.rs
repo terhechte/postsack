@@ -21,17 +21,7 @@ impl epi::App for ErrorApp {
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        let text = format!("Error:\n{}", &self.0);
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.centered_and_justified(|ui| {
-                ui.vertical_centered(|ui| {
-                    ui.add(eframe::egui::Label::new(text));
-                    if ui.button("Close").clicked() {
-                        std::process::exit(0);
-                    }
-                });
-            });
-        });
+        egui::CentralPanel::default().show(ctx, |ui| ui.add(widgets::ErrorBox(&self.0)));
         frame.set_window_size(ctx.used_size());
     }
 }

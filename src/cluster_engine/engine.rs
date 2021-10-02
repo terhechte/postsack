@@ -1,7 +1,7 @@
 // FIXME: Have our own rect type in here which is compatible to
 // treemap and egui
 use eframe::egui::Rect;
-use eyre::{bail, Result};
+use eyre::Result;
 
 use crate::database::query::{Filter, GroupByField, ValueField};
 use crate::types::Config;
@@ -9,8 +9,6 @@ use crate::types::Config;
 use super::calc::{Link, Request};
 use super::partitions::{Partition, Partitions};
 use super::IntoRequest;
-
-pub type GroupByFieldIndex = usize;
 
 // FIXME: Use strum or one of the enum to string crates
 const DEFAULT_GROUP_BY_FIELDS: &[GroupByField] = {
@@ -35,8 +33,10 @@ pub struct Engine {
     group_by_stack: Vec<usize>,
     link: Link,
     partitions: Vec<Partitions>,
-    next_partition: Option<Partition>,
+    // Are we currently waiting for SQLite to finish loading data
     is_querying: bool,
+    // Should we recalculate because something in the state changed?
+    // This is evaluated during `process` which should be called each `update` loop
     should_recalculate: bool,
 }
 
@@ -48,7 +48,6 @@ impl Engine {
             search_stack: Vec::new(),
             group_by_stack: vec![default_group_by_stack(0)],
             partitions: Vec::new(),
-            next_partition: None,
             is_querying: false,
             should_recalculate: false,
         };
@@ -60,11 +59,37 @@ impl Engine {
         Some(self.partitions.last().as_ref()?.items.as_slice())
     }
 
-    pub fn select_partition<S: IntoRequest>(&mut self, partition: Partition, state: &S) {
+    /// Returns (index in the `group_by_stack`, index of the chosen group, value of the group if selected)
+    pub fn current_groupings(&self) -> Vec<(usize, usize, Option<ValueField>)> {
+        let mut result = Vec::new();
+        // for everything in the current stack
+        for (index, stack_index) in self.group_by_stack.iter().enumerate() {
+            let value = if let Some(Some(partition)) =
+                self.partitions.get(index).map(|e| e.selected.as_ref())
+            {
+                Some(partition.field.clone())
+            } else {
+                None
+            };
+            result.push((index, *stack_index, value));
+        }
+        result
+    }
+
+    pub fn update_grouping(&mut self, index: usize, group_index: usize) {
+        self.group_by_stack.get_mut(index).map(|e| *e = group_index);
+        self.should_recalculate = true;
+    }
+
+    pub fn select_partition<S: IntoRequest>(
+        &mut self,
+        partition: Partition,
+        state: &S,
+    ) -> Result<()> {
         // Assign the partition
         let current = match self.partitions.last_mut() {
             Some(n) => n,
-            None => return,
+            None => return Ok(()),
         };
         current.selected = Some(partition);
 
@@ -83,7 +108,7 @@ impl Engine {
 
         // Block UI & Wait for updates
         self.is_querying = true;
-        self.update(state);
+        self.update(state)
     }
 
     pub fn back(&mut self) {
@@ -93,14 +118,14 @@ impl Engine {
         self.search_stack.remove(self.search_stack.len() - 1);
     }
 
-    pub fn update<S: IntoRequest>(&mut self, state: &S) {
-        // Submit it
-        self.link.input_sender.send(self.request_from(state));
+    pub fn update<S: IntoRequest>(&mut self, state: &S) -> Result<()> {
+        self.link.input_sender.send(self.request_from(state))?;
         self.is_querying = true;
+        Ok(())
     }
 
     /// Fetch the channels to see if there're any updates
-    pub fn process(&mut self) -> Result<()> {
+    pub fn process<S: IntoRequest>(&mut self, state: &S) -> Result<()> {
         match self.link.output_receiver.try_recv() {
             // We received something
             Ok(Ok(p)) => {
@@ -112,13 +137,18 @@ impl Engine {
             // There was an error, we forward it
             Ok(Err(e)) => return Err(e),
         };
-        Ok(())
+        if self.should_recalculate {
+            self.should_recalculate = false;
+            self.update(state)
+        } else {
+            Ok(())
+        }
     }
 
     /// When we don't have partitions loaded yet, or
     /// when we're currently querying / loading new partitions
     pub fn is_busy(&self) -> bool {
-        self.partitions.is_empty() || self.is_querying
+        self.partitions.is_empty() || self.is_querying || self.should_recalculate
     }
 
     fn request_from<S: IntoRequest>(&self, state: &S) -> Request {
