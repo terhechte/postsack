@@ -33,9 +33,30 @@ const DEFAULT_GROUP_BY_FIELDS: &[GroupByField] = {
     ]
 };
 
+// FIXME: Try with lifetimes. For this use case it might just work
+pub struct Grouping {
+    value: Option<ValueField>,
+    field: GroupByField,
+    index: usize,
+}
+
+impl Grouping {
+    pub fn value(&self) -> Option<String> {
+        self.value.as_ref().map(|e| e.value().to_string())
+    }
+
+    pub fn name(&self) -> &str {
+        self.field.as_str()
+    }
+
+    pub fn index(&self, in_fields: &[GroupByField]) -> Option<usize> {
+        in_fields.iter().position(|p| p == &self.field)
+    }
+}
+
 pub struct Engine {
     search_stack: Vec<ValueField>,
-    group_by_stack: Vec<usize>,
+    group_by_stack: Vec<GroupByField>,
     link: Link,
     partitions: Vec<Partitions>,
     // Are we currently waiting for SQLite to finish loading data
@@ -65,10 +86,12 @@ impl Engine {
     }
 
     /// Returns (index in the `group_by_stack`, index of the chosen group, value of the group if selected)
-    pub fn current_groupings(&self) -> Vec<(usize, usize, Option<ValueField>)> {
+    pub fn current_groupings(&self) -> Vec<Grouping> {
         let mut result = Vec::new();
         // for everything in the current stack
-        for (index, stack_index) in self.group_by_stack.iter().enumerate() {
+        for (index, field) in self.group_by_stack.iter().enumerate() {
+            // FIXME: The index is wrong here!  I think I have to convert it from the field
+            // to something else to get the correct value. but I can't think right now...
             let value = if let Some(Some(partition)) =
                 self.partitions.get(index).map(|e| e.selected.as_ref())
             {
@@ -76,13 +99,19 @@ impl Engine {
             } else {
                 None
             };
-            result.push((index, *stack_index, value));
+            result.push(Grouping {
+                value,
+                field: field.clone(),
+                index,
+            });
         }
         result
     }
 
-    pub fn update_grouping(&mut self, index: usize, group_index: usize) {
-        self.group_by_stack.get_mut(index).map(|e| *e = group_index);
+    pub fn update_grouping(&mut self, grouping: &Grouping, field: &GroupByField) {
+        self.group_by_stack
+            .get_mut(grouping.index)
+            .map(|e| *e = field.clone());
         self.should_recalculate = true;
     }
 
@@ -152,6 +181,25 @@ impl Engine {
         }
     }
 
+    /// Return all group fields which are still available based
+    /// on the current stack.
+    /// Also always include the current one, so we can choose between
+    pub fn available_group_by_fields(&self, grouping: &Grouping) -> Vec<GroupByField> {
+        DEFAULT_GROUP_BY_FIELDS
+            .iter()
+            .filter_map(|f| {
+                if f == &grouping.field {
+                    return Some(f.clone());
+                }
+                if self.group_by_stack.contains(f) {
+                    None
+                } else {
+                    Some(f.clone())
+                }
+            })
+            .collect()
+    }
+
     /// When we don't have partitions loaded yet, or
     /// when we're currently querying / loading new partitions
     pub fn is_busy(&self) -> bool {
@@ -168,41 +216,33 @@ impl Engine {
 
         Request {
             filters,
-            fields: self.group_by_fields(),
+            fields: self.group_by_stack.clone(),
         }
     }
 }
 
 // FIXME: Try to get rid of these
 impl Engine {
-    pub fn group_by_field_for(index: usize) -> GroupByField {
-        DEFAULT_GROUP_BY_FIELDS[index]
-    }
+    //pub fn group_by_field_for(index: usize) -> GroupByField {
+    //    DEFAULT_GROUP_BY_FIELDS[index]
+    //}
 
-    pub fn all_group_by_fields() -> Vec<GroupByField> {
-        DEFAULT_GROUP_BY_FIELDS.into()
-    }
-
-    pub fn group_by_fields(&self) -> Vec<GroupByField> {
-        self.group_by_stack
-            .iter()
-            .map(|e| Self::group_by_field_for(*e))
-            .collect()
-    }
+    //pub fn group_by_fields(&self) -> Vec<GroupByField> {
+    //    self.group_by_stack
+    //        .iter()
+    //        .map(|e| Self::group_by_field_for(*e))
+    //        .collect()
+    //}
 }
 
 /// Return the default group by fields index for each stack entry
-pub fn default_group_by_stack(index: usize) -> usize {
-    let f = match index {
+pub fn default_group_by_stack(index: usize) -> GroupByField {
+    match index {
         0 => GroupByField::Year,
         1 => GroupByField::SenderDomain,
         2 => GroupByField::SenderLocalPart,
         3 => GroupByField::Month,
         4 => GroupByField::Day,
         _ => panic!(),
-    };
-    DEFAULT_GROUP_BY_FIELDS
-        .iter()
-        .position(|e| e == &f)
-        .unwrap()
+    }
 }

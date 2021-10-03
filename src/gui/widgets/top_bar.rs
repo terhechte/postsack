@@ -5,25 +5,20 @@ fn top_bar_ui(ui: &mut egui::Ui, engine: &mut Engine) -> egui::Response {
     ui.horizontal(|ui| {
         let groupings = engine.current_groupings();
         let has_back = groupings.len() > 1;
-        for (index, group_index, value) in groupings {
-            if let Some(value) = value {
-                let label = egui::Label::new(format!(
-                    "{}: {}",
-                    &value.as_group_field().as_str(),
-                    value.value()
-                ));
+        for (id_index, group) in groupings.iter().enumerate() {
+            let alternatives = engine.available_group_by_fields(&group);
+            if let Some(value) = group.value() {
+                let label = egui::Label::new(format!("{}: {}", group.name(), value));
                 ui.add(label);
-            } else {
-                let alternatives = Engine::all_group_by_fields();
-                let mut selected = group_index;
-                let p = egui::ComboBox::from_id_source(&index).show_index(
+            } else if let Some(mut selected) = group.index(&alternatives) {
+                let p = egui::ComboBox::from_id_source(&id_index).show_index(
                     ui,
                     &mut selected,
                     alternatives.len(),
                     |i| alternatives[i].as_str().to_string(),
                 );
                 if p.changed() {
-                    engine.update_grouping(index, selected);
+                    engine.update_grouping(&group, &alternatives[selected]);
                 }
             }
         }
