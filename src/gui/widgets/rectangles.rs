@@ -1,7 +1,7 @@
 use std::collections::hash_map::DefaultHasher;
 
 use crate::cluster_engine::{Engine, Partition};
-use eframe::egui::{self, epaint::Galley, Pos2, Rgba, Stroke, TextStyle, Widget};
+use eframe::egui::{self, epaint::Galley, vec2, Pos2, Rect, Rgba, Stroke, TextStyle, Widget};
 use eyre::Report;
 use num_format::{Locale, ToFormattedString};
 
@@ -87,8 +87,12 @@ fn rectangle_ui(ui: &mut egui::Ui, partition: &Partition) -> egui::Response {
     {
         let text = format!("{}", partition.field.value());
         let galley = painter.layout_no_wrap(TextStyle::Body, text);
+        let previous_center = center;
         if let Some(center) = align_bottom(&galley, &mut center, 2.0) {
             painter.galley(center, galley, Rgba::BLACK.into());
+        } else {
+            // If the name doesn't fit, reverse the changes to center the count
+            center = previous_center;
         }
     }
     {

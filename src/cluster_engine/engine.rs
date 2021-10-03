@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use eframe::egui::Rect;
 use eyre::Result;
 
-use crate::database::query::{GroupByField, ValueField};
+use crate::database::query::{Filter, GroupByField, ValueField};
 use crate::types::Config;
 
 use super::calc::{Action, Link, Request};
@@ -98,9 +98,7 @@ impl Engine {
             Some(n) => {
                 if let Some(r) = range {
                     let len = n.len();
-                    dbg!(&len, r.start(), r.end());
                     if len > *r.start() && *r.end() < len {
-                        dbg!(&r);
                         n.range = Some(r.clone());
                         Some(())
                     } else {
@@ -251,9 +249,10 @@ impl Engine {
     }
 
     fn make_request(&self) -> Request {
-        // FIXME: We have no custom fitlers yet
-        let filters = Vec::new();
-
+        let mut filters = Vec::new();
+        for entry in &self.search_stack {
+            filters.push(Filter::Like(entry.clone()));
+        }
         Request {
             filters,
             fields: self.group_by_stack.clone(),

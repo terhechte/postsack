@@ -11,6 +11,7 @@ pub struct GmailDBApp {
     _config: Config,
     engine: Engine,
     error: Option<Report>,
+    show_emails: bool,
 }
 
 impl GmailDBApp {
@@ -20,6 +21,7 @@ impl GmailDBApp {
             _config: config.clone(),
             engine,
             error: None,
+            show_emails: false,
         })
     }
 }
@@ -41,17 +43,24 @@ impl epi::App for GmailDBApp {
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
         self.error = self.engine.process().err();
 
-        let Self { engine, error, .. } = self;
+        let Self {
+            engine,
+            error,
+            show_emails,
+            ..
+        } = self;
 
         if let Some(error) = error {
             egui::CentralPanel::default().show(ctx, |ui| ui.add(widgets::ErrorBox(&error)));
         } else {
-            egui::SidePanel::left("my_left_panel").show(ctx, |ui| {
-                ui.heading("GMail DB");
-                ui.horizontal(|ui| {
-                    ui.label("Search");
+            if *show_emails {
+                egui::SidePanel::right("my_left_panel").show(ctx, |ui| {
+                    ui.heading("GMail DB laskjf aslkfjlkajsf");
+                    ui.horizontal(|ui| {
+                        ui.label("Search");
+                    });
                 });
-            });
+            }
 
             egui::TopBottomPanel::top("my_panel").show(ctx, |ui| {
                 ui.add(super::widgets::TopBar::new(engine, error));
@@ -70,9 +79,22 @@ impl epi::App for GmailDBApp {
                                 let mut selected = total;
                                 let response = ui.add(egui::Slider::new(&mut selected, range));
                                 if response.changed() {
-                                    dbg!(&selected);
                                     engine.set_current_range(Some(0..=selected));
                                 }
+                            }
+                            // This is a hack to get right-alignment.
+                            // we can't size the button, we can only size text. We will size text
+                            // and then use ~that for the button
+                            let text = "Mail";
+                            let galley = ui
+                                .painter()
+                                .layout_no_wrap(egui::TextStyle::Button, text.to_owned());
+                            ui.add_space(
+                                ui.available_width()
+                                    - (galley.size.x + ui.spacing().button_padding.x * 2.0),
+                            );
+                            if ui.add(egui::Button::new(text)).clicked() {
+                                *show_emails = !*show_emails;
                             }
                         });
                         ui.add(super::widgets::Rectangles::new(engine, error));
