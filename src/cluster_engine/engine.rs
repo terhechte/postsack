@@ -1,3 +1,8 @@
+//! Things to fix:
+//! - Use strum on GroupByField and see what to do about ValueField
+//! - use JsonValue on ValueField but with a typesafe constructor?
+//! - have a better return type of the list of combo box buttons
+
 // FIXME: Have our own rect type in here which is compatible to
 // treemap and egui
 use eframe::egui::Rect;
@@ -116,6 +121,8 @@ impl Engine {
         self.group_by_stack.remove(self.group_by_stack.len() - 1);
         self.partitions.remove(self.partitions.len() - 1);
         self.search_stack.remove(self.search_stack.len() - 1);
+        // Remove the last selection
+        self.partitions.last_mut().map(|e| e.selected = None);
     }
 
     pub fn update<S: IntoRequest>(&mut self, state: &S) -> Result<()> {
