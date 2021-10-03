@@ -2,7 +2,6 @@ use crate::types::Config;
 use eframe::{self, egui, epi};
 
 mod app;
-pub(crate) mod state;
 pub(crate) mod widgets;
 
 pub fn run_gui(config: Config) {

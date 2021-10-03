@@ -20,13 +20,22 @@ use crate::types::Config;
 
 use super::partitions::{Partition, Partitions};
 
+/// This signifies the action we're currently evaluating
+/// It is used for sending requests and receiving responses
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Action {
+    Recalculate,
+    Select,
+    Wait,
+}
+
 pub struct Request {
     pub filters: Vec<Filter>,
     pub fields: Vec<GroupByField>,
 }
 
-pub type InputSender = Sender<Request>;
-pub type OutputReciever = Receiver<Result<Partitions>>;
+pub type InputSender = Sender<(Request, Action)>;
+pub type OutputReciever = Receiver<Result<(Partitions, Action)>>;
 pub type Handle = JoinHandle<Result<(), Report>>;
 
 pub struct Link {
@@ -49,11 +58,11 @@ pub fn run(config: &Config) -> Result<Link> {
 
 fn inner_loop(
     database: Database,
-    input_receiver: Receiver<Request>,
-    output_sender: Sender<Result<Partitions>>,
+    input_receiver: Receiver<(Request, Action)>,
+    output_sender: Sender<Result<(Partitions, Action)>>,
 ) -> Result<()> {
     loop {
-        let request = input_receiver.recv()?;
+        let (request, action) = input_receiver.recv()?;
         let filters = request.filters;
         let current_field = request
             .fields
@@ -66,7 +75,7 @@ fn inner_loop(
         };
         let result = database.query(query)?;
         let partitions = calculate_partitions(&result)?;
-        output_sender.send(Ok(Partitions::new(partitions)))?
+        output_sender.send(Ok((Partitions::new(partitions), action)))?
     }
 }
 

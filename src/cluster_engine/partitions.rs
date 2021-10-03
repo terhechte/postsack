@@ -30,6 +30,7 @@ impl Partition {
 
 /// A small NewType so that we can keep all the `TreeMap` code in here and don't
 /// have to do the layout calculation in a widget.
+#[derive(Debug)]
 pub struct Partitions {
     pub items: Vec<Partition>,
     pub selected: Option<Partition>,

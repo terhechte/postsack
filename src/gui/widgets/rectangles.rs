@@ -1,7 +1,8 @@
 use std::collections::hash_map::DefaultHasher;
 
-use crate::cluster_engine::{Engine, IntoRequest, Partition};
+use crate::cluster_engine::{Engine, Partition};
 use eframe::egui::{self, epaint::Galley, Pos2, Rgba, Stroke, TextStyle, Widget};
+use eyre::Report;
 use num_format::{Locale, ToFormattedString};
 
 fn partition_to_color(partition: &Partition) -> Rgba {
@@ -18,19 +19,18 @@ fn partition_to_color(partition: &Partition) -> Rgba {
     )
 }
 
-pub struct Rectangles<'a, S: IntoRequest> {
+pub struct Rectangles<'a> {
     engine: &'a mut Engine,
-    state: &'a S,
+    error: &'a mut Option<Report>,
 }
 
-impl<'a, S: IntoRequest> Rectangles<'a, S> {
-    pub fn new(engine: &'a mut Engine, state: &'a S) -> Self {
-        Rectangles { engine, state }
+impl<'a> Rectangles<'a> {
+    pub fn new(engine: &'a mut Engine, error: &'a mut Option<Report>) -> Self {
+        Rectangles { engine, error }
     }
 }
 
-#[allow(unused_must_use)]
-impl<'a, S: IntoRequest> Widget for Rectangles<'a, S> {
+impl<'a> Widget for Rectangles<'a> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         let size = ui.available_size();
         let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::hover());
@@ -43,7 +43,7 @@ impl<'a, S: IntoRequest> Widget for Rectangles<'a, S> {
         for item in items {
             let item_response = ui.put(item.layout_rect(), rectangle(&item));
             if item_response.clicked() {
-                self.engine.select_partition(item.clone(), self.state);
+                *self.error = self.engine.select_partition(item.clone()).err();
                 response.mark_changed();
             }
         }

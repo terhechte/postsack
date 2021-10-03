@@ -3,14 +3,12 @@ use eyre::{Report, Result};
 
 use eframe::{egui, epi};
 
-use super::state::State;
 use super::widgets::{self, Spinner};
 use crate::cluster_engine::Engine;
 use crate::types::Config;
 
 pub struct GmailDBApp {
     _config: Config,
-    state: State,
     engine: Engine,
     error: Option<Report>,
 }
@@ -18,11 +16,9 @@ pub struct GmailDBApp {
 impl GmailDBApp {
     pub fn new(config: &Config) -> Result<Self> {
         let engine = Engine::new(&config)?;
-        let state = State::new();
         Ok(Self {
             _config: config.clone(),
             engine,
-            state,
             error: None,
         })
     }
@@ -39,18 +35,13 @@ impl epi::App for GmailDBApp {
         _frame: &mut Frame<'_>,
         _storage: Option<&dyn Storage>,
     ) {
-        self.error = self.engine.update(&self.state).err();
+        self.error = self.engine.start().err();
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        self.error = self.engine.process(&self.state).err();
+        self.error = self.engine.process().err();
 
-        let Self {
-            state,
-            engine,
-            error,
-            ..
-        } = self;
+        let Self { engine, error, .. } = self;
 
         if let Some(error) = error {
             egui::CentralPanel::default().show(ctx, |ui| ui.add(widgets::ErrorBox(&error)));
@@ -63,7 +54,7 @@ impl epi::App for GmailDBApp {
             });
 
             egui::TopBottomPanel::top("my_panel").show(ctx, |ui| {
-                ui.add(super::widgets::top_bar(engine));
+                ui.add(super::widgets::TopBar::new(engine, error));
             });
 
             egui::CentralPanel::default().show(ctx, |ui| {
@@ -72,7 +63,7 @@ impl epi::App for GmailDBApp {
                         ui.add(Spinner::new(egui::vec2(50.0, 50.0)));
                     });
                 } else {
-                    ui.add(super::widgets::Rectangles::new(engine, state));
+                    ui.add(super::widgets::Rectangles::new(engine, error));
                 }
             });
         }

@@ -1,19 +1,11 @@
-//! Things to fix:
-//! - Use strum on GroupByField and see what to do about ValueField
-//! - use JsonValue on ValueField but with a typesafe constructor?
-//! - have a better return type of the list of combo box buttons
-
-// FIXME: Have our own rect type in here which is compatible to
-// treemap and egui
 use eframe::egui::Rect;
 use eyre::Result;
 
-use crate::database::query::{Filter, GroupByField, ValueField};
+use crate::database::query::{GroupByField, ValueField};
 use crate::types::Config;
 
-use super::calc::{Link, Request};
+use super::calc::{Action, Link, Request};
 use super::partitions::{Partition, Partitions};
-use super::IntoRequest;
 
 // FIXME: Use strum or one of the enum to string crates
 const DEFAULT_GROUP_BY_FIELDS: &[GroupByField] = {
@@ -59,11 +51,7 @@ pub struct Engine {
     group_by_stack: Vec<GroupByField>,
     link: Link,
     partitions: Vec<Partitions>,
-    // Are we currently waiting for SQLite to finish loading data
-    is_querying: bool,
-    // Should we recalculate because something in the state changed?
-    // This is evaluated during `process` which should be called each `update` loop
-    should_recalculate: bool,
+    action: Option<Action>,
 }
 
 impl Engine {
@@ -74,10 +62,15 @@ impl Engine {
             search_stack: Vec::new(),
             group_by_stack: vec![default_group_by_stack(0)],
             partitions: Vec::new(),
-            is_querying: false,
-            should_recalculate: false,
+            action: None,
         };
         Ok(engine)
+    }
+
+    pub fn start(&mut self) -> Result<()> {
+        // Make the initial query
+        self.action = Some(Action::Select);
+        self.update()
     }
 
     pub fn items_with_size(&mut self, rect: Rect) -> Option<&[Partition]> {
@@ -89,15 +82,11 @@ impl Engine {
     pub fn current_groupings(&self) -> Vec<Grouping> {
         let mut result = Vec::new();
         // for everything in the current stack
+        let len = self.group_by_stack.len();
         for (index, field) in self.group_by_stack.iter().enumerate() {
-            // FIXME: The index is wrong here!  I think I have to convert it from the field
-            // to something else to get the correct value. but I can't think right now...
-            let value = if let Some(Some(partition)) =
-                self.partitions.get(index).map(|e| e.selected.as_ref())
-            {
-                Some(partition.field.clone())
-            } else {
-                None
+            let value = match (len, self.partitions.get(index).map(|e| e.selected.as_ref())) {
+                (n, Some(Some(partition))) if len == n => Some(partition.field.clone()),
+                _ => None,
             };
             result.push(Grouping {
                 value,
@@ -108,18 +97,15 @@ impl Engine {
         result
     }
 
-    pub fn update_grouping(&mut self, grouping: &Grouping, field: &GroupByField) {
+    pub fn update_grouping(&mut self, grouping: &Grouping, field: &GroupByField) -> Result<()> {
         self.group_by_stack
             .get_mut(grouping.index)
             .map(|e| *e = field.clone());
-        self.should_recalculate = true;
+        self.action = Some(Action::Recalculate);
+        self.update()
     }
 
-    pub fn select_partition<S: IntoRequest>(
-        &mut self,
-        partition: Partition,
-        state: &S,
-    ) -> Result<()> {
+    pub fn select_partition(&mut self, partition: Partition) -> Result<()> {
         // Assign the partition
         let current = match self.partitions.last_mut() {
             Some(n) => n,
@@ -141,44 +127,65 @@ impl Engine {
         self.group_by_stack.push(next);
 
         // Block UI & Wait for updates
-        self.is_querying = true;
-        self.update(state)
+        self.action = Some(Action::Select);
+        self.update()
     }
 
     pub fn back(&mut self) {
-        // FIXME: Checks
+        if self.group_by_stack.is_empty()
+            || self.partitions.is_empty()
+            || self.search_stack.is_empty()
+        {
+            tracing::error!(
+                "Invalid state. Not everything has the same length: {:?}, {:?}, {:?}",
+                &self.group_by_stack,
+                self.partitions,
+                self.search_stack
+            );
+            return;
+        }
+
+        // Remove the last entry of everything
         self.group_by_stack.remove(self.group_by_stack.len() - 1);
         self.partitions.remove(self.partitions.len() - 1);
         self.search_stack.remove(self.search_stack.len() - 1);
-        // Remove the last selection
+
+        // Remove the selection in the last partition
         self.partitions.last_mut().map(|e| e.selected = None);
     }
 
-    pub fn update<S: IntoRequest>(&mut self, state: &S) -> Result<()> {
-        self.link.input_sender.send(self.request_from(state))?;
-        self.is_querying = true;
+    // Send the last action over the wire to be calculated
+    fn update(&mut self) -> Result<()> {
+        let action = match self.action {
+            Some(n) => n,
+            None => return Ok(()),
+        };
+        self.link.input_sender.send((self.make_request(), action))?;
+        self.action = Some(Action::Wait);
         Ok(())
     }
 
     /// Fetch the channels to see if there're any updates
-    pub fn process<S: IntoRequest>(&mut self, state: &S) -> Result<()> {
+    pub fn process(&mut self) -> Result<()> {
         match self.link.output_receiver.try_recv() {
             // We received something
-            Ok(Ok(p)) => {
-                self.partitions.push(p);
-                self.is_querying = false;
+            Ok(Ok((p, action))) => {
+                match action {
+                    Action::Select => self.partitions.push(p),
+                    Action::Recalculate => {
+                        let len = self.partitions.len();
+                        self.partitions[len - 1] = p;
+                    }
+                    Action::Wait => panic!("Should never send a wait action into the other thread"),
+                }
+                self.action = None;
             }
             // We received nothing
             Err(_) => (),
             // There was an error, we forward it
             Ok(Err(e)) => return Err(e),
         };
-        if self.should_recalculate {
-            self.should_recalculate = false;
-            self.update(state)
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 
     /// Return all group fields which are still available based
@@ -203,36 +210,18 @@ impl Engine {
     /// When we don't have partitions loaded yet, or
     /// when we're currently querying / loading new partitions
     pub fn is_busy(&self) -> bool {
-        self.partitions.is_empty() || self.is_querying || self.should_recalculate
+        self.partitions.is_empty() || self.action.is_some()
     }
 
-    fn request_from<S: IntoRequest>(&self, state: &S) -> Request {
-        let mut filters = state.into_filters();
-
-        // For each assigned partition, we use the term and value as an addition search
-        for field in &self.search_stack {
-            filters.push(Filter::Is(field.clone()));
-        }
+    fn make_request(&self) -> Request {
+        // FIXME: We have no custom fitlers yet
+        let filters = Vec::new();
 
         Request {
             filters,
             fields: self.group_by_stack.clone(),
         }
     }
-}
-
-// FIXME: Try to get rid of these
-impl Engine {
-    //pub fn group_by_field_for(index: usize) -> GroupByField {
-    //    DEFAULT_GROUP_BY_FIELDS[index]
-    //}
-
-    //pub fn group_by_fields(&self) -> Vec<GroupByField> {
-    //    self.group_by_stack
-    //        .iter()
-    //        .map(|e| Self::group_by_field_for(*e))
-    //        .collect()
-    //}
 }
 
 /// Return the default group by fields index for each stack entry
