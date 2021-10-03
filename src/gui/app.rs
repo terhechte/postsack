@@ -63,7 +63,20 @@ impl epi::App for GmailDBApp {
                         ui.add(Spinner::new(egui::vec2(50.0, 50.0)));
                     });
                 } else {
-                    ui.add(super::widgets::Rectangles::new(engine, error));
+                    ui.vertical(|ui| {
+                        ui.horizontal(|ui| {
+                            if let Some((range, total)) = engine.current_range() {
+                                ui.label("Limit");
+                                let mut selected = total;
+                                let response = ui.add(egui::Slider::new(&mut selected, range));
+                                if response.changed() {
+                                    dbg!(&selected);
+                                    engine.set_current_range(Some(0..=selected));
+                                }
+                            }
+                        });
+                        ui.add(super::widgets::Rectangles::new(engine, error));
+                    });
                 }
             });
         }
@@ -72,7 +85,6 @@ impl epi::App for GmailDBApp {
         frame.set_window_size(ctx.used_size());
 
         // If we're waiting for a computation to succeed, we re-render again.
-        // The initial plan of calling `ctx.request_repaint()` from a thread didn't work.
         if engine.is_busy() {
             ctx.request_repaint();
         }

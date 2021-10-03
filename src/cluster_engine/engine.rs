@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 use eframe::egui::Rect;
 use eyre::Result;
 
@@ -74,8 +76,43 @@ impl Engine {
     }
 
     pub fn items_with_size(&mut self, rect: Rect) -> Option<&[Partition]> {
-        self.partitions.last_mut()?.update_layout(rect);
-        Some(self.partitions.last().as_ref()?.items.as_slice())
+        let partition = self.partitions.last_mut()?;
+        partition.update_layout(rect);
+        Some(partition.items())
+    }
+
+    /// Retrieve the min and max amount of items. The range that should be displayed.
+    /// Per default, it is the whole range of the partition
+    pub fn current_range(&self) -> Option<(RangeInclusive<usize>, usize)> {
+        let partition = self.partitions.last()?;
+        let len = partition.len();
+        let r = match &partition.range {
+            Some(n) => (0..=len, *n.end()),
+            None => (0..=len, len),
+        };
+        Some(r)
+    }
+
+    pub fn set_current_range(&mut self, range: Option<RangeInclusive<usize>>) -> Option<()> {
+        match self.partitions.last_mut() {
+            Some(n) => {
+                if let Some(r) = range {
+                    let len = n.len();
+                    dbg!(&len, r.start(), r.end());
+                    if len > *r.start() && *r.end() < len {
+                        dbg!(&r);
+                        n.range = Some(r.clone());
+                        Some(())
+                    } else {
+                        None
+                    }
+                } else {
+                    n.range = None;
+                    Some(())
+                }
+            }
+            None => None,
+        }
     }
 
     /// Returns (index in the `group_by_stack`, index of the chosen group, value of the group if selected)

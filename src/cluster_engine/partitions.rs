@@ -32,8 +32,9 @@ impl Partition {
 /// have to do the layout calculation in a widget.
 #[derive(Debug)]
 pub struct Partitions {
-    pub items: Vec<Partition>,
+    items: Vec<Partition>,
     pub selected: Option<Partition>,
+    pub range: Option<std::ops::RangeInclusive<usize>>,
 }
 
 impl Partitions {
@@ -41,7 +42,12 @@ impl Partitions {
         Self {
             items,
             selected: None,
+            range: None,
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
     }
 
     /// Update the layout information in the partitions
@@ -54,7 +60,19 @@ impl Partitions {
             rect.width() as f64,
             rect.height() as f64,
         );
-        layout.layout_items(&mut self.items, bounds);
+        layout.layout_items(&mut self.items(), bounds);
+    }
+
+    /// The items in this partition, with range applied
+    pub fn items(&mut self) -> &mut [Partition] {
+        match &self.range {
+            Some(n) => {
+                // we reverse the range
+                let reversed_range = (self.len() - n.end())..=(self.len() - 1);
+                &mut self.items[reversed_range]
+            }
+            None => self.items.as_mut_slice(),
+        }
     }
 }
 
