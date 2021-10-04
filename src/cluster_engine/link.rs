@@ -21,11 +21,9 @@ use crate::types::Config;
 use super::partitions::{Partition, Partitions};
 
 // FIXME:
-// - query and request are the same, just make the query the request.
-// - instead of Query<'a> move just Query into the thread and
-//   then in there move &'a Query around.
-// - give query a range
-// - use strum
+// - improve the Action situation. I don't need the *waits* I think
+// - instead of hard-coding subject/sender-domain, have a "Detail" trait
+// - consider a better logic for the cache (by row id and just fetch the smallest range that contains all missing numbers)
 
 #[derive(Debug)]
 pub enum Response<Context: Send + 'static> {

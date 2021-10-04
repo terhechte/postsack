@@ -13,7 +13,7 @@ const DEFAULT_COLUMN_WIDTH: f32 = 200.0;
 /// - `R`: The data type of a single row displayed.
 /// - `C`: The type of collection holding the rows to display. Any collection
 ///   implementing `AsRef<[R]>` can be used.
-pub struct Table<'selection, R, C: AsRef<[R]>, RowMaker: FnMut(Range<usize>) -> C> {
+pub struct Table<'selection, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> {
     id_source: Id,
     columns: Vec<Column<R>>,
     selected_row: Option<&'selection mut Option<usize>>,
@@ -27,11 +27,11 @@ pub struct Table<'selection, R, C: AsRef<[R]>, RowMaker: FnMut(Range<usize>) -> 
 /// Table column definition.
 struct Column<R> {
     name: String,
-    value_mapper: Box<dyn FnMut(&R) -> String>,
+    value_mapper: Box<dyn FnMut(&Option<R>) -> String>,
     max_width: Option<f32>,
 }
 
-impl<R, C: AsRef<[R]>, RowMaker: FnMut(Range<usize>) -> C> Table<'static, R, C, RowMaker> {
+impl<R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Table<'static, R, C, RowMaker> {
     pub fn new(id_source: impl Hash, num_rows: usize, row_maker: RowMaker) -> Self {
         Self {
             id_source: Id::new(id_source),
@@ -46,7 +46,7 @@ impl<R, C: AsRef<[R]>, RowMaker: FnMut(Range<usize>) -> C> Table<'static, R, C, 
     }
 }
 
-impl<'s, R, C: AsRef<[R]>, RowMaker: FnMut(Range<usize>) -> C> Table<'s, R, C, RowMaker> {
+impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Table<'s, R, C, RowMaker> {
     pub fn new_selectable(
         id_source: impl Hash,
         selected_row: &'s mut Option<usize>,
@@ -68,12 +68,13 @@ impl<'s, R, C: AsRef<[R]>, RowMaker: FnMut(Range<usize>) -> C> Table<'s, R, C, R
     pub fn column(
         mut self,
         name: impl Display,
-        value_mapper: impl FnMut(&R) -> String + 'static,
+        width: f32,
+        value_mapper: impl FnMut(&Option<R>) -> String + 'static,
     ) -> Self {
         self.columns.push(Column {
             name: name.to_string(),
             value_mapper: Box::new(value_mapper),
-            max_width: None,
+            max_width: Some(width),
         });
         self
     }
@@ -141,7 +142,7 @@ impl<'s, R, C: AsRef<[R]>, RowMaker: FnMut(Range<usize>) -> C> Table<'s, R, C, R
     }
 }
 
-impl<'s, R, C: AsRef<[R]>, RowMaker: FnMut(Range<usize>) -> C> Widget
+impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Widget
     for Table<'s, R, C, RowMaker>
 {
     fn ui(mut self, ui: &mut Ui) -> Response {

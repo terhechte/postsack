@@ -4,12 +4,12 @@ use cached::{Cached, SizedCache};
 use eframe::egui::Rect;
 use eyre::{bail, eyre, Result};
 
-use crate::cluster_engine::calc::Response;
+use crate::cluster_engine::link::Response;
 use crate::database::query::{Field, Filter, Query, ValueField};
 use crate::database::query_result::QueryRow;
 use crate::types::Config;
 
-use super::calc::Link;
+use super::link::Link;
 use super::partitions::{Partition, Partitions};
 
 // FIXME: Try with lifetimes. For this use case it might just work
@@ -32,6 +32,13 @@ impl Grouping {
         in_fields.iter().position(|p| p == &self.field)
     }
 }
+
+// FIXME:!
+// - improve the naming: Grouping, Partitions, Partition, Mails(-> Details), ...
+//   items_with_size, current_element_count
+// - fix "Action".
+// - find a way to merge action, query and response in a type-safe manner...
+// - rename cluster_engine to model?
 
 /// This signifies the action we're currently evaluating
 /// It is used for sending requests and receiving responses
@@ -58,12 +65,12 @@ pub struct Engine {
     /// This is a very simple cache from ranges to rows.
     /// It doesn't account for overlapping ranges.
     /// There's a lot of room for improvement here.
-    row_cache: SizedCache<Range<usize>, Vec<QueryRow>>,
+    row_cache: SizedCache<usize, QueryRow>,
 }
 
 impl Engine {
     pub fn new(config: &Config) -> Result<Self> {
-        let link = super::calc::run(&config)?;
+        let link = super::link::run(&config)?;
         let engine = Engine {
             link,
             search_stack: Vec::new(),
@@ -233,13 +240,21 @@ impl Engine {
         };
 
         match response {
-            Response::Grouped(_, Action::Select, p) => self.partitions.push(p),
+            Response::Grouped(_, Action::Select, p) => {
+                self.partitions.push(p);
+                // Remove any rows that were cached for this partition
+                self.row_cache.cache_clear();
+            }
             Response::Grouped(_, Action::Recalculate, p) => {
                 let len = self.partitions.len();
                 self.partitions[len - 1] = p;
+                // Remove any rows that were cached for this partition
+                self.row_cache.cache_clear();
             }
             Response::Normal(Query::Normal { range, .. }, Action::Mails, r) => {
-                self.row_cache.cache_set(range.clone(), r.clone());
+                for (index, row) in range.zip(r) {
+                    self.row_cache.cache_set(index, row.clone());
+                }
             }
             _ => bail!("Invalid Query / Response combination"),
         }
@@ -279,8 +294,22 @@ impl Engine {
 
     /// Query the contents for the current filter settings
     /// This is a blocking call to simplify things a great deal
-    pub fn current_contents(&mut self, range: &Range<usize>) -> Result<Option<&Vec<QueryRow>>> {
-        Ok(self.row_cache.cache_get(range))
+    /// - returns the data, and an indicator that data is missing so that we can load more data
+    pub fn current_contents(
+        &mut self,
+        range: &Range<usize>,
+    ) -> Result<(Vec<Option<QueryRow>>, bool)> {
+        // build an array with either empty values or values from our cache.
+        let mut rows = Vec::new();
+        let mut data_missing = false;
+        for index in range.clone() {
+            let entry = self.row_cache.cache_get(&index).map(|e| e.clone());
+            if entry.is_none() && !data_missing {
+                data_missing = true;
+            }
+            rows.push(entry);
+        }
+        Ok((rows, data_missing))
     }
 
     pub fn is_busy(&self) -> bool {

@@ -25,27 +25,41 @@ impl<'a> Widget for MailPanel<'a> {
                     "mail_list",
                     &mut selected_row,
                     self.engine.current_element_count(),
-                    |range| match self.engine.current_contents(&range) {
-                        Ok(Some(n)) => n.clone(),
-                        Ok(None) => {
+                    |range| {
+                        let (rows, load_more) = match self.engine.current_contents(&range) {
+                            Ok((n, load_more)) => (n, load_more),
+                            Err(e) => {
+                                *self.error = Some(e);
+                                (empty_vec.clone(), false)
+                            }
+                        };
+                        if load_more {
                             *self.error = self.engine.request_contents(&range).err();
-                            empty_vec.clone()
                         }
-                        Err(e) => {
-                            *self.error = Some(e);
-                            empty_vec.clone()
-                        }
+                        rows
                     },
                 )
-                .column("Sender", |sample| {
+                .column("Sender", 130.0, |sample| {
+                    let sample = match sample {
+                        Some(n) => n,
+                        None => return "".to_owned(),
+                    };
                     format!(
                         "{}@{}",
                         sample[&Field::SenderLocalPart].value().as_str().unwrap(),
                         sample[&Field::SenderDomain].value().as_str().unwrap()
                     )
                 })
-                .column("Subject", |sample| {
-                    sample[&Field::Subject].value().to_string()
+                .column("Subject", 400.0, |sample| {
+                    let sample = match sample {
+                        Some(n) => n,
+                        None => return "".to_owned(),
+                    };
+                    sample[&Field::Subject]
+                        .value()
+                        .as_str()
+                        .unwrap()
+                        .to_string()
                 }),
             )
         })

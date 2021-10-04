@@ -58,9 +58,11 @@ impl epi::App for GmailDBApp {
             egui::CentralPanel::default().show(ctx, |ui| ui.add(widgets::ErrorBox(&error)));
         } else {
             if *show_emails {
-                egui::SidePanel::right("my_left_panel").show(ctx, |ui| {
-                    ui.add(super::mail_panel::MailPanel::new(engine, error));
-                });
+                egui::SidePanel::right("my_left_panel")
+                    .default_width(500.0)
+                    .show(ctx, |ui| {
+                        ui.add(super::mail_panel::MailPanel::new(engine, error));
+                    });
             }
 
             egui::TopBottomPanel::top("my_panel").show(ctx, |ui| {
