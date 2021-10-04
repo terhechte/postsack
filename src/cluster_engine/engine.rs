@@ -1,9 +1,12 @@
-use std::ops::RangeInclusive;
+use std::ops::{Range, RangeInclusive};
 
+use cached::{Cached, SizedCache};
 use eframe::egui::Rect;
-use eyre::{eyre, Result};
+use eyre::{bail, eyre, Result};
 
+use crate::cluster_engine::calc::Response;
 use crate::database::query::{Field, Filter, Query, ValueField};
+use crate::database::query_result::QueryRow;
 use crate::types::Config;
 
 use super::calc::Link;
@@ -34,9 +37,16 @@ impl Grouping {
 /// It is used for sending requests and receiving responses
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Action {
+    /// Recalculate the current partition based on a changed grouping
     Recalculate,
+    /// Select a new partition
     Select,
-    Wait,
+    /// Load the mails for the current partition
+    Mails,
+    /// Waiting for the Partition query to finish
+    WaitPartition,
+    /// Waiting for the query to finish
+    WaitMails,
 }
 
 pub struct Engine {
@@ -45,6 +55,10 @@ pub struct Engine {
     link: Link<Action>,
     partitions: Vec<Partitions>,
     action: Option<Action>,
+    /// This is a very simple cache from ranges to rows.
+    /// It doesn't account for overlapping ranges.
+    /// There's a lot of room for improvement here.
+    row_cache: SizedCache<Range<usize>, Vec<QueryRow>>,
 }
 
 impl Engine {
@@ -56,6 +70,7 @@ impl Engine {
             group_by_stack: vec![default_group_by_stack(0)],
             partitions: Vec::new(),
             action: None,
+            row_cache: SizedCache::with_size(10000),
         };
         Ok(engine)
     }
@@ -70,6 +85,15 @@ impl Engine {
         let partition = self.partitions.last_mut()?;
         partition.update_layout(rect);
         Some(partition.items())
+    }
+
+    /// The total amount of elements in all the partitions
+    pub fn current_element_count(&self) -> usize {
+        let partitions = match self.partitions.last() {
+            Some(n) => n,
+            None => return 0,
+        };
+        partitions.element_count()
     }
 
     /// Retrieve the min and max amount of items. The range that should be displayed.
@@ -128,6 +152,8 @@ impl Engine {
             .get_mut(grouping.index)
             .map(|e| *e = field.clone());
         self.action = Some(Action::Recalculate);
+        // Remove any rows that were cached for this partition
+        self.row_cache.cache_clear();
         self.update()
     }
 
@@ -178,6 +204,9 @@ impl Engine {
 
         // Remove the selection in the last partition
         self.partitions.last_mut().map(|e| e.selected = None);
+
+        // Remove any rows that were cached for this partition
+        self.row_cache.cache_clear();
     }
 
     // Send the last action over the wire to be calculated
@@ -188,30 +217,34 @@ impl Engine {
         };
         let request = self.make_group_query().ok_or(eyre!("Invalid State."))?;
         self.link.input_sender.send((request, action))?;
-        self.action = Some(Action::Wait);
+        self.action = Some(Action::WaitPartition);
         Ok(())
     }
 
     /// Fetch the channels to see if there're any updates
     pub fn process(&mut self) -> Result<()> {
-        match self.link.output_receiver.try_recv() {
+        let response = match self.link.output_receiver.try_recv() {
             // We received something
-            Ok(Ok((p, action))) => {
-                match action {
-                    Action::Select => self.partitions.push(p),
-                    Action::Recalculate => {
-                        let len = self.partitions.len();
-                        self.partitions[len - 1] = p;
-                    }
-                    Action::Wait => panic!("Should never send a wait action into the other thread"),
-                }
-                self.action = None;
-            }
+            Ok(Ok(response)) => response,
             // We received nothing
-            Err(_) => (),
+            Err(_) => return Ok(()),
             // There was an error, we forward it
             Ok(Err(e)) => return Err(e),
         };
+
+        match response {
+            Response::Grouped(_, Action::Select, p) => self.partitions.push(p),
+            Response::Grouped(_, Action::Recalculate, p) => {
+                let len = self.partitions.len();
+                self.partitions[len - 1] = p;
+            }
+            Response::Normal(Query::Normal { range, .. }, Action::Mails, r) => {
+                self.row_cache.cache_set(range.clone(), r.clone());
+            }
+            _ => bail!("Invalid Query / Response combination"),
+        }
+        self.action = None;
+
         Ok(())
     }
 
@@ -233,16 +266,36 @@ impl Engine {
             .collect()
     }
 
+    pub fn request_contents(&mut self, range: &Range<usize>) -> Result<()> {
+        let request = self
+            .make_normal_query(range.clone())
+            .ok_or(eyre!("Invalid State."))?;
+        self.link
+            .input_sender
+            .send((request.clone(), Action::Mails))?;
+        self.action = Some(Action::WaitMails);
+        Ok(())
+    }
+
     /// Query the contents for the current filter settings
     /// This is a blocking call to simplify things a great deal
-    pub fn current_contents(&mut self, range: std::ops::Range<usize>) -> Result<Vec<ValueField>> {
-        todo!()
+    pub fn current_contents(&mut self, range: &Range<usize>) -> Result<Option<&Vec<QueryRow>>> {
+        Ok(self.row_cache.cache_get(range))
+    }
+
+    pub fn is_busy(&self) -> bool {
+        self.is_partitions_busy() || self.is_mail_busy()
     }
 
     /// When we don't have partitions loaded yet, or
     /// when we're currently querying / loading new partitions
-    pub fn is_busy(&self) -> bool {
-        self.partitions.is_empty() || self.action.is_some()
+    pub fn is_partitions_busy(&self) -> bool {
+        self.partitions.is_empty() || self.action == Some(Action::WaitPartition)
+    }
+
+    /// If we're loading mails
+    pub fn is_mail_busy(&self) -> bool {
+        self.action == Some(Action::WaitMails)
     }
 
     fn make_group_query(&self) -> Option<Query> {
@@ -253,6 +306,18 @@ impl Engine {
         Some(Query::Grouped {
             filters,
             group_by: self.group_by_stack.last()?.clone(),
+        })
+    }
+
+    fn make_normal_query(&self, range: Range<usize>) -> Option<Query> {
+        let mut filters = Vec::new();
+        for entry in &self.search_stack {
+            filters.push(Filter::Like(entry.clone()));
+        }
+        Some(Query::Normal {
+            filters,
+            fields: vec![Field::SenderDomain, Field::SenderLocalPart, Field::Subject],
+            range,
         })
     }
 }

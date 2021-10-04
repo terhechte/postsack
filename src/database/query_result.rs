@@ -1,4 +1,7 @@
-use super::query::ValueField;
+use super::query::{Field, Value, ValueField};
+use std::collections::HashMap;
+
+pub type QueryRow = HashMap<Field, ValueField>;
 
 #[derive(Debug)]
 pub enum QueryResult {
@@ -7,7 +10,7 @@ pub enum QueryResult {
         count: usize,
         /// All the itmes that we grouped by including their values.
         /// So that we can use each of them to limit the next query.
-        values: Vec<ValueField>,
+        value: ValueField,
     },
-    Normal(Vec<ValueField>),
+    Normal(QueryRow),
 }

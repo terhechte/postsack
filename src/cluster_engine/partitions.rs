@@ -4,7 +4,10 @@ use eframe::egui::Rect as EguiRect;
 use eyre::{Report, Result};
 use treemap::{Mappable, Rect, TreemapLayout};
 
-use crate::database::{query::ValueField, query_result::QueryResult};
+use crate::database::{
+    query::{Field, ValueField},
+    query_result::QueryResult,
+};
 
 #[derive(Debug, Clone)]
 pub struct Partition {
@@ -63,6 +66,12 @@ impl Partitions {
         layout.layout_items(&mut self.items(), bounds);
     }
 
+    /// The total amount of items in all the partitions.
+    /// E.g. the sum of the count of the partitions
+    pub fn element_count(&self) -> usize {
+        self.items.iter().map(|e| e.count).sum::<usize>()
+    }
+
     /// The items in this partition, with range applied
     pub fn items(&mut self) -> &mut [Partition] {
         match &self.range {
@@ -93,15 +102,12 @@ impl Mappable for Partition {
 impl<'a> TryFrom<&'a QueryResult> for Partition {
     type Error = Report;
     fn try_from(result: &'a QueryResult) -> Result<Self> {
-        let (count, values) = match result {
-            QueryResult::Grouped { count, values } => (count, values),
+        let (count, field) = match result {
+            QueryResult::Grouped { count, value } => (count, value),
             _ => return Err(eyre::eyre!("Invalid result type, expected `Grouped`")),
         };
         // so far we can only support one group by at a time.
         // at least in here. The queries support it
-        let field = values
-            .first()
-            .ok_or(eyre::eyre!("No group by fields available"))?;
 
         Ok(Partition {
             field: field.clone(),

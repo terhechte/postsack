@@ -26,6 +26,7 @@ treemap = "0.3.2"
 num-format = "0.4.0"
 strum = "0.21"
 strum_macros = "0.21"
+cached = { version = "0.25.0", features = [] }
 
 [features]
 default = ["gui"]

@@ -41,7 +41,10 @@ impl epi::App for GmailDBApp {
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        self.error = self.engine.process().err();
+        // Avoid any processing if there is an unhandled error.
+        if self.error.is_none() {
+            self.error = self.engine.process().err();
+        }
 
         let Self {
             engine,
@@ -51,23 +54,21 @@ impl epi::App for GmailDBApp {
         } = self;
 
         if let Some(error) = error {
+            dbg!(&error);
             egui::CentralPanel::default().show(ctx, |ui| ui.add(widgets::ErrorBox(&error)));
         } else {
             if *show_emails {
                 egui::SidePanel::right("my_left_panel").show(ctx, |ui| {
-                    ui.heading("GMail DB laskjf aslkfjlkajsf");
-                    ui.horizontal(|ui| {
-                        ui.label("Search");
-                    });
+                    ui.add(super::mail_panel::MailPanel::new(engine, error));
                 });
             }
 
             egui::TopBottomPanel::top("my_panel").show(ctx, |ui| {
-                ui.add(super::widgets::TopBar::new(engine, error));
+                ui.add(super::top_bar::TopBar::new(engine, error));
             });
 
             egui::CentralPanel::default().show(ctx, |ui| {
-                if engine.is_busy() {
+                if engine.is_partitions_busy() {
                     ui.centered_and_justified(|ui| {
                         ui.add(Spinner::new(egui::vec2(50.0, 50.0)));
                     });

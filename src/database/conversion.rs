@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::str::FromStr;
 
@@ -44,7 +45,7 @@ impl<'a> RowConversion<'a> for QueryResult {
 
         Ok(QueryResult::Grouped {
             count: amount,
-            values,
+            value: values[field].clone(),
         })
     }
     fn from_row<'stmt>(fields: &'a [Field], row: &Row<'stmt>) -> Result<Self> {
@@ -53,27 +54,31 @@ impl<'a> RowConversion<'a> for QueryResult {
     }
 }
 
-fn values_from_fields<'stmt>(fields: &[Field], row: &Row<'stmt>) -> Result<Vec<ValueField>> {
-    let mut values = vec![];
+fn values_from_fields<'stmt>(
+    fields: &[Field],
+    row: &Row<'stmt>,
+) -> Result<HashMap<Field, ValueField>> {
+    let mut values: HashMap<Field, ValueField> = HashMap::default();
     for field in fields {
         use Field::*;
         // Use type safety when unpacking
         match field {
-            SenderDomain | SenderLocalPart | SenderName | ToGroup | ToName | ToAddress => {
+            SenderDomain | SenderLocalPart | SenderName | ToGroup | ToName | ToAddress
+            | Subject => {
                 let string: String = row.get::<&str, String>(field.as_str())?.into();
-                values.push(ValueField::string(&field, &string));
+                values.insert(*field, ValueField::string(&field, &string));
             }
             Year | Month | Day => {
-                values.push(ValueField::usize(
-                    &field,
-                    row.get::<&str, usize>(field.as_str())?.into(),
-                ));
+                values.insert(
+                    *field,
+                    ValueField::usize(&field, row.get::<&str, usize>(field.as_str())?.into()),
+                );
             }
             IsReply | IsSend => {
-                values.push(ValueField::bool(
-                    &field,
-                    row.get::<&str, bool>(field.as_str())?.into(),
-                ));
+                values.insert(
+                    *field,
+                    ValueField::bool(&field, row.get::<&str, bool>(field.as_str())?.into()),
+                );
             }
         }
     }

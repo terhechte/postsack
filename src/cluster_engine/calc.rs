@@ -12,8 +12,8 @@ use crossbeam_channel::{unbounded, Receiver, Sender};
 use eyre::{Report, Result};
 
 use crate::database::{
-    query::{Field, Filter, Query},
-    query_result::QueryResult,
+    query::{Field, Filter, Query, ValueField},
+    query_result::{QueryResult, QueryRow},
     Database,
 };
 use crate::types::Config;
@@ -27,8 +27,14 @@ use super::partitions::{Partition, Partitions};
 // - give query a range
 // - use strum
 
+#[derive(Debug)]
+pub enum Response<Context: Send + 'static> {
+    Grouped(Query, Context, Partitions),
+    Normal(Query, Context, Vec<QueryRow>),
+}
+
 pub type InputSender<Context> = Sender<(Query, Context)>;
-pub type OutputReciever<Context> = Receiver<Result<(Partitions, Context)>>;
+pub type OutputReciever<Context> = Receiver<Result<Response<Context>>>;
 pub type Handle = JoinHandle<Result<(), Report>>;
 
 pub struct Link<Context: Send + 'static> {
@@ -52,17 +58,26 @@ pub fn run<Context: Send + Sync + 'static>(config: &Config) -> Result<Link<Conte
 fn inner_loop<Context: Send + Sync + 'static>(
     database: Database,
     input_receiver: Receiver<(Query, Context)>,
-    output_sender: Sender<Result<(Partitions, Context)>>,
+    output_sender: Sender<Result<Response<Context>>>,
 ) -> Result<()> {
     loop {
         let (query, context) = input_receiver.recv()?;
         let result = database.query(&query)?;
-        let partitions = calculate_partitions(&result)?;
-        output_sender.send(Ok((Partitions::new(partitions), context)))?
+        let response = match query {
+            Query::Grouped { .. } => {
+                let partitions = calculate_partitions(&result)?;
+                Response::Grouped(query, context, Partitions::new(partitions))
+            }
+            Query::Normal { .. } => {
+                let converted = calculate_rows(&result)?;
+                Response::Normal(query, context, converted)
+            }
+        };
+        output_sender.send(Ok(response))?;
     }
 }
 
-fn calculate_partitions<'a>(result: &[QueryResult]) -> Result<Vec<Partition>> {
+fn calculate_partitions(result: &[QueryResult]) -> Result<Vec<Partition>> {
     let mut partitions = Vec::new();
     for r in result.iter() {
         let partition = r.try_into()?;
@@ -70,4 +85,19 @@ fn calculate_partitions<'a>(result: &[QueryResult]) -> Result<Vec<Partition>> {
     }
 
     Ok(partitions)
+}
+
+fn calculate_rows(result: &[QueryResult]) -> Result<Vec<QueryRow>> {
+    Ok(result
+        .iter()
+        .map(|r| {
+            let values = match r {
+                QueryResult::Normal(values) => values,
+                _ => {
+                    panic!("Invalid result type, expected `Normal`")
+                }
+            };
+            values.clone()
+        })
+        .collect())
 }

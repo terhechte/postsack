@@ -1,10 +1,14 @@
 use rsql_builder;
-use serde_json::{self, Value};
+use serde_json;
+pub use serde_json::Value;
 use strum::{self, IntoEnumIterator};
 use strum_macros::{EnumIter, IntoStaticStr};
 
+use std::ops::Range;
+
 pub const AMOUNT_FIELD_NAME: &str = "amount";
 
+#[derive(Clone, Debug)]
 pub enum Filter {
     Like(ValueField),
     NotLike(ValueField),
@@ -25,6 +29,7 @@ pub enum Field {
     ToAddress,
     IsReply,
     IsSend,
+    Subject,
 }
 
 impl Field {
@@ -76,6 +81,7 @@ impl ValueField {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum Query {
     Grouped {
         filters: Vec<Filter>,
@@ -84,6 +90,7 @@ pub enum Query {
     Normal {
         fields: Vec<Field>,
         filters: Vec<Filter>,
+        range: Range<usize>,
     },
 }
 
@@ -119,11 +126,11 @@ impl Query {
                 ),
                 format!("GROUP BY {}", group_by.as_str()),
             ),
-            Query::Normal { fields, .. } => {
+            Query::Normal { fields, range, .. } => {
                 let fields: Vec<&str> = fields.iter().map(|e| e.into()).collect();
                 (
                     format!("SELECT {} FROM emails", fields.join(", ")),
-                    "".to_owned(),
+                    format!("LIMIT {}, {}", range.start, range.end - range.start),
                 )
             }
         };

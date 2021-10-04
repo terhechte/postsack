@@ -1,9 +1,9 @@
 mod error_box;
 mod rectangles;
 mod spinner;
-mod top_bar;
+mod table;
 
 pub use error_box::ErrorBox;
 pub use rectangles::Rectangles;
 pub use spinner::Spinner;
-pub use top_bar::TopBar;
+pub use table::Table;
