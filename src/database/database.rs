@@ -9,7 +9,7 @@ use std::{
     thread::JoinHandle,
 };
 
-use super::{query_result::QueryResult, sql::*, DBMessage};
+use super::{query::Query, query_result::QueryResult, sql::*, DBMessage};
 use crate::{database::RowConversion, types::EmailEntry};
 
 #[derive(Debug)]
@@ -58,8 +58,16 @@ impl Database {
 
         let mut rows = stmt.query(p)?;
         while let Some(row) = rows.next()? {
-            let result = QueryResult::grouped_from_row(&query.group_by, &row)?;
-            query_results.push(result);
+            match query {
+                Query::Grouped { group_by, .. } => {
+                    let result = QueryResult::grouped_from_row(&group_by, &row)?;
+                    query_results.push(result);
+                }
+                Query::Normal { fields, .. } => {
+                    let result = QueryResult::from_row(&fields, &row)?;
+                    query_results.push(result);
+                }
+            }
         }
         Ok(query_results)
     }

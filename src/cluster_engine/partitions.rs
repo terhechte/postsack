@@ -92,17 +92,20 @@ impl Mappable for Partition {
 
 impl<'a> TryFrom<&'a QueryResult> for Partition {
     type Error = Report;
-    fn try_from(r: &'a QueryResult) -> Result<Self> {
+    fn try_from(result: &'a QueryResult) -> Result<Self> {
+        let (count, values) = match result {
+            QueryResult::Grouped { count, values } => (count, values),
+            _ => return Err(eyre::eyre!("Invalid result type, expected `Grouped`")),
+        };
         // so far we can only support one group by at a time.
         // at least in here. The queries support it
-        let field = r
-            .values
+        let field = values
             .first()
             .ok_or(eyre::eyre!("No group by fields available"))?;
 
         Ok(Partition {
             field: field.clone(),
-            count: r.count,
+            count: *count,
             rect: Rect::new(),
         })
     }

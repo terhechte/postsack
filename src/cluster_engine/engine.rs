@@ -1,12 +1,12 @@
 use std::ops::RangeInclusive;
 
 use eframe::egui::Rect;
-use eyre::Result;
+use eyre::{eyre, Result};
 
 use crate::database::query::{Filter, GroupByField, ValueField};
 use crate::types::Config;
 
-use super::calc::{Action, Link, Request};
+use super::calc::{Link, Request};
 use super::partitions::{Partition, Partitions};
 
 // FIXME: Use strum or one of the enum to string crates
@@ -48,10 +48,19 @@ impl Grouping {
     }
 }
 
+/// This signifies the action we're currently evaluating
+/// It is used for sending requests and receiving responses
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Action {
+    Recalculate,
+    Select,
+    Wait,
+}
+
 pub struct Engine {
     search_stack: Vec<ValueField>,
     group_by_stack: Vec<GroupByField>,
-    link: Link,
+    link: Link<Action>,
     partitions: Vec<Partitions>,
     action: Option<Action>,
 }
@@ -195,7 +204,8 @@ impl Engine {
             Some(n) => n,
             None => return Ok(()),
         };
-        self.link.input_sender.send((self.make_request(), action))?;
+        let request = self.make_group_request().ok_or(eyre!("Invalid State."))?;
+        self.link.input_sender.send((request, action))?;
         self.action = Some(Action::Wait);
         Ok(())
     }
@@ -242,21 +252,27 @@ impl Engine {
             .collect()
     }
 
+    /// Query the contents for the current filter settings
+    /// This is a blocking call to simplify things a great deal
+    pub fn current_contents(&mut self, range: std::ops::Range<usize>) -> Result<Vec<ValueField>> {
+        todo!()
+    }
+
     /// When we don't have partitions loaded yet, or
     /// when we're currently querying / loading new partitions
     pub fn is_busy(&self) -> bool {
         self.partitions.is_empty() || self.action.is_some()
     }
 
-    fn make_request(&self) -> Request {
+    fn make_group_request(&self) -> Option<Request> {
         let mut filters = Vec::new();
         for entry in &self.search_stack {
             filters.push(Filter::Like(entry.clone()));
         }
-        Request {
+        Some(Request::Grouped {
             filters,
-            fields: self.group_by_stack.clone(),
-        }
+            group_by: self.group_by_stack.last()?.clone(),
+        })
     }
 }
 

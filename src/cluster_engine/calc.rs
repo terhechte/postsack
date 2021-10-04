@@ -20,31 +20,28 @@ use crate::types::Config;
 
 use super::partitions::{Partition, Partitions};
 
-/// This signifies the action we're currently evaluating
-/// It is used for sending requests and receiving responses
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Action {
-    Recalculate,
-    Select,
-    Wait,
+pub enum Request {
+    Grouped {
+        filters: Vec<Filter>,
+        group_by: GroupByField,
+    },
+    Normal {
+        filters: Vec<Filter>,
+        fields: Vec<GroupByField>,
+    },
 }
 
-pub struct Request {
-    pub filters: Vec<Filter>,
-    pub fields: Vec<GroupByField>,
-}
-
-pub type InputSender = Sender<(Request, Action)>;
-pub type OutputReciever = Receiver<Result<(Partitions, Action)>>;
+pub type InputSender<Context> = Sender<(Request, Context)>;
+pub type OutputReciever<Context> = Receiver<Result<(Partitions, Context)>>;
 pub type Handle = JoinHandle<Result<(), Report>>;
 
-pub struct Link {
-    pub input_sender: InputSender,
-    pub output_receiver: OutputReciever,
+pub struct Link<Context: Send + 'static> {
+    pub input_sender: InputSender<Context>,
+    pub output_receiver: OutputReciever<Context>,
     pub handle: Handle,
 }
 
-pub fn run(config: &Config) -> Result<Link> {
+pub fn run<Context: Send + Sync + 'static>(config: &Config) -> Result<Link<Context>> {
     let database = Database::new(&config.database_path)?;
     let (input_sender, input_receiver) = unbounded();
     let (output_sender, output_receiver) = unbounded();
@@ -56,26 +53,17 @@ pub fn run(config: &Config) -> Result<Link> {
     })
 }
 
-fn inner_loop(
+fn inner_loop<Context: Send + Sync + 'static>(
     database: Database,
-    input_receiver: Receiver<(Request, Action)>,
-    output_sender: Sender<Result<(Partitions, Action)>>,
+    input_receiver: Receiver<(Request, Context)>,
+    output_sender: Sender<Result<(Partitions, Context)>>,
 ) -> Result<()> {
     loop {
-        let (request, action) = input_receiver.recv()?;
-        let filters = request.filters;
-        let current_field = request
-            .fields
-            .last()
-            .ok_or(eyre::eyre!("No Group By Available"))?;
-        let group_by = vec![current_field.clone()];
-        let query = Query {
-            filters: &filters,
-            group_by: &group_by,
-        };
+        let (request, context) = input_receiver.recv()?;
+        let query: Query = (&request).into();
         let result = database.query(query)?;
         let partitions = calculate_partitions(&result)?;
-        output_sender.send(Ok((Partitions::new(partitions), action)))?
+        output_sender.send(Ok((Partitions::new(partitions), context)))?
     }
 }
 
@@ -87,4 +75,19 @@ fn calculate_partitions<'a>(result: &[QueryResult]) -> Result<Vec<Partition>> {
     }
 
     Ok(partitions)
+}
+
+impl<'a> From<&'a Request> for Query<'a> {
+    fn from(request: &'a Request) -> Self {
+        match request {
+            Request::Grouped { filters, group_by } => Query::Grouped {
+                filters: &filters,
+                group_by: &group_by,
+            },
+            Request::Normal { fields, filters } => Query::Normal {
+                fields: &fields,
+                filters: &filters,
+            },
+        }
+    }
 }

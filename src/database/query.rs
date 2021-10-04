@@ -1,6 +1,8 @@
 use rsql_builder;
 use serde_json;
 
+pub const AMOUNT_FIELD_NAME: &str = "amount";
+
 /// For In-Queries, we need a Vec of at least one, so we make a new type
 pub struct VecOfMinOne<T> {
     inner: Vec<T>,
@@ -263,16 +265,31 @@ impl ValueField {
     }
 }
 
-pub struct Query<'a> {
-    pub filters: &'a [Filter],
-    pub group_by: &'a [GroupByField],
+pub enum Query<'a> {
+    Grouped {
+        filters: &'a [Filter],
+        group_by: &'a GroupByField,
+    },
+    Normal {
+        fields: &'a [GroupByField],
+        filters: &'a [Filter],
+    },
+}
+
+impl<'a> Query<'a> {
+    fn filters(&self) -> &'a [Filter] {
+        match self {
+            &Query::Grouped { filters, .. } => filters,
+            &Query::Normal { filters, .. } => filters,
+        }
+    }
 }
 
 impl<'a> Query<'a> {
     pub fn to_sql(&self) -> (String, Vec<serde_json::Value>) {
         let mut conditions = {
             let mut whr = rsql_builder::B::new_where();
-            for filter in self.filters {
+            for filter in self.filters() {
                 match filter {
                     // Bool
                     Filter::Like(f) if f.is_bool() => whr.like(f.into(), f.as_bool()),
@@ -298,17 +315,22 @@ impl<'a> Query<'a> {
             whr
         };
 
-        let group_by_fields: Vec<&str> = self.group_by.iter().map(|e| e.as_str()).collect();
-        let group_by = format!("GROUP BY {}", &group_by_fields.join(", "));
-
-        // If we have a group by, we always include the count
-        let header = if self.group_by.is_empty() {
-            "SELECT * FROM emails".to_owned()
-        } else {
-            format!(
-                "SELECT count(path) as amount, {} FROM emails",
-                group_by_fields.join(", ")
-            )
+        let (header, group_by) = match self {
+            Query::Grouped { group_by, .. } => (
+                format!(
+                    "SELECT count(path) as {}, {} FROM emails",
+                    AMOUNT_FIELD_NAME,
+                    group_by.as_str()
+                ),
+                format!("GROUP BY {}", group_by.as_str()),
+            ),
+            Query::Normal { fields, .. } => {
+                let fields: Vec<&str> = fields.iter().map(|e| e.as_str()).collect();
+                (
+                    format!("SELECT {} FROM emails", fields.join(", ")),
+                    "".to_owned(),
+                )
+            }
         };
 
         let (sql, values) = rsql_builder::B::prepare(
@@ -328,13 +350,13 @@ mod tests {
     #[test]
     fn test_test() {
         let value = format!("bx");
-        let query = Query {
+        let query = Query::Grouped {
             filters: &[
                 Filter::Is(ValueField::ToName("bam".into())),
                 Filter::Like(ValueField::SenderName(value.into())),
                 Filter::Like(ValueField::Year(2323)),
             ],
-            group_by: &[GroupByField::Month],
+            group_by: &GroupByField::Month,
         };
         dbg!(&query.to_sql());
     }
