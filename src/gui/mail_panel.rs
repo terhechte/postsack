@@ -1,5 +1,5 @@
 use crate::cluster_engine::Engine;
-use crate::database::query::{Field, Value};
+use crate::database::query::Field;
 use eframe::egui::{self, Widget};
 use eyre::Report;
 

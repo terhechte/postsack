@@ -12,7 +12,7 @@ use crossbeam_channel::{unbounded, Receiver, Sender};
 use eyre::{Report, Result};
 
 use crate::database::{
-    query::{Field, Filter, Query, ValueField},
+    query::Query,
     query_result::{QueryResult, QueryRow},
     Database,
 };
@@ -24,6 +24,10 @@ use super::partitions::{Partition, Partitions};
 // - improve the Action situation. I don't need the *waits* I think
 // - instead of hard-coding subject/sender-domain, have a "Detail" trait
 // - consider a better logic for the cache (by row id and just fetch the smallest range that contains all missing numbers)
+
+pub trait Payload<O> {
+    fn map_response<T>(self, response: T) -> Self;
+}
 
 #[derive(Debug)]
 pub enum Response<Context: Send + 'static> {

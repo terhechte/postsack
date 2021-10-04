@@ -50,10 +50,11 @@ pub enum Action {
     Select,
     /// Load the mails for the current partition
     Mails,
-    /// Waiting for the Partition query to finish
-    WaitPartition,
-    /// Waiting for the query to finish
-    WaitMails,
+}
+
+enum LoadingState {
+    Loaded(QueryRow),
+    Loading,
 }
 
 pub struct Engine {
@@ -61,11 +62,10 @@ pub struct Engine {
     group_by_stack: Vec<Field>,
     link: Link<Action>,
     partitions: Vec<Partitions>,
-    action: Option<Action>,
     /// This is a very simple cache from ranges to rows.
     /// It doesn't account for overlapping ranges.
     /// There's a lot of room for improvement here.
-    row_cache: SizedCache<usize, QueryRow>,
+    row_cache: SizedCache<usize, LoadingState>,
 }
 
 impl Engine {
@@ -76,16 +76,13 @@ impl Engine {
             search_stack: Vec::new(),
             group_by_stack: vec![default_group_by_stack(0)],
             partitions: Vec::new(),
-            action: None,
             row_cache: SizedCache::with_size(10000),
         };
         Ok(engine)
     }
 
     pub fn start(&mut self) -> Result<()> {
-        // Make the initial query
-        self.action = Some(Action::Select);
-        self.update()
+        Ok(self.update((self.make_group_query()?, Action::Select))?)
     }
 
     pub fn items_with_size(&mut self, rect: Rect) -> Option<&[Partition]> {
@@ -158,10 +155,9 @@ impl Engine {
         self.group_by_stack
             .get_mut(grouping.index)
             .map(|e| *e = field.clone());
-        self.action = Some(Action::Recalculate);
         // Remove any rows that were cached for this partition
         self.row_cache.cache_clear();
-        self.update()
+        self.update((self.make_group_query()?, Action::Recalculate))
     }
 
     pub fn select_partition(&mut self, partition: Partition) -> Result<()> {
@@ -186,8 +182,7 @@ impl Engine {
         self.group_by_stack.push(next);
 
         // Block UI & Wait for updates
-        self.action = Some(Action::Select);
-        self.update()
+        self.update((self.make_group_query()?, Action::Select))
     }
 
     pub fn back(&mut self) {
@@ -217,15 +212,8 @@ impl Engine {
     }
 
     // Send the last action over the wire to be calculated
-    fn update(&mut self) -> Result<()> {
-        let action = match self.action {
-            Some(n) => n,
-            None => return Ok(()),
-        };
-        let request = self.make_group_query().ok_or(eyre!("Invalid State."))?;
-        self.link.input_sender.send((request, action))?;
-        self.action = Some(Action::WaitPartition);
-        Ok(())
+    fn update(&mut self, payload: (Query, Action)) -> Result<()> {
+        Ok(self.link.input_sender.send((payload.0, payload.1))?)
     }
 
     /// Fetch the channels to see if there're any updates
@@ -253,12 +241,12 @@ impl Engine {
             }
             Response::Normal(Query::Normal { range, .. }, Action::Mails, r) => {
                 for (index, row) in range.zip(r) {
-                    self.row_cache.cache_set(index, row.clone());
+                    let entry = LoadingState::Loaded(row.clone());
+                    self.row_cache.cache_set(index, entry);
                 }
             }
             _ => bail!("Invalid Query / Response combination"),
         }
-        self.action = None;
 
         Ok(())
     }
@@ -282,13 +270,16 @@ impl Engine {
     }
 
     pub fn request_contents(&mut self, range: &Range<usize>) -> Result<()> {
-        let request = self
-            .make_normal_query(range.clone())
-            .ok_or(eyre!("Invalid State."))?;
+        // Mark the rows as being loaded
+        for index in range.clone() {
+            if self.row_cache.cache_get(&index).is_none() {
+                self.row_cache.cache_set(index, LoadingState::Loading);
+            }
+        }
+        let request = self.make_normal_query(range.clone());
         self.link
             .input_sender
             .send((request.clone(), Action::Mails))?;
-        self.action = Some(Action::WaitMails);
         Ok(())
     }
 
@@ -303,10 +294,15 @@ impl Engine {
         let mut rows = Vec::new();
         let mut data_missing = false;
         for index in range.clone() {
-            let entry = self.row_cache.cache_get(&index).map(|e| e.clone());
-            if entry.is_none() && !data_missing {
-                data_missing = true;
-            }
+            let entry = self.row_cache.cache_get(&index);
+            let entry = match entry {
+                Some(LoadingState::Loaded(n)) => Some((*n).clone()),
+                Some(LoadingState::Loading) => None,
+                None => {
+                    data_missing = true;
+                    None
+                }
+            };
             rows.push(entry);
         }
         Ok((rows, data_missing))
@@ -319,35 +315,39 @@ impl Engine {
     /// When we don't have partitions loaded yet, or
     /// when we're currently querying / loading new partitions
     pub fn is_partitions_busy(&self) -> bool {
-        self.partitions.is_empty() || self.action == Some(Action::WaitPartition)
+        self.partitions.is_empty()
     }
 
     /// If we're loading mails
     pub fn is_mail_busy(&self) -> bool {
-        self.action == Some(Action::WaitMails)
+        !self.link.input_sender.is_empty()
     }
 
-    fn make_group_query(&self) -> Option<Query> {
+    fn make_group_query(&self) -> Result<Query> {
         let mut filters = Vec::new();
         for entry in &self.search_stack {
             filters.push(Filter::Like(entry.clone()));
         }
-        Some(Query::Grouped {
+        let last = self
+            .group_by_stack
+            .last()
+            .ok_or(eyre!("Invalid partition state"))?;
+        Ok(Query::Grouped {
             filters,
-            group_by: self.group_by_stack.last()?.clone(),
+            group_by: last.clone(),
         })
     }
 
-    fn make_normal_query(&self, range: Range<usize>) -> Option<Query> {
+    fn make_normal_query(&self, range: Range<usize>) -> Query {
         let mut filters = Vec::new();
         for entry in &self.search_stack {
             filters.push(Filter::Like(entry.clone()));
         }
-        Some(Query::Normal {
+        Query::Normal {
             filters,
             fields: vec![Field::SenderDomain, Field::SenderLocalPart, Field::Subject],
             range,
-        })
+        }
     }
 }
 

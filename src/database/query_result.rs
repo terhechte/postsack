@@ -1,4 +1,4 @@
-use super::query::{Field, Value, ValueField};
+use super::query::{Field, ValueField};
 use std::collections::HashMap;
 
 pub type QueryRow = HashMap<Field, ValueField>;

@@ -4,10 +4,7 @@ use eframe::egui::Rect as EguiRect;
 use eyre::{Report, Result};
 use treemap::{Mappable, Rect, TreemapLayout};
 
-use crate::database::{
-    query::{Field, ValueField},
-    query_result::QueryResult,
-};
+use crate::database::{query::ValueField, query_result::QueryResult};
 
 #[derive(Debug, Clone)]
 pub struct Partition {
