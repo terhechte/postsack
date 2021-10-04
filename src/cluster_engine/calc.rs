@@ -12,7 +12,7 @@ use crossbeam_channel::{unbounded, Receiver, Sender};
 use eyre::{Report, Result};
 
 use crate::database::{
-    query::{Filter, GroupByField, Query},
+    query::{Field, Filter, Query},
     query_result::QueryResult,
     Database,
 };
@@ -20,14 +20,21 @@ use crate::types::Config;
 
 use super::partitions::{Partition, Partitions};
 
+// FIXME:
+// - query and request are the same, just make the query the request.
+// - instead of Query<'a> move just Query into the thread and
+//   then in there move &'a Query around.
+// - give query a range
+// - use strum
+
 pub enum Request {
     Grouped {
         filters: Vec<Filter>,
-        group_by: GroupByField,
+        group_by: Field,
     },
     Normal {
         filters: Vec<Filter>,
-        fields: Vec<GroupByField>,
+        fields: Vec<Field>,
     },
 }
 

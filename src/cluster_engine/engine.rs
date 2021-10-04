@@ -3,34 +3,16 @@ use std::ops::RangeInclusive;
 use eframe::egui::Rect;
 use eyre::{eyre, Result};
 
-use crate::database::query::{Filter, GroupByField, ValueField};
+use crate::database::query::{Field, Filter, ValueField};
 use crate::types::Config;
 
 use super::calc::{Link, Request};
 use super::partitions::{Partition, Partitions};
 
-// FIXME: Use strum or one of the enum to string crates
-const DEFAULT_GROUP_BY_FIELDS: &[GroupByField] = {
-    use GroupByField::*;
-    &[
-        SenderDomain,
-        SenderLocalPart,
-        SenderName,
-        Year,
-        Month,
-        Day,
-        ToGroup,
-        ToName,
-        ToAddress,
-        IsReply,
-        IsSend,
-    ]
-};
-
 // FIXME: Try with lifetimes. For this use case it might just work
 pub struct Grouping {
     value: Option<ValueField>,
-    field: GroupByField,
+    field: Field,
     index: usize,
 }
 
@@ -43,7 +25,7 @@ impl Grouping {
         self.field.as_str()
     }
 
-    pub fn index(&self, in_fields: &[GroupByField]) -> Option<usize> {
+    pub fn index(&self, in_fields: &[Field]) -> Option<usize> {
         in_fields.iter().position(|p| p == &self.field)
     }
 }
@@ -59,7 +41,7 @@ pub enum Action {
 
 pub struct Engine {
     search_stack: Vec<ValueField>,
-    group_by_stack: Vec<GroupByField>,
+    group_by_stack: Vec<Field>,
     link: Link<Action>,
     partitions: Vec<Partitions>,
     action: Option<Action>,
@@ -141,7 +123,7 @@ impl Engine {
         result
     }
 
-    pub fn update_grouping(&mut self, grouping: &Grouping, field: &GroupByField) -> Result<()> {
+    pub fn update_grouping(&mut self, grouping: &Grouping, field: &Field) -> Result<()> {
         self.group_by_stack
             .get_mut(grouping.index)
             .map(|e| *e = field.clone());
@@ -236,14 +218,13 @@ impl Engine {
     /// Return all group fields which are still available based
     /// on the current stack.
     /// Also always include the current one, so we can choose between
-    pub fn available_group_by_fields(&self, grouping: &Grouping) -> Vec<GroupByField> {
-        DEFAULT_GROUP_BY_FIELDS
-            .iter()
+    pub fn available_group_by_fields(&self, grouping: &Grouping) -> Vec<Field> {
+        Field::all_cases()
             .filter_map(|f| {
-                if f == &grouping.field {
+                if f == grouping.field {
                     return Some(f.clone());
                 }
-                if self.group_by_stack.contains(f) {
+                if self.group_by_stack.contains(&f) {
                     None
                 } else {
                     Some(f.clone())
@@ -277,13 +258,13 @@ impl Engine {
 }
 
 /// Return the default group by fields index for each stack entry
-pub fn default_group_by_stack(index: usize) -> GroupByField {
+pub fn default_group_by_stack(index: usize) -> Field {
     match index {
-        0 => GroupByField::Year,
-        1 => GroupByField::SenderDomain,
-        2 => GroupByField::SenderLocalPart,
-        3 => GroupByField::Month,
-        4 => GroupByField::Day,
+        0 => Field::Year,
+        1 => Field::SenderDomain,
+        2 => Field::SenderLocalPart,
+        3 => Field::Month,
+        4 => Field::Day,
         _ => panic!(),
     }
 }

@@ -24,6 +24,8 @@ eframe = { version = "*", optional = true}
 rsql_builder = "0.1.2"
 treemap = "0.3.2"
 num-format = "0.4.0"
+strum = "0.21"
+strum_macros = "0.21"
 
 [features]
 default = ["gui"]

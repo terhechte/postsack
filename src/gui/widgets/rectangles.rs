@@ -1,14 +1,15 @@
 use std::collections::hash_map::DefaultHasher;
 
 use crate::cluster_engine::{Engine, Partition};
-use eframe::egui::{self, epaint::Galley, vec2, Pos2, Rect, Rgba, Stroke, TextStyle, Widget};
+use eframe::egui::{self, epaint::Galley, Pos2, Rgba, Stroke, TextStyle, Widget};
 use eyre::Report;
 use num_format::{Locale, ToFormattedString};
 
 fn partition_to_color(partition: &Partition) -> Rgba {
     let mut hasher = DefaultHasher::new();
     use std::hash::{Hash, Hasher};
-    partition.field.hash(&mut hasher);
+    let value = partition.field.value().to_string();
+    value.hash(&mut hasher);
     let value = hasher.finish();
     let [r1, r2, g1, g2, b1, b2, _, _] = value.to_be_bytes();
 

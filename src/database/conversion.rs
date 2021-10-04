@@ -6,7 +6,7 @@ use eyre::{bail, eyre, Result};
 use rusqlite::{self, types, Row};
 use serde_json::Value;
 
-use super::query::{GroupByField, ValueField, AMOUNT_FIELD_NAME};
+use super::query::{Field, ValueField, AMOUNT_FIELD_NAME};
 use super::query_result::QueryResult;
 use crate::types::{EmailEntry, EmailMeta};
 
@@ -33,12 +33,12 @@ pub fn json_to_value(input: &Value) -> Result<types::Value> {
 }
 
 pub trait RowConversion<'a>: Sized {
-    fn grouped_from_row<'stmt>(field: &'a GroupByField, row: &Row<'stmt>) -> Result<Self>;
-    fn from_row<'stmt>(fields: &'a [GroupByField], row: &Row<'stmt>) -> Result<Self>;
+    fn grouped_from_row<'stmt>(field: &'a Field, row: &Row<'stmt>) -> Result<Self>;
+    fn from_row<'stmt>(fields: &'a [Field], row: &Row<'stmt>) -> Result<Self>;
 }
 
 impl<'a> RowConversion<'a> for QueryResult {
-    fn grouped_from_row<'stmt>(field: &'a GroupByField, row: &Row<'stmt>) -> Result<Self> {
+    fn grouped_from_row<'stmt>(field: &'a Field, row: &Row<'stmt>) -> Result<Self> {
         let amount: usize = row.get(AMOUNT_FIELD_NAME)?;
         let values = values_from_fields(&[*field], &row)?;
 
@@ -47,55 +47,34 @@ impl<'a> RowConversion<'a> for QueryResult {
             values,
         })
     }
-    fn from_row<'stmt>(fields: &'a [GroupByField], row: &Row<'stmt>) -> Result<Self> {
+    fn from_row<'stmt>(fields: &'a [Field], row: &Row<'stmt>) -> Result<Self> {
         let values = values_from_fields(&fields, &row)?;
         Ok(QueryResult::Normal(values))
     }
 }
 
-fn values_from_fields<'stmt>(fields: &[GroupByField], row: &Row<'stmt>) -> Result<Vec<ValueField>> {
+fn values_from_fields<'stmt>(fields: &[Field], row: &Row<'stmt>) -> Result<Vec<ValueField>> {
     let mut values = vec![];
     for field in fields {
-        use GroupByField::*;
+        use Field::*;
+        // Use type safety when unpacking
         match field {
-            // Str fields
-            SenderDomain => values.push(ValueField::SenderDomain(
-                row.get::<&str, String>(field.as_str())?.into(),
-            )),
-            SenderLocalPart => values.push(ValueField::SenderLocalPart(
-                row.get::<&str, String>(field.as_str())?.into(),
-            )),
-            SenderName => values.push(ValueField::SenderName(
-                row.get::<&str, String>(field.as_str())?.into(),
-            )),
-            ToGroup => values.push(ValueField::ToGroup(
-                row.get::<&str, String>(field.as_str())?.into(),
-            )),
-            ToName => values.push(ValueField::ToName(
-                row.get::<&str, String>(field.as_str())?.into(),
-            )),
-            ToAddress => values.push(ValueField::ToAddress(
-                row.get::<&str, String>(field.as_str())?.into(),
-            )),
-
-            // usize field
-            Year => values.push(ValueField::Year(
-                row.get::<&str, usize>(field.as_str())?.into(),
-            )),
-            Month => values.push(ValueField::Day(
-                row.get::<&str, usize>(field.as_str())?.into(),
-            )),
-            Day => values.push(ValueField::Day(
-                row.get::<&str, usize>(field.as_str())?.into(),
-            )),
-
-            // bool field
-            IsReply => values.push(ValueField::IsReply(
-                row.get::<&str, bool>(field.as_str())?.into(),
-            )),
-            IsSend => values.push(ValueField::IsSend(
-                row.get::<&str, bool>(field.as_str())?.into(),
-            )),
+            SenderDomain | SenderLocalPart | SenderName | ToGroup | ToName | ToAddress => {
+                let string: String = row.get::<&str, String>(field.as_str())?.into();
+                values.push(ValueField::string(&field, &string));
+            }
+            Year | Month | Day => {
+                values.push(ValueField::usize(
+                    &field,
+                    row.get::<&str, usize>(field.as_str())?.into(),
+                ));
+            }
+            IsReply | IsSend => {
+                values.push(ValueField::bool(
+                    &field,
+                    row.get::<&str, bool>(field.as_str())?.into(),
+                ));
+            }
         }
     }
     Ok(values)
