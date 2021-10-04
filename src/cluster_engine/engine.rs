@@ -3,10 +3,10 @@ use std::ops::RangeInclusive;
 use eframe::egui::Rect;
 use eyre::{eyre, Result};
 
-use crate::database::query::{Field, Filter, ValueField};
+use crate::database::query::{Field, Filter, Query, ValueField};
 use crate::types::Config;
 
-use super::calc::{Link, Request};
+use super::calc::Link;
 use super::partitions::{Partition, Partitions};
 
 // FIXME: Try with lifetimes. For this use case it might just work
@@ -186,7 +186,7 @@ impl Engine {
             Some(n) => n,
             None => return Ok(()),
         };
-        let request = self.make_group_request().ok_or(eyre!("Invalid State."))?;
+        let request = self.make_group_query().ok_or(eyre!("Invalid State."))?;
         self.link.input_sender.send((request, action))?;
         self.action = Some(Action::Wait);
         Ok(())
@@ -245,12 +245,12 @@ impl Engine {
         self.partitions.is_empty() || self.action.is_some()
     }
 
-    fn make_group_request(&self) -> Option<Request> {
+    fn make_group_query(&self) -> Option<Query> {
         let mut filters = Vec::new();
         for entry in &self.search_stack {
             filters.push(Filter::Like(entry.clone()));
         }
-        Some(Request::Grouped {
+        Some(Query::Grouped {
             filters,
             group_by: self.group_by_stack.last()?.clone(),
         })

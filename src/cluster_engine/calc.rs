@@ -27,18 +27,7 @@ use super::partitions::{Partition, Partitions};
 // - give query a range
 // - use strum
 
-pub enum Request {
-    Grouped {
-        filters: Vec<Filter>,
-        group_by: Field,
-    },
-    Normal {
-        filters: Vec<Filter>,
-        fields: Vec<Field>,
-    },
-}
-
-pub type InputSender<Context> = Sender<(Request, Context)>;
+pub type InputSender<Context> = Sender<(Query, Context)>;
 pub type OutputReciever<Context> = Receiver<Result<(Partitions, Context)>>;
 pub type Handle = JoinHandle<Result<(), Report>>;
 
@@ -62,13 +51,12 @@ pub fn run<Context: Send + Sync + 'static>(config: &Config) -> Result<Link<Conte
 
 fn inner_loop<Context: Send + Sync + 'static>(
     database: Database,
-    input_receiver: Receiver<(Request, Context)>,
+    input_receiver: Receiver<(Query, Context)>,
     output_sender: Sender<Result<(Partitions, Context)>>,
 ) -> Result<()> {
     loop {
-        let (request, context) = input_receiver.recv()?;
-        let query: Query = (&request).into();
-        let result = database.query(query)?;
+        let (query, context) = input_receiver.recv()?;
+        let result = database.query(&query)?;
         let partitions = calculate_partitions(&result)?;
         output_sender.send(Ok((Partitions::new(partitions), context)))?
     }
@@ -82,19 +70,4 @@ fn calculate_partitions<'a>(result: &[QueryResult]) -> Result<Vec<Partition>> {
     }
 
     Ok(partitions)
-}
-
-impl<'a> From<&'a Request> for Query<'a> {
-    fn from(request: &'a Request) -> Self {
-        match request {
-            Request::Grouped { filters, group_by } => Query::Grouped {
-                filters: &filters,
-                group_by: &group_by,
-            },
-            Request::Normal { fields, filters } => Query::Normal {
-                fields: &fields,
-                filters: &filters,
-            },
-        }
-    }
 }

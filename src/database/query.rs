@@ -76,27 +76,27 @@ impl ValueField {
     }
 }
 
-pub enum Query<'a> {
+pub enum Query {
     Grouped {
-        filters: &'a [Filter],
-        group_by: &'a Field,
+        filters: Vec<Filter>,
+        group_by: Field,
     },
     Normal {
-        fields: &'a [Field],
-        filters: &'a [Filter],
+        fields: Vec<Field>,
+        filters: Vec<Filter>,
     },
 }
 
-impl<'a> Query<'a> {
-    fn filters(&self) -> &'a [Filter] {
+impl Query {
+    fn filters(&self) -> &[Filter] {
         match self {
-            &Query::Grouped { filters, .. } => filters,
-            &Query::Normal { filters, .. } => filters,
+            &Query::Grouped { ref filters, .. } => &filters,
+            &Query::Normal { ref filters, .. } => &filters,
         }
     }
 }
 
-impl<'a> Query<'a> {
+impl Query {
     pub fn to_sql(&self) -> (String, Vec<serde_json::Value>) {
         let mut conditions = {
             let mut whr = rsql_builder::B::new_where();
@@ -145,11 +145,11 @@ mod tests {
     #[test]
     fn test_test() {
         let query = Query::Grouped {
-            filters: &[
+            filters: vec![
                 Filter::Like(ValueField::string(&Field::SenderDomain, "gmail.com")),
                 Filter::Is(ValueField::usize(&Field::Year, 2021)),
             ],
-            group_by: &Field::Month,
+            group_by: Field::Month,
         };
         dbg!(&query.to_sql());
     }

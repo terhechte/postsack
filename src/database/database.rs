@@ -40,7 +40,7 @@ impl Database {
         })
     }
 
-    pub fn query<'a>(&self, query: super::query::Query<'a>) -> Result<Vec<QueryResult>> {
+    pub fn query(&self, query: &super::query::Query) -> Result<Vec<QueryResult>> {
         use rusqlite::params_from_iter;
         let c = match &self.connection {
             Some(n) => n,
