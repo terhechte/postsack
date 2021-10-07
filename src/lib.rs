@@ -1,10 +1,10 @@
 use tracing_subscriber::EnvFilter;
 
-mod cluster_engine;
 pub mod database;
 pub mod filesystem;
 #[cfg(feature = "gui")]
 pub mod gui;
+mod model;
 pub mod parse;
 pub mod types;
 

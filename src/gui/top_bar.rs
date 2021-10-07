@@ -1,4 +1,4 @@
-use crate::cluster_engine::{segmentation, Engine};
+use crate::model::{segmentations, Engine};
 use eframe::egui::{self, Widget};
 use eyre::Report;
 
@@ -16,10 +16,10 @@ impl<'a> TopBar<'a> {
 impl<'a> Widget for TopBar<'a> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.horizontal(|ui| {
-            let groupings = segmentation::aggregated_by(self.engine);
+            let groupings = segmentations::aggregated_by(self.engine);
             let has_back = groupings.len() > 1;
             for (id_index, group) in groupings.iter().enumerate() {
-                let alternatives = segmentation::aggregation_fields(self.engine, &group);
+                let alternatives = segmentations::aggregation_fields(self.engine, &group);
                 if let Some(value) = group.value() {
                     let label = egui::Label::new(format!("{}: {}", group.name(), value));
                     ui.add(label);
@@ -31,7 +31,7 @@ impl<'a> Widget for TopBar<'a> {
                         |i| alternatives[i].as_str().to_string(),
                     );
                     if p.changed() {
-                        *self.error = segmentation::set_aggregation(
+                        *self.error = segmentations::set_aggregation(
                             self.engine,
                             &group,
                             &alternatives[selected],

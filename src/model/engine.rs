@@ -4,15 +4,15 @@
 //! See also:
 //! - [`segmentations::`]
 //! - [`items::`]
-use cached::{Cached, SizedCache};
 use eyre::{bail, Result};
+use lru::LruCache;
 
-use crate::cluster_engine::link::Response;
 use crate::database::query::{Field, Query, ValueField};
+use crate::model::link::Response;
 use crate::types::Config;
 
 use super::link::Link;
-use super::segmentation;
+use super::segmentations;
 use super::types::{LoadingState, Segment, Segmentation};
 
 /// This signifies the action we're currently evaluating
@@ -38,7 +38,7 @@ pub struct Engine {
     /// This is a very simple cache from ranges to rows.
     /// It doesn't account for overlapping ranges.
     /// There's a lot of room for improvement here.
-    pub(super) item_cache: SizedCache<usize, LoadingState>,
+    pub(super) item_cache: LruCache<usize, LoadingState>,
 }
 
 impl Engine {
@@ -49,7 +49,7 @@ impl Engine {
             search_stack: Vec::new(),
             group_by_stack: vec![default_group_by_stack(0)],
             segmentations: Vec::new(),
-            item_cache: SizedCache::with_size(10000),
+            item_cache: LruCache::new(10000),
         };
         Ok(engine)
     }
@@ -60,7 +60,7 @@ impl Engine {
     pub fn start(&mut self) -> Result<()> {
         Ok(self
             .link
-            .request(&segmentation::make_query(&self)?, Action::PushSegmentation)?)
+            .request(&segmentations::make_query(&self)?, Action::PushSegmentation)?)
     }
 
     /// Return the current stack of `Segmentations`
@@ -97,7 +97,7 @@ impl Engine {
 
         // Block UI & Wait for updates
         self.link
-            .request(&segmentation::make_query(&self)?, Action::PushSegmentation)
+            .request(&segmentations::make_query(&self)?, Action::PushSegmentation)
     }
 
     /// Pop the current `Segmentation` from the stack.
@@ -125,7 +125,7 @@ impl Engine {
         self.segmentations.last_mut().map(|e| e.selected = None);
 
         // Remove any rows that were cached for this segmentation
-        self.item_cache.cache_clear();
+        self.item_cache.clear();
     }
 
     /// Call this continously to retrieve calculation results and apply them.
@@ -144,18 +144,18 @@ impl Engine {
             Response::Grouped(_, Action::PushSegmentation, p) => {
                 self.segmentations.push(p);
                 // Remove any rows that were cached for this segmentation
-                self.item_cache.cache_clear();
+                self.item_cache.clear();
             }
             Response::Grouped(_, Action::RecalculateSegmentation, p) => {
                 let len = self.segmentations.len();
                 self.segmentations[len - 1] = p;
                 // Remove any rows that were cached for this segmentation
-                self.item_cache.cache_clear();
+                self.item_cache.clear();
             }
             Response::Normal(Query::Normal { range, .. }, Action::LoadItems, r) => {
                 for (index, row) in range.zip(r) {
                     let entry = LoadingState::Loaded(row.clone());
-                    self.item_cache.cache_set(index, entry);
+                    self.item_cache.put(index, entry);
                 }
             }
             _ => bail!("Invalid Query / Response combination"),

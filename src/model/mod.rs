@@ -1,7 +1,7 @@
 mod engine;
 pub mod items;
 mod link;
-pub mod segmentation;
+pub mod segmentations;
 mod types;
 
 pub use engine::Engine;

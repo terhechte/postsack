@@ -4,7 +4,7 @@ use eyre::{Report, Result};
 use eframe::{egui, epi};
 
 use super::widgets::{self, Spinner};
-use crate::cluster_engine::{segmentation, Engine};
+use crate::model::{segmentations, Engine};
 use crate::types::Config;
 
 pub struct GmailDBApp {
@@ -77,12 +77,12 @@ impl epi::App for GmailDBApp {
                 } else {
                     ui.vertical(|ui| {
                         ui.horizontal(|ui| {
-                            if let Some((range, total)) = segmentation::segments_range(engine) {
+                            if let Some((range, total)) = segmentations::segments_range(engine) {
                                 ui.label("Limit");
                                 let mut selected = total;
                                 let response = ui.add(egui::Slider::new(&mut selected, range));
                                 if response.changed() {
-                                    segmentation::set_segments_range(engine, Some(0..=selected));
+                                    segmentations::set_segments_range(engine, Some(0..=selected));
                                 }
                             }
                             // This is a hack to get right-alignment.

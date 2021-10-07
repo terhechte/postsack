@@ -4,7 +4,6 @@
 //! These operations allow retreiving the individual items for all
 //! segments in the `Segmentation.
 
-use cached::Cached;
 use eyre::Result;
 
 use super::types::LoadingState;
@@ -38,7 +37,7 @@ pub fn items(engine: &mut Engine, range: Option<Range<usize>>) -> Result<Vec<Opt
 
     let mut missing_data = false;
     for index in range.clone() {
-        let entry = engine.item_cache.cache_get(&index);
+        let entry = engine.item_cache.get(&index);
         let entry = match entry {
             Some(LoadingState::Loaded(n)) => Some((*n).clone()),
             Some(LoadingState::Loading) => None,
@@ -47,7 +46,7 @@ pub fn items(engine: &mut Engine, range: Option<Range<usize>>) -> Result<Vec<Opt
                 missing_data = true;
 
                 // Mark the row as being loaded
-                engine.item_cache.cache_set(index, LoadingState::Loading);
+                engine.item_cache.put(index, LoadingState::Loading);
                 None
             }
         };

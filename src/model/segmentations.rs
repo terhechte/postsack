@@ -13,7 +13,6 @@
 //! to fit into a rectangle.
 //! - [`layouted_segments]
 
-use cached::Cached;
 use eyre::{eyre, Result};
 
 use super::engine::Action;
@@ -27,7 +26,10 @@ use std::ops::RangeInclusive;
 /// Filter the `Range` of segments of the current `Segmentation`
 ///
 /// Returns the `Range` and the total number of segments.
-/// Returns `Some` if a range has been set with [`set_segments_range`], `None` otherwise.
+/// If no custom range has been set with [`set_segments_range`], returns
+/// the full range of items, otherwise the custom range.
+///
+/// Returns `None` if no current `Segmentation` exists.
 ///
 /// # Arguments
 ///
@@ -36,11 +38,10 @@ use std::ops::RangeInclusive;
 pub fn segments_range(engine: &Engine) -> Option<(RangeInclusive<usize>, usize)> {
     let segmentation = engine.segmentations.last()?;
     let len = segmentation.len();
-    let r = match &segmentation.range {
+    Some(match &segmentation.range {
         Some(n) => (0..=len, *n.end()),
         None => (0..=len, len),
-    };
-    Some(r)
+    })
 }
 
 /// Set the `Range` of segments of the current `Segmentation`
@@ -140,7 +141,7 @@ pub fn set_aggregation(
         .get_mut(aggregation.index)
         .map(|e| *e = field.clone());
     // Remove any rows that were cached for this Segmentation
-    engine.item_cache.cache_clear();
+    engine.item_cache.clear();
     engine
         .link
         .request(&make_query(engine)?, Action::RecalculateSegmentation)

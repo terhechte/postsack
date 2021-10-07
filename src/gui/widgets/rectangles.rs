@@ -1,6 +1,6 @@
 use std::collections::hash_map::DefaultHasher;
 
-use crate::cluster_engine::{segmentation, Engine, Segment};
+use crate::model::{segmentations, Engine, Segment};
 use eframe::egui::{self, epaint::Galley, Pos2, Rgba, Stroke, TextStyle, Widget};
 use eyre::Report;
 use num_format::{Locale, ToFormattedString};
@@ -36,7 +36,7 @@ impl<'a> Widget for Rectangles<'a> {
         let size = ui.available_size();
         let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::hover());
 
-        let items = match segmentation::layouted_segments(self.engine, rect) {
+        let items = match segmentations::layouted_segments(self.engine, rect) {
             Some(n) => n.to_owned(),
             None => return response,
         };
