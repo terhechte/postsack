@@ -89,8 +89,10 @@ pub fn update_grouping(engine: &mut Engine, grouping: &Grouping, field: &Field) 
         .get_mut(grouping.index)
         .map(|e| *e = field.clone());
     // Remove any rows that were cached for this partition
-    engine.row_cache.cache_clear();
-    engine.update((make_group_query(engine)?, Action::Recalculate))
+    engine.item_cache.cache_clear();
+    engine
+        .link
+        .request(&make_partition_query(engine)?, Action::RecalculatePartition)
 }
 
 pub fn items_with_size(engine: &mut Engine, rect: eframe::egui::Rect) -> Option<&[Partition]> {
@@ -105,7 +107,7 @@ pub fn is_partitions_busy(engine: &Engine) -> bool {
     engine.partitions.is_empty()
 }
 
-pub(super) fn make_group_query(engine: &Engine) -> Result<Query> {
+pub(super) fn make_partition_query(engine: &Engine) -> Result<Query> {
     let mut filters = Vec::new();
     for entry in &engine.search_stack {
         filters.push(Filter::Like(entry.clone()));

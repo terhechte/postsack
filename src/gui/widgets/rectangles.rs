@@ -44,7 +44,7 @@ impl<'a> Widget for Rectangles<'a> {
         for item in items {
             let item_response = ui.put(item.layout_rect(), rectangle(&item));
             if item_response.clicked() {
-                *self.error = self.engine.select_partition(item.clone()).err();
+                *self.error = self.engine.push(item.clone()).err();
                 response.mark_changed();
             }
         }

@@ -15,20 +15,19 @@ use super::types::{LoadingState, Partition, Partitions};
 //   items_with_size, current_element_count
 // - rename cluster_engine to model?
 // - replace row_cache with the LRU crate I have open
+// - write method documentation
+// - write file header documentation
 
 /// This signifies the action we're currently evaluating
 /// It is used for sending requests and receiving responses
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(super) enum Action {
-    // FIXME: Rename to RecalculatePartition
     /// Recalculate the current partition based on a changed grouping
-    Recalculate,
+    RecalculatePartition,
     /// Select a new partition
-    // FIXME: Recalculate to PushPartition
-    Select,
+    PushPartition,
     /// Load the mails for the current partition
-    // FIXME: Rename to `Items`
-    Mails,
+    LoadItems,
 }
 
 pub struct Engine {
@@ -39,7 +38,7 @@ pub struct Engine {
     /// This is a very simple cache from ranges to rows.
     /// It doesn't account for overlapping ranges.
     /// There's a lot of room for improvement here.
-    pub(super) row_cache: SizedCache<usize, LoadingState>,
+    pub(super) item_cache: SizedCache<usize, LoadingState>,
 }
 
 impl Engine {
@@ -50,16 +49,19 @@ impl Engine {
             search_stack: Vec::new(),
             group_by_stack: vec![default_group_by_stack(0)],
             partitions: Vec::new(),
-            row_cache: SizedCache::with_size(10000),
+            item_cache: SizedCache::with_size(10000),
         };
         Ok(engine)
     }
 
     pub fn start(&mut self) -> Result<()> {
-        Ok(self.update((partitions::make_group_query(&self)?, Action::Select))?)
+        Ok(self.link.request(
+            &partitions::make_partition_query(&self)?,
+            Action::PushPartition,
+        )?)
     }
 
-    pub fn select_partition(&mut self, partition: Partition) -> Result<()> {
+    pub fn push(&mut self, partition: Partition) -> Result<()> {
         // Assign the partition
         let current = match self.partitions.last_mut() {
             Some(n) => n,
@@ -81,10 +83,13 @@ impl Engine {
         self.group_by_stack.push(next);
 
         // Block UI & Wait for updates
-        self.update((partitions::make_group_query(&self)?, Action::Select))
+        self.link.request(
+            &partitions::make_partition_query(&self)?,
+            Action::PushPartition,
+        )
     }
 
-    pub fn back(&mut self) {
+    pub fn pop(&mut self) {
         if self.group_by_stack.is_empty()
             || self.partitions.is_empty()
             || self.search_stack.is_empty()
@@ -107,12 +112,7 @@ impl Engine {
         self.partitions.last_mut().map(|e| e.selected = None);
 
         // Remove any rows that were cached for this partition
-        self.row_cache.cache_clear();
-    }
-
-    // Send the last action over the wire to be calculated
-    pub(super) fn update(&mut self, payload: (Query, Action)) -> Result<()> {
-        Ok(self.link.request(&payload.0, payload.1)?)
+        self.item_cache.cache_clear();
     }
 
     /// Fetch the channels to see if there're any updates
@@ -123,21 +123,21 @@ impl Engine {
         };
 
         match response {
-            Response::Grouped(_, Action::Select, p) => {
+            Response::Grouped(_, Action::PushPartition, p) => {
                 self.partitions.push(p);
                 // Remove any rows that were cached for this partition
-                self.row_cache.cache_clear();
+                self.item_cache.cache_clear();
             }
-            Response::Grouped(_, Action::Recalculate, p) => {
+            Response::Grouped(_, Action::RecalculatePartition, p) => {
                 let len = self.partitions.len();
                 self.partitions[len - 1] = p;
                 // Remove any rows that were cached for this partition
-                self.row_cache.cache_clear();
+                self.item_cache.cache_clear();
             }
-            Response::Normal(Query::Normal { range, .. }, Action::Mails, r) => {
+            Response::Normal(Query::Normal { range, .. }, Action::LoadItems, r) => {
                 for (index, row) in range.zip(r) {
                     let entry = LoadingState::Loaded(row.clone());
-                    self.row_cache.cache_set(index, entry);
+                    self.item_cache.cache_set(index, entry);
                 }
             }
             _ => bail!("Invalid Query / Response combination"),

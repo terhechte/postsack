@@ -22,7 +22,7 @@ pub fn current_contents(
 
     let mut missing_data = false;
     for index in range.clone() {
-        let entry = engine.row_cache.cache_get(&index);
+        let entry = engine.item_cache.cache_get(&index);
         let entry = match entry {
             Some(LoadingState::Loaded(n)) => Some((*n).clone()),
             Some(LoadingState::Loading) => None,
@@ -31,7 +31,7 @@ pub fn current_contents(
                 missing_data = true;
 
                 // Mark the row as being loaded
-                engine.row_cache.cache_set(index, LoadingState::Loading);
+                engine.item_cache.cache_set(index, LoadingState::Loading);
                 None
             }
         };
@@ -39,8 +39,8 @@ pub fn current_contents(
     }
     // Only if at least some data is missing do we perform the request
     if missing_data && !range.is_empty() {
-        let request = make_normal_query(&engine, range.clone());
-        engine.link.request(&request, Action::Mails)?;
+        let request = make_items_query(&engine, range.clone());
+        engine.link.request(&request, Action::LoadItems)?;
     }
     Ok(rows)
 }
@@ -59,7 +59,7 @@ pub fn is_mail_busy(engine: &Engine) -> bool {
     engine.link.is_processing()
 }
 
-fn make_normal_query(engine: &Engine, range: Range<usize>) -> Query {
+fn make_items_query(engine: &Engine, range: Range<usize>) -> Query {
     let mut filters = Vec::new();
     for entry in &engine.search_stack {
         filters.push(Filter::Like(entry.clone()));

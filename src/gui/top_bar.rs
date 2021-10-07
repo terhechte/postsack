@@ -43,7 +43,7 @@ impl<'a> Widget for TopBar<'a> {
 
             if has_back {
                 if ui.button("Back").clicked() {
-                    self.engine.back();
+                    self.engine.pop();
                 }
             }
         })
