@@ -25,10 +25,6 @@ use super::partitions::{Partition, Partitions};
 // - instead of hard-coding subject/sender-domain, have a "Detail" trait
 // - consider a better logic for the cache (by row id and just fetch the smallest range that contains all missing numbers)
 
-pub trait Payload<O> {
-    fn map_response<T>(self, response: T) -> Self;
-}
-
 #[derive(Debug)]
 pub enum Response<Context: Send + 'static> {
     Grouped(Query, Context, Partitions),
@@ -43,6 +39,41 @@ pub struct Link<Context: Send + 'static> {
     pub input_sender: InputSender<Context>,
     pub output_receiver: OutputReciever<Context>,
     pub handle: Handle,
+    // We need to account for the brief moment where the processing channel is empty
+    // but we're applying the results. If there is a UI update in this window,
+    // the UI will not update again after the changes were applied because an empty
+    // channel indicates completed processing.
+    // There's also a delay between a request taken out of the input channel and being
+    // put into the output channel. In order to account for all of this, we emploty a
+    // request counter to know how many requests are currently in the pipeline
+    request_counter: usize,
+}
+
+impl<Context: Send + Sync + 'static> Link<Context> {
+    pub fn request(&mut self, query: &Query, context: Context) -> Result<()> {
+        self.request_counter += 1;
+        self.input_sender.send((query.clone(), context))?;
+        Ok(())
+    }
+
+    pub fn receive(&mut self) -> Result<Option<Response<Context>>> {
+        match self.output_receiver.try_recv() {
+            // We received something
+            Ok(Ok(response)) => {
+                // Only subtract if we successfuly received a value
+                self.request_counter -= 1;
+                Ok(Some(response))
+            }
+            // We received nothing
+            Err(_) => Ok(None),
+            // There was an error, we forward it
+            Ok(Err(e)) => Err(e),
+        }
+    }
+
+    pub fn is_processing(&self) -> bool {
+        self.request_counter > 0
+    }
 }
 
 pub fn run<Context: Send + Sync + 'static>(config: &Config) -> Result<Link<Context>> {
@@ -54,6 +85,7 @@ pub fn run<Context: Send + Sync + 'static>(config: &Config) -> Result<Link<Conte
         input_sender,
         output_receiver,
         handle,
+        request_counter: 0,
     })
 }
 
@@ -68,7 +100,7 @@ fn inner_loop<Context: Send + Sync + 'static>(
         let response = match query {
             Query::Grouped { .. } => {
                 let partitions = calculate_partitions(&result)?;
-                Response::Grouped(query, context, Partitions::new(partitions))
+                Response::Grouped(query, context, partitions)
             }
             Query::Normal { .. } => {
                 let converted = calculate_rows(&result)?;
@@ -79,14 +111,14 @@ fn inner_loop<Context: Send + Sync + 'static>(
     }
 }
 
-fn calculate_partitions(result: &[QueryResult]) -> Result<Vec<Partition>> {
+fn calculate_partitions(result: &[QueryResult]) -> Result<Partitions> {
     let mut partitions = Vec::new();
     for r in result.iter() {
         let partition = r.try_into()?;
         partitions.push(partition);
     }
 
-    Ok(partitions)
+    Ok(Partitions::new(partitions))
 }
 
 fn calculate_rows(result: &[QueryResult]) -> Result<Vec<QueryRow>> {

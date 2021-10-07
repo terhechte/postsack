@@ -26,16 +26,18 @@ impl<'a> Widget for MailPanel<'a> {
                     &mut selected_row,
                     self.engine.current_element_count(),
                     |range| {
-                        let (rows, load_more) = match self.engine.current_contents(&range) {
-                            Ok((n, load_more)) => (n, load_more),
+                        // we overshoot the range a bit, as otherwise somehow the bottom is always empty
+                        let range = std::ops::Range {
+                            start: range.start,
+                            end: range.end + 6,
+                        };
+                        let rows = match self.engine.current_contents(&range) {
+                            Ok(n) => n,
                             Err(e) => {
                                 *self.error = Some(e);
-                                (empty_vec.clone(), false)
+                                empty_vec.clone()
                             }
                         };
-                        if load_more {
-                            *self.error = self.engine.request_contents(&range).err();
-                        }
                         rows
                     },
                 )

@@ -39,6 +39,8 @@ impl Grouping {
 // - fix "Action".
 // - find a way to merge action, query and response in a type-safe manner...
 // - rename cluster_engine to model?
+// - move the different operations in modules and just share the state
+// - replace row_cache with the LRU crate I have open
 
 /// This signifies the action we're currently evaluating
 /// It is used for sending requests and receiving responses
@@ -213,18 +215,14 @@ impl Engine {
 
     // Send the last action over the wire to be calculated
     fn update(&mut self, payload: (Query, Action)) -> Result<()> {
-        Ok(self.link.input_sender.send((payload.0, payload.1))?)
+        Ok(self.link.request(&payload.0, payload.1)?)
     }
 
     /// Fetch the channels to see if there're any updates
     pub fn process(&mut self) -> Result<()> {
-        let response = match self.link.output_receiver.try_recv() {
-            // We received something
-            Ok(Ok(response)) => response,
-            // We received nothing
-            Err(_) => return Ok(()),
-            // There was an error, we forward it
-            Ok(Err(e)) => return Err(e),
+        let response = match self.link.receive()? {
+            Some(n) => n,
+            None => return Ok(()),
         };
 
         match response {
@@ -269,43 +267,36 @@ impl Engine {
             .collect()
     }
 
-    pub fn request_contents(&mut self, range: &Range<usize>) -> Result<()> {
-        // Mark the rows as being loaded
-        for index in range.clone() {
-            if self.row_cache.cache_get(&index).is_none() {
-                self.row_cache.cache_set(index, LoadingState::Loading);
-            }
-        }
-        let request = self.make_normal_query(range.clone());
-        self.link
-            .input_sender
-            .send((request.clone(), Action::Mails))?;
-        Ok(())
-    }
-
-    /// Query the contents for the current filter settings
-    /// This is a blocking call to simplify things a great deal
-    /// - returns the data, and an indicator that data is missing so that we can load more data
-    pub fn current_contents(
-        &mut self,
-        range: &Range<usize>,
-    ) -> Result<(Vec<Option<QueryRow>>, bool)> {
+    /// Query the contents for the current filter settings.
+    /// This call will return the available data and request additional data when it is missing.
+    /// The return value indicates whether a row is loaded or loading.
+    pub fn current_contents(&mut self, range: &Range<usize>) -> Result<Vec<Option<QueryRow>>> {
         // build an array with either empty values or values from our cache.
         let mut rows = Vec::new();
-        let mut data_missing = false;
+
+        let mut missing_data = false;
         for index in range.clone() {
             let entry = self.row_cache.cache_get(&index);
             let entry = match entry {
                 Some(LoadingState::Loaded(n)) => Some((*n).clone()),
                 Some(LoadingState::Loading) => None,
                 None => {
-                    data_missing = true;
+                    // for simplicity, we keep the "something is missing" state separate
+                    missing_data = true;
+
+                    // Mark the row as being loaded
+                    self.row_cache.cache_set(index, LoadingState::Loading);
                     None
                 }
             };
             rows.push(entry);
         }
-        Ok((rows, data_missing))
+        // Only if at least some data is missing do we perform the request
+        if missing_data && !range.is_empty() {
+            let request = self.make_normal_query(range.clone());
+            self.link.request(&request, Action::Mails)?;
+        }
+        Ok(rows)
     }
 
     pub fn is_busy(&self) -> bool {
@@ -320,7 +311,7 @@ impl Engine {
 
     /// If we're loading mails
     pub fn is_mail_busy(&self) -> bool {
-        !self.link.input_sender.is_empty()
+        self.link.is_processing()
     }
 
     fn make_group_query(&self) -> Result<Query> {
