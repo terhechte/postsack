@@ -24,14 +24,14 @@ impl<'a> Widget for MailPanel<'a> {
                 Table::new_selectable(
                     "mail_list",
                     &mut selected_row,
-                    items::current_element_count(&self.engine),
+                    items::count(&self.engine),
                     |range| {
                         // we overshoot the range a bit, as otherwise somehow the bottom is always empty
                         let range = std::ops::Range {
                             start: range.start,
                             end: range.end + 6,
                         };
-                        let rows = match items::current_contents(self.engine, &range) {
+                        let rows = match items::items(self.engine, Some(range)) {
                             Ok(n) => n,
                             Err(e) => {
                                 *self.error = Some(e);

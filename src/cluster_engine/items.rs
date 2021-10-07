@@ -1,3 +1,9 @@
+//! Operations related to retrieving `items` from the current `Segmentation`
+//!
+//! A `Segmentation` is a aggregation of items into many `Segments`.
+//! These operations allow retreiving the individual items for all
+//! segments in the `Segmentation.
+
 use cached::Cached;
 use eyre::Result;
 
@@ -10,15 +16,25 @@ use crate::database::{
 
 use std::ops::Range;
 
-/// Query the contents for the current filter settings.
-/// This call will return the available data and request additional data when it is missing.
-/// The return value indicates whether a row is loaded or loading.
-pub fn current_contents(
-    engine: &mut Engine,
-    range: &Range<usize>,
-) -> Result<Vec<Option<QueryRow>>> {
+/// Return the `items` in the current `Segmentation`
+///
+/// If the items don't exist in the cache, they will be queried
+/// asynchronously from the database. The return value distinguishes
+/// between `Loaded` and `Loading` items.
+///
+/// # Arguments
+///
+/// * `engine` - The engine to use for retrieving data
+/// * `range` - The range of items to retrieve. If `None` then all items will be retrieved
+pub fn items(engine: &mut Engine, range: Option<Range<usize>>) -> Result<Vec<Option<QueryRow>>> {
     // build an array with either empty values or values from our cache.
     let mut rows = Vec::new();
+
+    // The given range or all items
+    let range = range.unwrap_or_else(|| Range {
+        start: 0,
+        end: count(engine),
+    });
 
     let mut missing_data = false;
     for index in range.clone() {
@@ -39,27 +55,27 @@ pub fn current_contents(
     }
     // Only if at least some data is missing do we perform the request
     if missing_data && !range.is_empty() {
-        let request = make_items_query(&engine, range.clone());
+        let request = make_query(&engine, range.clone());
         engine.link.request(&request, Action::LoadItems)?;
     }
     Ok(rows)
 }
 
-/// The total amount of elements in all the partitions
-pub fn current_element_count(engine: &Engine) -> usize {
-    let partitions = match engine.partitions.last() {
+/// The total amount of elements in the current `Segmentation`
+///
+/// # Arguments
+///
+/// * `engine` - The engine to use for retrieving data
+pub fn count(engine: &Engine) -> usize {
+    let segmentation = match engine.segmentations.last() {
         Some(n) => n,
         None => return 0,
     };
-    partitions.element_count()
+    segmentation.element_count()
 }
 
-/// If we're loading mails
-pub fn is_mail_busy(engine: &Engine) -> bool {
-    engine.link.is_processing()
-}
-
-fn make_items_query(engine: &Engine, range: Range<usize>) -> Query {
+/// Make the query for retrieving items
+fn make_query(engine: &Engine, range: Range<usize>) -> Query {
     let mut filters = Vec::new();
     for entry in &engine.search_stack {
         filters.push(Filter::Like(entry.clone()));

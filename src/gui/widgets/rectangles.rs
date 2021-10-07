@@ -1,14 +1,14 @@
 use std::collections::hash_map::DefaultHasher;
 
-use crate::cluster_engine::{partitions, Engine, Partition};
+use crate::cluster_engine::{segmentation, Engine, Segment};
 use eframe::egui::{self, epaint::Galley, Pos2, Rgba, Stroke, TextStyle, Widget};
 use eyre::Report;
 use num_format::{Locale, ToFormattedString};
 
-fn partition_to_color(partition: &Partition) -> Rgba {
+fn segment_to_color(segment: &Segment) -> Rgba {
     let mut hasher = DefaultHasher::new();
     use std::hash::{Hash, Hasher};
-    let value = partition.field.value().to_string();
+    let value = segment.field.value().to_string();
     value.hash(&mut hasher);
     let value = hasher.finish();
     let [r1, r2, g1, g2, b1, b2, _, _] = value.to_be_bytes();
@@ -36,7 +36,7 @@ impl<'a> Widget for Rectangles<'a> {
         let size = ui.available_size();
         let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::hover());
 
-        let items = match partitions::items_with_size(self.engine, rect) {
+        let items = match segmentation::layouted_segments(self.engine, rect) {
             Some(n) => n.to_owned(),
             None => return response,
         };
@@ -53,7 +53,7 @@ impl<'a> Widget for Rectangles<'a> {
     }
 }
 
-fn rectangle_ui(ui: &mut egui::Ui, partition: &Partition) -> egui::Response {
+fn rectangle_ui(ui: &mut egui::Ui, segment: &Segment) -> egui::Response {
     let size = ui.available_size();
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
 
@@ -65,7 +65,7 @@ fn rectangle_ui(ui: &mut egui::Ui, partition: &Partition) -> egui::Response {
         Stroke::default()
     };
 
-    let color = partition_to_color(&partition);
+    let color = segment_to_color(&segment);
 
     let painter = ui.painter();
 
@@ -86,7 +86,7 @@ fn rectangle_ui(ui: &mut egui::Ui, partition: &Partition) -> egui::Response {
 
     // Write the label and the amount
     {
-        let text = format!("{}", partition.field.value());
+        let text = format!("{}", segment.field.value());
         let galley = painter.layout_no_wrap(TextStyle::Body, text);
         let previous_center = center;
         if let Some(center) = align_bottom(&galley, &mut center, 2.0) {
@@ -97,17 +97,17 @@ fn rectangle_ui(ui: &mut egui::Ui, partition: &Partition) -> egui::Response {
         }
     }
     {
-        let text = partition.count.to_formatted_string(&Locale::en);
+        let text = segment.count.to_formatted_string(&Locale::en);
         let galley = painter.layout_no_wrap(TextStyle::Small, text);
         if let Some(center) = align_bottom(&galley, &mut center, 5.0) {
             painter.galley(center, galley, Rgba::BLACK.into());
         }
     }
-    let label = format!("{}\n{}", &partition.field.value(), &partition.count);
+    let label = format!("{}\n{}", &segment.field.value(), &segment.count);
 
     response.on_hover_text(&label)
 }
 
-fn rectangle(partition: &Partition) -> impl egui::Widget + '_ {
-    move |ui: &mut egui::Ui| rectangle_ui(ui, partition)
+fn rectangle(segment: &Segment) -> impl egui::Widget + '_ {
+    move |ui: &mut egui::Ui| rectangle_ui(ui, segment)
 }

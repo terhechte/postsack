@@ -1,3 +1,9 @@
+//! The `Engine` is the entry point to the data that should be
+//! displayed in Segmentations.
+//! See [`Engine`] for more information.
+//! See also:
+//! - [`segmentations::`]
+//! - [`items::`]
 use cached::{Cached, SizedCache};
 use eyre::{bail, Result};
 
@@ -5,36 +11,34 @@ use crate::cluster_engine::link::Response;
 use crate::database::query::{Field, Query, ValueField};
 use crate::types::Config;
 
-use super::items;
 use super::link::Link;
-use super::partitions;
-use super::types::{LoadingState, Partition, Partitions};
+use super::segmentation;
+use super::types::{LoadingState, Segment, Segmentation};
 
 // FIXME:!
-// - improve the naming: Grouping, Partitions, Partition, Mails(-> Details), ...
-//   items_with_size, current_element_count
 // - rename cluster_engine to model?
 // - replace row_cache with the LRU crate I have open
-// - write method documentation
-// - write file header documentation
 
 /// This signifies the action we're currently evaluating
 /// It is used for sending requests and receiving responses
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(super) enum Action {
-    /// Recalculate the current partition based on a changed grouping
-    RecalculatePartition,
-    /// Select a new partition
-    PushPartition,
-    /// Load the mails for the current partition
+    /// Recalculate the current `Segmentation` based on a changed aggregation
+    RecalculateSegmentation,
+    /// Push a new `Segmentation`
+    PushSegmentation,
+    /// Load the mails for the current `Segmentation`
     LoadItems,
 }
 
+/// Interact with the `Database`, operate on `Segmentations`, `Segments`, and `Items`.
+/// `Engine` is used as the input for almost all operations in the
+/// `items::` and `segmentation::` modules.
 pub struct Engine {
     pub(super) search_stack: Vec<ValueField>,
     pub(super) group_by_stack: Vec<Field>,
     pub(super) link: Link<Action>,
-    pub(super) partitions: Vec<Partitions>,
+    pub(super) segmentations: Vec<Segmentation>,
     /// This is a very simple cache from ranges to rows.
     /// It doesn't account for overlapping ranges.
     /// There's a lot of room for improvement here.
@@ -48,30 +52,43 @@ impl Engine {
             link,
             search_stack: Vec::new(),
             group_by_stack: vec![default_group_by_stack(0)],
-            partitions: Vec::new(),
+            segmentations: Vec::new(),
             item_cache: SizedCache::with_size(10000),
         };
         Ok(engine)
     }
 
+    /// Start the `Engine`. This will create a thread to
+    /// asynchronously communicate with the underlying backend
+    /// in a non-blocking manner.
     pub fn start(&mut self) -> Result<()> {
-        Ok(self.link.request(
-            &partitions::make_partition_query(&self)?,
-            Action::PushPartition,
-        )?)
+        Ok(self
+            .link
+            .request(&segmentation::make_query(&self)?, Action::PushSegmentation)?)
     }
 
-    pub fn push(&mut self, partition: Partition) -> Result<()> {
-        // Assign the partition
-        let current = match self.partitions.last_mut() {
+    /// Return the current stack of `Segmentations`
+    pub fn segmentations(&self) -> &[Segmentation] {
+        &self.segmentations
+    }
+
+    /// Push a new `Segment` to select a more specific `Segmentation`.
+    ///
+    /// Pushing will create an additional `Aggregation` based on the selected
+    /// `Segment`, retrieve the data from the backend, and add it to the
+    /// current stack of `Segmentations`.
+    /// It allows to **drill down** into the data.
+    pub fn push(&mut self, segment: Segment) -> Result<()> {
+        // Assign the segmentation
+        let current = match self.segmentations.last_mut() {
             Some(n) => n,
             None => return Ok(()),
         };
-        current.selected = Some(partition);
+        current.selected = Some(segment);
 
         // Create the new search stack
         self.search_stack = self
-            .partitions
+            .segmentations
             .iter()
             .filter_map(|e| e.selected.as_ref())
             .map(|p| p.field.clone())
@@ -83,21 +100,21 @@ impl Engine {
         self.group_by_stack.push(next);
 
         // Block UI & Wait for updates
-        self.link.request(
-            &partitions::make_partition_query(&self)?,
-            Action::PushPartition,
-        )
+        self.link
+            .request(&segmentation::make_query(&self)?, Action::PushSegmentation)
     }
 
+    /// Pop the current `Segmentation` from the stack.
+    /// The opposite of [`engine::push`]
     pub fn pop(&mut self) {
         if self.group_by_stack.is_empty()
-            || self.partitions.is_empty()
+            || self.segmentations.is_empty()
             || self.search_stack.is_empty()
         {
             tracing::error!(
                 "Invalid state. Not everything has the same length: {:?}, {:?}, {:?}",
                 &self.group_by_stack,
-                self.partitions,
+                self.segmentations,
                 self.search_stack
             );
             return;
@@ -105,17 +122,22 @@ impl Engine {
 
         // Remove the last entry of everything
         self.group_by_stack.remove(self.group_by_stack.len() - 1);
-        self.partitions.remove(self.partitions.len() - 1);
+        self.segmentations.remove(self.segmentations.len() - 1);
         self.search_stack.remove(self.search_stack.len() - 1);
 
-        // Remove the selection in the last partition
-        self.partitions.last_mut().map(|e| e.selected = None);
+        // Remove the selection in the last segmentation
+        self.segmentations.last_mut().map(|e| e.selected = None);
 
-        // Remove any rows that were cached for this partition
+        // Remove any rows that were cached for this segmentation
         self.item_cache.cache_clear();
     }
 
-    /// Fetch the channels to see if there're any updates
+    /// Call this continously to retrieve calculation results and apply them.
+    /// Any mutating function on [`Engine`], such as [`Engine::push`] or [`items::items`]
+    /// require calling this method to apply there results once they're
+    /// available from the asynchronous backend.
+    /// This method is specifically non-blocking for usage in
+    /// `Eventloop` based UI frameworks such as `egui`.
     pub fn process(&mut self) -> Result<()> {
         let response = match self.link.receive()? {
             Some(n) => n,
@@ -123,15 +145,15 @@ impl Engine {
         };
 
         match response {
-            Response::Grouped(_, Action::PushPartition, p) => {
-                self.partitions.push(p);
-                // Remove any rows that were cached for this partition
+            Response::Grouped(_, Action::PushSegmentation, p) => {
+                self.segmentations.push(p);
+                // Remove any rows that were cached for this segmentation
                 self.item_cache.cache_clear();
             }
-            Response::Grouped(_, Action::RecalculatePartition, p) => {
-                let len = self.partitions.len();
-                self.partitions[len - 1] = p;
-                // Remove any rows that were cached for this partition
+            Response::Grouped(_, Action::RecalculateSegmentation, p) => {
+                let len = self.segmentations.len();
+                self.segmentations[len - 1] = p;
+                // Remove any rows that were cached for this segmentation
                 self.item_cache.cache_clear();
             }
             Response::Normal(Query::Normal { range, .. }, Action::LoadItems, r) => {
@@ -146,12 +168,24 @@ impl Engine {
         Ok(())
     }
 
+    /// Returns true if there're currently calculations open and `process`
+    /// needs to be called. This can be used in `Eventloop` based frameworks
+    /// such as `egui` to know when to continue calling `process` in the `loop`
+    /// ```
+    /// loop {
+    ///  self.engine.process().unwrap();
+    ///  if self.engine.is_busy() {
+    ///    // Call the library function to run the event-loop again.
+    ///    ctx.request_repaint();
+    ///  }
+    /// }
+    /// ```
     pub fn is_busy(&self) -> bool {
-        partitions::is_partitions_busy(&self) || items::is_mail_busy(&self)
+        self.link.is_processing() || self.segmentations.is_empty()
     }
 }
 
-/// Return the default group by fields index for each stack entry
+/// Return the default aggregation fields for each segmentation stack level
 pub fn default_group_by_stack(index: usize) -> Field {
     match index {
         0 => Field::Year,

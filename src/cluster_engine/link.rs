@@ -1,15 +1,14 @@
-//! Runs a continuous thread to calculate the canvas.
-//! Receives as input the current gui app state and size via a channel,
-//! Then performs the SQLite query
-//! Then performs the calculation to the `TreeMap`
-//! And finally uses a channel to submit the result back to the UI
-//! Runs its own connection to the SQLite database.
+//! Abstraction to perform asynchronous calculations & queries without blocking UI
+//!
+//! This opens a `crossbeam` `channel` to communicate with a backend.
+//! Each backend operation is send and retrieved in a loop on a thread.
+//! This allows sending operations into `Link` and retrieving the contents
+//! asynchronously without blocking the UI.
 
 use std::convert::TryInto;
-use std::thread::JoinHandle;
 
 use crossbeam_channel::{unbounded, Receiver, Sender};
-use eyre::{Report, Result};
+use eyre::Result;
 
 use crate::database::{
     query::Query,
@@ -18,27 +17,20 @@ use crate::database::{
 };
 use crate::types::Config;
 
-use super::types::Partitions;
-
-// FIXME:
-// - improve the Action situation. I don't need the *waits* I think
-// - instead of hard-coding subject/sender-domain, have a "Detail" trait
-// - consider a better logic for the cache (by row id and just fetch the smallest range that contains all missing numbers)
+use super::types::Segmentation;
 
 #[derive(Debug)]
 pub enum Response<Context: Send + 'static> {
-    Grouped(Query, Context, Partitions),
+    Grouped(Query, Context, Segmentation),
     Normal(Query, Context, Vec<QueryRow>),
 }
 
-pub type InputSender<Context> = Sender<(Query, Context)>;
-pub type OutputReciever<Context> = Receiver<Result<Response<Context>>>;
-pub type Handle = JoinHandle<Result<(), Report>>;
+pub(super) type InputSender<Context> = Sender<(Query, Context)>;
+pub(super) type OutputReciever<Context> = Receiver<Result<Response<Context>>>;
 
-pub struct Link<Context: Send + 'static> {
+pub(super) struct Link<Context: Send + 'static> {
     pub input_sender: InputSender<Context>,
     pub output_receiver: OutputReciever<Context>,
-    pub handle: Handle,
     // We need to account for the brief moment where the processing channel is empty
     // but we're applying the results. If there is a UI update in this window,
     // the UI will not update again after the changes were applied because an empty
@@ -76,15 +68,14 @@ impl<Context: Send + Sync + 'static> Link<Context> {
     }
 }
 
-pub fn run<Context: Send + Sync + 'static>(config: &Config) -> Result<Link<Context>> {
+pub(super) fn run<Context: Send + Sync + 'static>(config: &Config) -> Result<Link<Context>> {
     let database = Database::new(&config.database_path)?;
     let (input_sender, input_receiver) = unbounded();
     let (output_sender, output_receiver) = unbounded();
-    let handle = std::thread::spawn(move || inner_loop(database, input_receiver, output_sender));
+    let _ = std::thread::spawn(move || inner_loop(database, input_receiver, output_sender));
     Ok(Link {
         input_sender,
         output_receiver,
-        handle,
         request_counter: 0,
     })
 }
@@ -99,8 +90,8 @@ fn inner_loop<Context: Send + Sync + 'static>(
         let result = database.query(&query)?;
         let response = match query {
             Query::Grouped { .. } => {
-                let partitions = calculate_partitions(&result)?;
-                Response::Grouped(query, context, partitions)
+                let segmentations = calculate_segmentations(&result)?;
+                Response::Grouped(query, context, segmentations)
             }
             Query::Normal { .. } => {
                 let converted = calculate_rows(&result)?;
@@ -111,14 +102,14 @@ fn inner_loop<Context: Send + Sync + 'static>(
     }
 }
 
-fn calculate_partitions(result: &[QueryResult]) -> Result<Partitions> {
-    let mut partitions = Vec::new();
+fn calculate_segmentations(result: &[QueryResult]) -> Result<Segmentation> {
+    let mut segmentations = Vec::new();
     for r in result.iter() {
-        let partition = r.try_into()?;
-        partitions.push(partition);
+        let segmentation = r.try_into()?;
+        segmentations.push(segmentation);
     }
 
-    Ok(Partitions::new(partitions))
+    Ok(Segmentation::new(segmentations))
 }
 
 fn calculate_rows(result: &[QueryResult]) -> Result<Vec<QueryRow>> {

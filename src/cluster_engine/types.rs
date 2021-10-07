@@ -17,13 +17,13 @@ pub enum LoadingState {
 }
 
 // FIXME: Try with lifetimes. For this use case it might just work
-pub struct Grouping {
+pub struct Aggregation {
     pub(super) value: Option<ValueField>,
     pub(super) field: Field,
     pub(super) index: usize,
 }
 
-impl Grouping {
+impl Aggregation {
     pub fn value(&self) -> Option<String> {
         self.value.as_ref().map(|e| e.value().to_string())
     }
@@ -38,14 +38,14 @@ impl Grouping {
 }
 
 #[derive(Debug, Clone)]
-pub struct Partition {
+pub struct Segment {
     pub field: ValueField,
     pub count: usize,
     /// A TreeMap Rect
     pub rect: Rect,
 }
 
-impl Partition {
+impl Segment {
     /// Perform rect conversion from TreeMap to Egui
     pub fn layout_rect(&self) -> EguiRect {
         use eframe::egui::pos2;
@@ -62,14 +62,14 @@ impl Partition {
 /// A small NewType so that we can keep all the `TreeMap` code in here and don't
 /// have to do the layout calculation in a widget.
 #[derive(Debug)]
-pub struct Partitions {
-    items: Vec<Partition>,
-    pub selected: Option<Partition>,
+pub struct Segmentation {
+    items: Vec<Segment>,
+    pub selected: Option<Segment>,
     pub range: Option<std::ops::RangeInclusive<usize>>,
 }
 
-impl Partitions {
-    pub fn new(items: Vec<Partition>) -> Self {
+impl Segmentation {
+    pub fn new(items: Vec<Segment>) -> Self {
         Self {
             items,
             selected: None,
@@ -81,7 +81,7 @@ impl Partitions {
         self.items.len()
     }
 
-    /// Update the layout information in the partitions
+    /// Update the layout information in the Segments
     /// based on the current size
     pub fn update_layout(&mut self, rect: EguiRect) {
         let layout = TreemapLayout::new();
@@ -94,14 +94,14 @@ impl Partitions {
         layout.layout_items(&mut self.items(), bounds);
     }
 
-    /// The total amount of items in all the partitions.
-    /// E.g. the sum of the count of the partitions
+    /// The total amount of items in all the `Segments`.
+    /// E.g. the sum of the count of the `Segments`
     pub fn element_count(&self) -> usize {
         self.items.iter().map(|e| e.count).sum::<usize>()
     }
 
-    /// The items in this partition, with range applied
-    pub fn items(&mut self) -> &mut [Partition] {
+    /// The items in this `Segmentation`, with range applied
+    pub fn items(&mut self) -> &mut [Segment] {
         match &self.range {
             Some(n) => {
                 // we reverse the range
@@ -113,7 +113,7 @@ impl Partitions {
     }
 }
 
-impl Mappable for Partition {
+impl Mappable for Segment {
     fn size(&self) -> f64 {
         self.count as f64
     }
@@ -127,7 +127,7 @@ impl Mappable for Partition {
     }
 }
 
-impl<'a> TryFrom<&'a QueryResult> for Partition {
+impl<'a> TryFrom<&'a QueryResult> for Segment {
     type Error = Report;
     fn try_from(result: &'a QueryResult) -> Result<Self> {
         let (count, field) = match result {
@@ -137,7 +137,7 @@ impl<'a> TryFrom<&'a QueryResult> for Partition {
         // so far we can only support one group by at a time.
         // at least in here. The queries support it
 
-        Ok(Partition {
+        Ok(Segment {
             field: field.clone(),
             count: *count,
             rect: Rect::new(),
