@@ -1,6 +1,8 @@
 mod engine;
+pub mod items;
 mod link;
-mod partitions;
+pub mod partitions;
+mod types;
 
 pub use engine::Engine;
-pub use partitions::Partition;
+pub use types::Partition;

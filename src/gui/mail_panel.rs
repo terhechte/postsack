@@ -1,4 +1,4 @@
-use crate::cluster_engine::Engine;
+use crate::cluster_engine::{items, Engine};
 use crate::database::query::Field;
 use eframe::egui::{self, Widget};
 use eyre::Report;
@@ -24,14 +24,14 @@ impl<'a> Widget for MailPanel<'a> {
                 Table::new_selectable(
                     "mail_list",
                     &mut selected_row,
-                    self.engine.current_element_count(),
+                    items::current_element_count(&self.engine),
                     |range| {
                         // we overshoot the range a bit, as otherwise somehow the bottom is always empty
                         let range = std::ops::Range {
                             start: range.start,
                             end: range.end + 6,
                         };
-                        let rows = match self.engine.current_contents(&range) {
+                        let rows = match items::current_contents(self.engine, &range) {
                             Ok(n) => n,
                             Err(e) => {
                                 *self.error = Some(e);

@@ -18,7 +18,7 @@ use crate::database::{
 };
 use crate::types::Config;
 
-use super::partitions::{Partition, Partitions};
+use super::types::Partitions;
 
 // FIXME:
 // - improve the Action situation. I don't need the *waits* I think

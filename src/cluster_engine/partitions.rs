@@ -1,115 +1,121 @@
-use std::convert::TryFrom;
+//! Operations on the currently visible **Partition**.
 
-use eframe::egui::Rect as EguiRect;
-use eyre::{Report, Result};
-use treemap::{Mappable, Rect, TreemapLayout};
+use cached::Cached;
+use eyre::{eyre, Result};
 
-use crate::database::{query::ValueField, query_result::QueryResult};
+use super::engine::Action;
+use super::{
+    types::{Grouping, Partition},
+    Engine,
+};
+use crate::database::query::{Field, Filter, Query};
+use std::ops::RangeInclusive;
 
-#[derive(Debug, Clone)]
-pub struct Partition {
-    pub field: ValueField,
-    pub count: usize,
-    /// A TreeMap Rect
-    pub rect: Rect,
-}
-
-impl Partition {
-    /// Perform rect conversion from TreeMap to Egui
-    pub fn layout_rect(&self) -> EguiRect {
-        use eframe::egui::pos2;
-        EguiRect {
-            min: pos2(self.rect.x as f32, self.rect.y as f32),
-            max: pos2(
-                self.rect.x as f32 + self.rect.w as f32,
-                self.rect.y as f32 + self.rect.h as f32,
-            ),
-        }
-    }
-}
-
-/// A small NewType so that we can keep all the `TreeMap` code in here and don't
-/// have to do the layout calculation in a widget.
-#[derive(Debug)]
-pub struct Partitions {
-    items: Vec<Partition>,
-    pub selected: Option<Partition>,
-    pub range: Option<std::ops::RangeInclusive<usize>>,
-}
-
-impl Partitions {
-    pub fn new(items: Vec<Partition>) -> Self {
-        Self {
-            items,
-            selected: None,
-            range: None,
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.items.len()
-    }
-
-    /// Update the layout information in the partitions
-    /// based on the current size
-    pub fn update_layout(&mut self, rect: EguiRect) {
-        let layout = TreemapLayout::new();
-        let bounds = Rect::from_points(
-            rect.left() as f64,
-            rect.top() as f64,
-            rect.width() as f64,
-            rect.height() as f64,
-        );
-        layout.layout_items(&mut self.items(), bounds);
-    }
-
-    /// The total amount of items in all the partitions.
-    /// E.g. the sum of the count of the partitions
-    pub fn element_count(&self) -> usize {
-        self.items.iter().map(|e| e.count).sum::<usize>()
-    }
-
-    /// The items in this partition, with range applied
-    pub fn items(&mut self) -> &mut [Partition] {
-        match &self.range {
-            Some(n) => {
-                // we reverse the range
-                let reversed_range = (self.len() - n.end())..=(self.len() - 1);
-                &mut self.items[reversed_range]
+/// Return all group fields which are still available based
+/// on the current stack.
+/// Also always include the current one, so we can choose between
+pub fn available_group_by_fields(engine: &Engine, grouping: &Grouping) -> Vec<Field> {
+    Field::all_cases()
+        .filter_map(|f| {
+            if f == grouping.field {
+                return Some(f.clone());
             }
-            None => self.items.as_mut_slice(),
-        }
-    }
-}
-
-impl Mappable for Partition {
-    fn size(&self) -> f64 {
-        self.count as f64
-    }
-
-    fn bounds(&self) -> &Rect {
-        &self.rect
-    }
-
-    fn set_bounds(&mut self, bounds: Rect) {
-        self.rect = bounds;
-    }
-}
-
-impl<'a> TryFrom<&'a QueryResult> for Partition {
-    type Error = Report;
-    fn try_from(result: &'a QueryResult) -> Result<Self> {
-        let (count, field) = match result {
-            QueryResult::Grouped { count, value } => (count, value),
-            _ => return Err(eyre::eyre!("Invalid result type, expected `Grouped`")),
-        };
-        // so far we can only support one group by at a time.
-        // at least in here. The queries support it
-
-        Ok(Partition {
-            field: field.clone(),
-            count: *count,
-            rect: Rect::new(),
+            if engine.group_by_stack.contains(&f) {
+                None
+            } else {
+                Some(f.clone())
+            }
         })
+        .collect()
+}
+
+/// Retrieve the min and max amount of items. The range that should be displayed.
+/// Per default, it is the whole range of the partition
+pub fn current_range(engine: &Engine) -> Option<(RangeInclusive<usize>, usize)> {
+    let partition = engine.partitions.last()?;
+    let len = partition.len();
+    let r = match &partition.range {
+        Some(n) => (0..=len, *n.end()),
+        None => (0..=len, len),
+    };
+    Some(r)
+}
+
+pub fn set_current_range(engine: &mut Engine, range: Option<RangeInclusive<usize>>) -> Option<()> {
+    match engine.partitions.last_mut() {
+        Some(n) => {
+            if let Some(r) = range {
+                let len = n.len();
+                if len > *r.start() && *r.end() < len {
+                    n.range = Some(r.clone());
+                    Some(())
+                } else {
+                    None
+                }
+            } else {
+                n.range = None;
+                Some(())
+            }
+        }
+        None => None,
     }
+}
+
+/// Returns (index in the `group_by_stack`, index of the chosen group, value of the group if selected)
+pub fn current_groupings(engine: &Engine) -> Vec<Grouping> {
+    let mut result = Vec::new();
+    // for everything in the current stack
+    let len = engine.group_by_stack.len();
+    for (index, field) in engine.group_by_stack.iter().enumerate() {
+        let value = match (
+            len,
+            engine.partitions.get(index).map(|e| e.selected.as_ref()),
+        ) {
+            (n, Some(Some(partition))) if len == n => Some(partition.field.clone()),
+            _ => None,
+        };
+        result.push(Grouping {
+            value,
+            field: field.clone(),
+            index,
+        });
+    }
+    result
+}
+
+pub fn update_grouping(engine: &mut Engine, grouping: &Grouping, field: &Field) -> Result<()> {
+    engine
+        .group_by_stack
+        .get_mut(grouping.index)
+        .map(|e| *e = field.clone());
+    // Remove any rows that were cached for this partition
+    engine.row_cache.cache_clear();
+    engine.update((make_group_query(engine)?, Action::Recalculate))
+}
+
+pub fn items_with_size(engine: &mut Engine, rect: eframe::egui::Rect) -> Option<&[Partition]> {
+    let partition = engine.partitions.last_mut()?;
+    partition.update_layout(rect);
+    Some(partition.items())
+}
+
+/// When we don't have partitions loaded yet, or
+/// when we're currently querying / loading new partitions
+pub fn is_partitions_busy(engine: &Engine) -> bool {
+    engine.partitions.is_empty()
+}
+
+pub(super) fn make_group_query(engine: &Engine) -> Result<Query> {
+    let mut filters = Vec::new();
+    for entry in &engine.search_stack {
+        filters.push(Filter::Like(entry.clone()));
+    }
+    let last = engine
+        .group_by_stack
+        .last()
+        .ok_or(eyre!("Invalid partition state"))?;
+    Ok(Query::Grouped {
+        filters,
+        group_by: last.clone(),
+    })
 }

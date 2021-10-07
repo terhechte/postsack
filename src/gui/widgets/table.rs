@@ -4,7 +4,7 @@
 use std::ops::Range;
 use std::{fmt::Display, hash::Hash};
 
-use eframe::egui::{vec2, Id, Key, Response, ScrollArea, Sense, TextStyle, Ui, Vec2, Widget};
+use eframe::egui::{vec2, Id, Response, ScrollArea, Sense, TextStyle, Ui, Vec2, Widget};
 
 const DEFAULT_COLUMN_WIDTH: f32 = 200.0;
 

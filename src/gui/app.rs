@@ -4,7 +4,7 @@ use eyre::{Report, Result};
 use eframe::{egui, epi};
 
 use super::widgets::{self, Spinner};
-use crate::cluster_engine::Engine;
+use crate::cluster_engine::{partitions, Engine};
 use crate::types::Config;
 
 pub struct GmailDBApp {
@@ -70,19 +70,19 @@ impl epi::App for GmailDBApp {
             });
 
             egui::CentralPanel::default().show(ctx, |ui| {
-                if engine.is_partitions_busy() {
+                if partitions::is_partitions_busy(engine) {
                     ui.centered_and_justified(|ui| {
                         ui.add(Spinner::new(egui::vec2(50.0, 50.0)));
                     });
                 } else {
                     ui.vertical(|ui| {
                         ui.horizontal(|ui| {
-                            if let Some((range, total)) = engine.current_range() {
+                            if let Some((range, total)) = partitions::current_range(engine) {
                                 ui.label("Limit");
                                 let mut selected = total;
                                 let response = ui.add(egui::Slider::new(&mut selected, range));
                                 if response.changed() {
-                                    engine.set_current_range(Some(0..=selected));
+                                    partitions::set_current_range(engine, Some(0..=selected));
                                 }
                             }
                             // This is a hack to get right-alignment.

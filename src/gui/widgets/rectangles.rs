@@ -1,6 +1,6 @@
 use std::collections::hash_map::DefaultHasher;
 
-use crate::cluster_engine::{Engine, Partition};
+use crate::cluster_engine::{partitions, Engine, Partition};
 use eframe::egui::{self, epaint::Galley, Pos2, Rgba, Stroke, TextStyle, Widget};
 use eyre::Report;
 use num_format::{Locale, ToFormattedString};
@@ -36,7 +36,7 @@ impl<'a> Widget for Rectangles<'a> {
         let size = ui.available_size();
         let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::hover());
 
-        let items = match self.engine.items_with_size(rect) {
+        let items = match partitions::items_with_size(self.engine, rect) {
             Some(n) => n.to_owned(),
             None => return response,
         };
