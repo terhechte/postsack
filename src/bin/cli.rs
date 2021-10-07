@@ -14,10 +14,10 @@ fn main() -> Result<()> {
     let config = make_config();
 
     println!("Collecting Mails...");
-    let emails = filesystem::read_emails(&config)?;
+    let emails = importer::filesystem::read_emails(&config)?;
 
     println!("Begin Parsing Mails...");
-    let (receiver, handle) = crate::parse::emails::parse_emails(&config, emails)?;
+    let (receiver, handle) = crate::importer::parse::emails::parse_emails(&config, emails)?;
 
     let mut stdout = stdout();
 
@@ -34,7 +34,7 @@ fn main() -> Result<()> {
                     break 'outer;
                 }
             };
-            use parse::emails::ParseMessage;
+            use importer::parse::emails::ParseMessage;
             match message {
                 ParseMessage::Done => done = true,
                 ParseMessage::Total(n) => total = Some(n),

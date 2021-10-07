@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use eyre::Report;
 
-use crate::types::EmailEntry;
+use crate::importer::types::EmailEntry;
 
 /// Parameter for sending work to the database during `import`.
 pub enum DBMessage {

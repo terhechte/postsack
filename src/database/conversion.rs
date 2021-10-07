@@ -9,7 +9,7 @@ use serde_json::Value;
 
 use super::query::{Field, ValueField, AMOUNT_FIELD_NAME};
 use super::query_result::QueryResult;
-use crate::types::{EmailEntry, EmailMeta};
+use crate::importer::types::{EmailEntry, EmailMeta};
 
 /// rusqlite does offer Serde to Value conversion, but it
 /// converts everything to strings!

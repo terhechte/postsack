@@ -1,11 +1,10 @@
 use tracing_subscriber::EnvFilter;
 
 pub mod database;
-pub mod filesystem;
 #[cfg(feature = "gui")]
 pub mod gui;
+pub mod importer;
 mod model;
-pub mod parse;
 pub mod types;
 
 pub fn setup_tracing() {

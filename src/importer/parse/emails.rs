@@ -1,7 +1,8 @@
+use super::super::filesystem::RawEmailEntry;
+use super::super::types::EmailEntry;
 use super::gmail_meta;
 use crate::database::{DBMessage, Database};
-use crate::filesystem::RawEmailEntry;
-use crate::types::{Config, EmailEntry};
+use crate::types::Config;
 
 use chrono::prelude::*;
 use email_parser::address::{Address, EmailAddress, Mailbox};
