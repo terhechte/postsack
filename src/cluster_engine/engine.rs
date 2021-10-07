@@ -15,10 +15,6 @@ use super::link::Link;
 use super::segmentation;
 use super::types::{LoadingState, Segment, Segmentation};
 
-// FIXME:!
-// - rename cluster_engine to model?
-// - replace row_cache with the LRU crate I have open
-
 /// This signifies the action we're currently evaluating
 /// It is used for sending requests and receiving responses
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
