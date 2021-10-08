@@ -19,14 +19,14 @@ struct Data {
 
 #[derive(Clone, Debug, Copy)]
 pub struct Progress {
-    total: usize,
-    count: usize,
+    pub total: usize,
+    pub count: usize,
 }
 
 #[derive(Clone, Debug, Copy)]
 pub struct State {
-    finishing: bool,
-    done: bool,
+    pub finishing: bool,
+    pub done: bool,
 }
 
 /// This can be initialized with a [`MessageSender`] and it will

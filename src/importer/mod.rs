@@ -3,7 +3,11 @@ use crossbeam_channel;
 mod formats;
 mod message_adapter;
 
+use crate::types::Config;
 pub use formats::shared::email::{EmailEntry, EmailMeta};
+pub use message_adapter::*;
+
+use self::formats::Importer;
 
 /// The message that informs of the importers progress
 pub enum Message {
@@ -31,9 +35,6 @@ pub enum Message {
 pub type MessageSender = crossbeam_channel::Sender<Message>;
 pub type MessageReceiver = crossbeam_channel::Receiver<Message>;
 
-// pub enum Message {}
-
-// pub struct Importer<FORMAT: ImporterFormat> {
-//     format: FORMAT,
-//     sender: Sender<Message>,
-// }
+pub fn gmail_importer(config: &Config) -> Importer<formats::Gmail> {
+    Importer::new(config, formats::Gmail::default())
+}

@@ -12,6 +12,10 @@ pub struct Importer<'a, Format: ImporterFormat> {
 }
 
 impl<'a, Format: ImporterFormat + 'static> Importer<'a, Format> {
+    pub fn new(config: &'a Config, format: Format) -> Self {
+        Self { config, format }
+    }
+
     pub fn import(self) -> Result<(MessageReceiver, JoinHandle<Result<usize>>)> {
         let Importer { config, format } = self;
         let (sender, receiver) = unbounded();

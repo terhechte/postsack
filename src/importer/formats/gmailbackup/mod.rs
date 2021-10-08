@@ -4,6 +4,7 @@ mod raw_email;
 
 use super::{Config, ImporterFormat, MessageSender, Result};
 
+#[derive(Default)]
 pub struct Gmail {}
 
 impl ImporterFormat for Gmail {

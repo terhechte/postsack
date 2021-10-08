@@ -5,6 +5,8 @@ mod gmailbackup;
 mod importer;
 pub mod shared;
 
+pub use gmailbackup::Gmail;
+
 pub use crate::types::Config;
 use shared::parse::ParseableEmail;
 

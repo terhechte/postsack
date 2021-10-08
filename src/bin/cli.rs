@@ -6,59 +6,55 @@ use std::{
     time::Duration,
 };
 
-use gmaildb::*;
+use gmaildb::{
+    self,
+    importer::{Progress, State},
+};
 
 fn main() -> Result<()> {
-    setup_tracing();
+    gmaildb::setup_tracing();
 
-    let config = make_config();
+    let config = gmaildb::make_config();
+    let importer = gmaildb::importer::gmail_importer(&config);
 
-    println!("Collecting Mails...");
-    let emails = importer::filesystem::read_emails(&config)?;
-
-    println!("Begin Parsing Mails...");
-    let (receiver, handle) = crate::importer::parse::emails::parse_emails(&config, emails)?;
+    let adapter = gmaildb::importer::Adapter::new();
+    let handle = adapter.process(importer)?;
 
     let mut stdout = stdout();
 
-    let mut total: Option<usize> = None;
-    let mut counter = 0;
-    let mut done = false;
-
-    'outer: while done == false {
-        for entry in receiver.try_iter() {
-            let message = match entry {
-                Ok(n) => n,
-                Err(e) => {
-                    println!("Processing Error: {:?}", &e);
-                    break 'outer;
-                }
-            };
-            use importer::parse::emails::ParseMessage;
-            match message {
-                ParseMessage::Done => done = true,
-                ParseMessage::Total(n) => total = Some(n),
-                ParseMessage::ParsedOne => counter += 1,
-            };
-        }
-
-        if let Some(total) = total {
-            print!("\rProcessing {}/{}...", counter, total);
-        }
-
+    loop {
+        match adapter.finished() {
+            Ok(State {
+                finishing: true, ..
+            }) => {
+                println!("Finishing import...");
+            }
+            Ok(State { done: true, .. }) => {
+                break;
+            }
+            _ => (),
+        };
+        match adapter.read_count() {
+            Ok(Progress { count, total }) => {
+                print!("\rReading {}/{}...", count, total);
+            }
+            _ => (),
+        };
+        match adapter.write_count() {
+            Ok(Progress { count, total }) => {
+                print!("\rWriting to DB {}/{}...", count, total);
+            }
+            _ => (),
+        };
         stdout.flush().unwrap();
-        sleep(Duration::from_millis(20));
+        sleep(Duration::from_millis(50));
     }
-    let result = handle.join().map_err(|op| eyre::eyre!("{:?}", &op))??;
 
-    println!(
-        "Read: {}, Processed: {}, Inserted: {}",
-        total.unwrap_or_default(),
-        counter,
-        result
-    );
+    match handle.join() {
+        Err(e) => println!("Error: {:?}", e),
+        Ok(Err(e)) => println!("Error: {:?}", e),
+        _ => (),
+    }
 
-    println!();
-    tracing::trace!("Exit Program");
     Ok(())
 }
