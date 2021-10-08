@@ -1,5 +1,6 @@
 use eyre::{bail, eyre, Result};
 use rayon::prelude::*;
+use tracing::trace;
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -37,6 +38,7 @@ where
                 return None;
             }
             let sender = sender.clone();
+            trace!("Reading folder {}", path.display());
             action(&path, sender)
                 .map_err(|e| tracing::error!("{} {:?}", &path.display(), &e))
                 .ok()

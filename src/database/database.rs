@@ -29,10 +29,9 @@ impl Database {
 
         Self::create_tables(&connection)?;
 
-        //#[cfg(feature = "trace-sql")]
+        #[cfg(feature = "trace-sql")]
         connection.trace(Some(|query| {
-            //tracing::trace!("SQL: {}", &query);
-            println!("SQL: {}", &query);
+            tracing::trace!("SQL: {}", &query);
         }));
 
         Ok(Database {

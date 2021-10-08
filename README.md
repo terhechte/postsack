@@ -3,6 +3,7 @@
 ## Fast
 
 It currently parses 632383 emails in ~160 seconds, so roughly `4.000` emails per second. This excludes (for now) attachments.
+Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` emails per second. This excludes (for now) attachments.
 
 ## Open Issues
 - [ ] make the rectangles look nicer

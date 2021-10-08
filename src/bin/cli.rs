@@ -8,7 +8,7 @@ use std::{
 
 use gmaildb::{
     self,
-    importer::{Progress, State},
+    importer::{Adapter, State},
 };
 
 fn main() -> Result<()> {
@@ -23,31 +23,15 @@ fn main() -> Result<()> {
     let mut stdout = stdout();
 
     loop {
-        match adapter.finished() {
-            Ok(State {
-                finishing: true, ..
-            }) => {
-                println!("Finishing import...");
+        match handle_adapter(&adapter) {
+            Ok(true) => break,
+            Ok(false) => (),
+            Err(e) => {
+                println!("Execution Error:\n{:?}", &e);
+                panic!();
             }
-            Ok(State { done: true, .. }) => {
-                break;
-            }
-            _ => (),
-        };
-        match adapter.read_count() {
-            Ok(Progress { count, total }) => {
-                print!("\rReading {}/{}...", count, total);
-            }
-            _ => (),
-        };
-        match adapter.write_count() {
-            Ok(Progress { count, total }) => {
-                print!("\rWriting to DB {}/{}...", count, total);
-            }
-            _ => (),
-        };
+        }
         stdout.flush().unwrap();
-        sleep(Duration::from_millis(50));
     }
 
     match handle.join() {
@@ -55,6 +39,30 @@ fn main() -> Result<()> {
         Ok(Err(e)) => println!("Error: {:?}", e),
         _ => (),
     }
+    println!("\rDone");
 
     Ok(())
+}
+
+fn handle_adapter(adapter: &Adapter) -> Result<bool> {
+    let State { done, finishing } = adapter.finished()?;
+    if done {
+        return Ok(true);
+    }
+    if finishing {
+        print!("\rFinishing up...");
+    } else {
+        let write = adapter.write_count()?;
+        if write.count > 0 {
+            print!("\rWriting to DB {}/{}...", write.count, write.total);
+        } else {
+            let read = adapter.read_count()?;
+            print!(
+                "\rReading Emails {}%...",
+                ((read.count as f32 / read.total as f32) * 100.0) as usize
+            );
+        }
+    }
+    sleep(Duration::from_millis(50));
+    Ok(false)
 }

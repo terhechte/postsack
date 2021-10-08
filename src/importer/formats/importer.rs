@@ -17,7 +17,7 @@ impl<'a, Format: ImporterFormat + 'static> Importer<'a, Format> {
     }
 
     pub fn import(self) -> Result<(MessageReceiver, JoinHandle<Result<usize>>)> {
-        let Importer { config, format } = self;
+        let Importer { format, .. } = self;
         let (sender, receiver) = unbounded();
 
         let config = self.config.clone();

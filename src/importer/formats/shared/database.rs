@@ -65,6 +65,7 @@ pub fn into_database<Mail: ParseableEmail + 'static>(
         bail!("Channel Failure {:?}", &e);
     }
 
+    tracing::trace!("Waiting for database handle...");
     let output = match handle.join() {
         Ok(Ok(count)) => Ok(count),
         Ok(Err(e)) => Err(e),
@@ -73,6 +74,7 @@ pub fn into_database<Mail: ParseableEmail + 'static>(
 
     // Tell the caller that we're done processing. This will allow leaving the
     // display loop
+    tracing::trace!("Messaging Done");
     if let Err(e) = tx.send(Message::Done) {
         bail!("Channel Failure {:?}", &e);
     }

@@ -1,5 +1,6 @@
 use eyre::Result;
 use rayon::prelude::*;
+use tracing::trace;
 
 use super::super::shared::filesystem::folders_in;
 use super::super::{Message, MessageSender};
@@ -24,7 +25,8 @@ fn read_folder(path: &Path, sender: MessageSender) -> Result<Vec<RawEmailEntry>>
             if path.is_dir() {
                 return None;
             }
-            sender.send(Message::ReadOne);
+            trace!("Reading {}", &path.display());
+            sender.send(Message::ReadOne).unwrap();
             RawEmailEntry::new(path)
         })
         //.take(50)
