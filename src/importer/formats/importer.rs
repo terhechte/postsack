@@ -1,11 +1,28 @@
-use super::ImporterFormat;
+use super::{shared, Config, ImporterFormat};
 
-use crossbeam_channel::{self, Sender};
+use super::{Message, MessageReceiver, MessageSender};
+
+use crossbeam_channel::{self, unbounded, Receiver, Sender};
+use eyre::{Report, Result};
 use std::thread::JoinHandle;
 
-pub enum Message {}
+pub struct Importer<'a, Format: ImporterFormat> {
+    config: &'a Config,
+    format: Format,
+}
 
-pub struct Importer<FORMAT: ImporterFormat> {
-    format: FORMAT,
-    sender: Sender<Message>,
+impl<'a, Format: ImporterFormat + 'static> Importer<'a, Format> {
+    pub fn import(self) -> Result<(MessageReceiver, JoinHandle<Result<usize>>)> {
+        let Importer { config, format } = self;
+        let (sender, receiver) = unbounded();
+
+        let config = self.config.clone();
+        let handle: JoinHandle<Result<usize>> = std::thread::spawn(move || {
+            let emails = format.emails(&config, sender.clone())?;
+            let processed = shared::database::into_database(&config, emails, sender.clone())?;
+
+            Ok(processed)
+        });
+        Ok((receiver, handle))
+    }
 }
