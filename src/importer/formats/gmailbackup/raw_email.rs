@@ -1,11 +1,12 @@
-use eyre::{bail, eyre, Result};
+use eyre::{eyre, Result};
 use flate2::read::GzDecoder;
-use rayon::prelude::*;
 
+use std::borrow::Cow;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use crate::types::Config;
+use super::super::shared::email::EmailMeta;
+use super::super::shared::parse::ParseableEmail;
 
 /// Raw representation of an email.
 /// Contains the paths to the relevant files as well
@@ -49,7 +50,7 @@ impl RawEmailEntry {
 }
 
 impl RawEmailEntry {
-    fn new<P: AsRef<std::path::Path>>(path: P) -> Option<RawEmailEntry> {
+    pub(super) fn new<P: AsRef<std::path::Path>>(path: P) -> Option<RawEmailEntry> {
         let path = path.as_ref();
         let stem = path.file_stem()?.to_str()?;
         let name = path.file_name()?.to_str()?;
@@ -92,44 +93,20 @@ impl RawEmailEntry {
     }
 }
 
-pub fn read_emails(config: &Config) -> Result<Vec<RawEmailEntry>> {
-    let folder = config.emails_folder_path.as_path();
-    if !folder.exists() {
-        bail!("Folder {} does not exist", &folder.display());
+impl ParseableEmail for RawEmailEntry {
+    fn message<'a>(&'a self) -> Result<Cow<'a, [u8]>> {
+        Ok(Cow::Owned(self.read()?))
     }
-    Ok(std::fs::read_dir(&folder)?
-        .into_iter()
-        .par_bridge()
-        .filter_map(|entry| {
-            let path = entry
-                .map_err(|e| tracing::error!("{} {:?}", &folder.display(), &e))
-                .ok()?
-                .path();
-            if !path.is_dir() {
-                return None;
-            }
-            read_folder(&path)
-                .map_err(|e| tracing::error!("{} {:?}", &path.display(), &e))
-                .ok()
-        })
-        .flatten()
-        .collect())
-}
 
-fn read_folder(path: &Path) -> Result<Vec<RawEmailEntry>> {
-    Ok(std::fs::read_dir(path)?
-        .into_iter()
-        .par_bridge()
-        .filter_map(|entry| {
-            let path = entry
-                .map_err(|e| tracing::error!("{} {:?}", &path.display(), &e))
-                .ok()?
-                .path();
-            if path.is_dir() {
-                return None;
-            }
-            RawEmailEntry::new(path)
-        })
-        //.take(50)
-        .collect())
+    fn path(&self) -> &Path {
+        self.eml_path.as_path()
+    }
+
+    fn meta(&self) -> Result<Option<EmailMeta>> {
+        if self.has_gmail_meta() {
+            Ok(Some(super::meta::parse_meta(self)?.into()))
+        } else {
+            Ok(None)
+        }
+    }
 }

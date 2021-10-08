@@ -10,7 +10,7 @@ use std::{
 };
 
 use super::{query::Query, query_result::QueryResult, sql::*, DBMessage};
-use crate::{database::RowConversion, importer::types::EmailEntry};
+use crate::{database::RowConversion, importer::EmailEntry};
 
 #[derive(Debug)]
 pub struct Database {

@@ -4,8 +4,8 @@ use eyre::{bail, Result};
 use serde::Deserialize;
 use serde_json;
 
-use super::super::filesystem::RawEmailEntry;
-use super::super::types::EmailMeta;
+use super::super::shared::email::EmailMeta;
+use super::raw_email::RawEmailEntry;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Meta {
