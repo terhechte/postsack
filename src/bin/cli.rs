@@ -54,12 +54,12 @@ fn handle_adapter(adapter: &Adapter) -> Result<bool> {
     } else {
         let write = adapter.write_count()?;
         if write.count > 0 {
-            print!("\rWriting to DB {}/{}...", write.count, write.total);
+            print!("\rWriting emails to DB {}/{}...", write.count, write.total);
         } else {
             let read = adapter.read_count()?;
             print!(
                 "\rReading Emails {}%...",
-                ((read.count as f32 / read.total as f32) * 100.0) as usize
+                (read.count as f32 / read.total as f32) * 100.0
             );
         }
     }

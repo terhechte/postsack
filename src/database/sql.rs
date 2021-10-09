@@ -21,8 +21,7 @@ CREATE TABLE IF NOT EXISTS emails (
 
 pub const TBL_ERRORS: &str = r#"
 CREATE TABLE IF NOT EXISTS errors (
-  message TEXT NOT NULL,
-  path TEXT NOT NULL
+  message TEXT NOT NULL
 );"#;
 
 pub const QUERY_EMAILS: &str = r#"

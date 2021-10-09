@@ -1,6 +1,11 @@
+//! We use a stubbornly stupid algorithm where we just
+//! recursively drill down into the appropriate folder
+//! until we find `emlx` files and return those.
+
 use eyre::Result;
 use rayon::prelude::*;
 use tracing::trace;
+use walkdir::WalkDir;
 
 use super::super::shared::filesystem::folders_in;
 use super::super::{Message, MessageSender};
@@ -8,6 +13,12 @@ use super::raw_email::RawEmailEntry;
 use crate::types::Config;
 
 use std::path::Path;
+
+fn test_walkdir() {
+    for entry in WalkDir::new("foo").int_par_iter().filter_map(|e| e.ok()) {
+        println!("{}", entry.path().display());
+    }
+}
 
 pub fn read_emails(config: &Config, sender: MessageSender) -> Result<Vec<RawEmailEntry>> {
     Ok(folders_in(&config.emails_folder_path, sender, read_folder)?)

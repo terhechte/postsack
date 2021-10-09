@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use email_parser::address::{Address, EmailAddress, Mailbox};
-use eyre::{bail, eyre, Result};
+use eyre::{eyre, Result};
 
 use std::borrow::{Borrow, Cow};
 use std::convert::{TryFrom, TryInto};
@@ -11,6 +11,9 @@ use super::email::{EmailEntry, EmailMeta};
 /// Different `importer`s can implement this trait to provide the necessary
 /// data to parse their data into a `EmailEntry`.
 pub trait ParseableEmail: Send + Sized + Sync {
+    /// This will be called once before `message`, `path` and `meta`
+    /// are called. It can be used to perform parsing operations
+    fn prepare(&mut self) -> Result<()>;
     /// The message content as bytes
     fn message<'a>(&'a self) -> Result<Cow<'a, [u8]>>;
     /// The original path of the email in the filesystem
@@ -20,71 +23,60 @@ pub trait ParseableEmail: Send + Sized + Sync {
     fn meta(&self) -> Result<Option<EmailMeta>>;
 }
 
-pub fn parse_email<Entry: ParseableEmail>(entry: &Entry) -> Result<EmailEntry> {
+pub fn parse_email<Entry: ParseableEmail>(entry: &mut Entry) -> Result<EmailEntry> {
+    entry.prepare()?;
     let content = entry.message()?;
-    parse_email_parser(entry, content.borrow())
-}
-
-fn parse_email_parser<Entry: ParseableEmail>(
-    raw_entry: &Entry,
-    content: &[u8],
-) -> Result<EmailEntry> {
     match email_parser::email::Email::parse(&content) {
-        Ok(email) => (raw_entry, email).try_into(),
+        Ok(email) => {
+            let path = entry.path();
+            let (sender_name, _, sender_local_part, sender_domain) =
+                mailbox_to_string(&email.sender);
+
+            let datetime = emaildatetime_to_chrono(&email.date);
+            let subject = email.subject.map(|e| e.to_string()).unwrap_or_default();
+
+            let to_count = match email.to.as_ref() {
+                Some(n) => n.len(),
+                None => 0,
+            };
+            let to = match email.to.as_ref().map(|v| v.first()).flatten() {
+                Some(n) => address_to_name_string(n),
+                None => None,
+            };
+            let to_group = to.as_ref().map(|e| e.0.clone()).flatten();
+            let to_first = to.as_ref().map(|e| (e.1.clone(), e.2.clone()));
+
+            let is_reply = email.in_reply_to.map(|v| !v.is_empty()).unwrap_or(false);
+
+            let meta = entry.meta()?;
+
+            // FIXME: This is filled out at a later stage
+            let is_send = false;
+
+            Ok(EmailEntry {
+                path: path.to_path_buf(),
+                sender_domain,
+                sender_local_part,
+                sender_name,
+                datetime,
+                subject,
+                meta,
+                is_reply,
+                to_count,
+                to_group,
+                to_first,
+                is_send,
+            })
+        }
         Err(error) => {
             //let content_string = String::from_utf8(content.clone())?;
             //println!("{}|{}", &error, &raw_entry.eml_path.display());
             Err(eyre!(
                 "Could not parse email: {:?} [{}]",
                 &error,
-                raw_entry.path().display()
+                entry.path().display()
             ))
         }
-    }
-}
-
-impl<'a, Entry: ParseableEmail> TryFrom<(&Entry, email_parser::email::Email<'a>)> for EmailEntry {
-    type Error = eyre::Report;
-    fn try_from(content: (&Entry, email_parser::email::Email)) -> Result<Self, Self::Error> {
-        let (entry, email) = content;
-        let path = entry.path();
-        let (sender_name, _, sender_local_part, sender_domain) = mailbox_to_string(&email.sender);
-
-        let datetime = emaildatetime_to_chrono(&email.date);
-        let subject = email.subject.map(|e| e.to_string()).unwrap_or_default();
-
-        let to_count = match email.to.as_ref() {
-            Some(n) => n.len(),
-            None => 0,
-        };
-        let to = match email.to.as_ref().map(|v| v.first()).flatten() {
-            Some(n) => address_to_name_string(n),
-            None => None,
-        };
-        let to_group = to.as_ref().map(|e| e.0.clone()).flatten();
-        let to_first = to.as_ref().map(|e| (e.1.clone(), e.2.clone()));
-
-        let is_reply = email.in_reply_to.map(|v| !v.is_empty()).unwrap_or(false);
-
-        let meta = entry.meta()?;
-
-        // FIXME: This is filled out at a later stage
-        let is_send = false;
-
-        Ok(EmailEntry {
-            path: path.to_path_buf(),
-            sender_domain,
-            sender_local_part,
-            sender_name,
-            datetime,
-            subject,
-            meta,
-            is_reply,
-            to_count,
-            to_group,
-            to_first,
-            is_send,
-        })
     }
 }
 

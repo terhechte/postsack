@@ -94,6 +94,9 @@ impl RawEmailEntry {
 }
 
 impl ParseableEmail for RawEmailEntry {
+    fn prepare(&mut self) -> Result<()> {
+        Ok(())
+    }
     fn message<'a>(&'a self) -> Result<Cow<'a, [u8]>> {
         Ok(Cow::Owned(self.read()?))
     }

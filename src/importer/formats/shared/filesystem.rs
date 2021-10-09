@@ -1,12 +1,13 @@
-use eyre::{bail, eyre, Result};
+use eyre::{bail, Result};
 use rayon::prelude::*;
 use tracing::trace;
 
-use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::super::{Message, MessageSender};
 
+/// Call `FolderAction` on all files in all sub folders in
+/// folder `folder`.
 pub fn folders_in<FolderAction, ActionResult, P>(
     folder: P,
     sender: MessageSender,

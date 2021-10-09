@@ -9,7 +9,7 @@ pub enum DBMessage {
     /// Send for a successfuly parsed mail
     Mail(EmailEntry),
     /// Send for any kind of error during reading / parsing
-    Error(Report, PathBuf),
+    Error(Report),
     /// Send once all parsing is done.
     /// This is used to break out of the receiving loop
     Done,

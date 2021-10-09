@@ -113,9 +113,7 @@ impl Database {
                                 counter += 1;
                                 insert_mail(&mut mail_prepared, &mail)
                             }
-                            DBMessage::Error(report, path) => {
-                                insert_error(&mut error_prepared, &report, &path)
-                            }
+                            DBMessage::Error(report) => insert_error(&mut error_prepared, &report),
                             DBMessage::Done => {
                                 tracing::trace!("Received DBMessage::Done");
                                 break;
@@ -184,8 +182,8 @@ fn insert_mail(statement: &mut Statement, entry: &EmailEntry) -> Result<()> {
     Ok(())
 }
 
-fn insert_error(statement: &mut Statement, message: &Report, path: &PathBuf) -> Result<()> {
-    statement.execute(params![message.to_string(), path.display().to_string()])?;
-    tracing::trace!("Insert Error {}", &path.display());
+fn insert_error(statement: &mut Statement, message: &Report) -> Result<()> {
+    statement.execute(params![message.to_string()])?;
+    tracing::trace!("Insert Error {}", message);
     Ok(())
 }

@@ -1,22 +1,15 @@
-use super::email::{EmailEntry, EmailMeta};
 use super::parse::{parse_email, ParseableEmail};
 use crate::database::{DBMessage, Database};
 use crate::types::Config;
 
 use super::super::{Message, MessageSender};
 
-use chrono::prelude::*;
-use email_parser::address::{Address, EmailAddress, Mailbox};
-use eyre::{bail, eyre, Result};
+use eyre::{bail, Context, Result};
 use rayon::prelude::*;
-use std::thread::JoinHandle;
-
-use std::convert::{TryFrom, TryInto};
-use std::path::Path;
 
 pub fn into_database<Mail: ParseableEmail + 'static>(
     config: &Config,
-    emails: Vec<Mail>,
+    mut emails: Vec<Mail>,
     tx: MessageSender,
 ) -> Result<usize> {
     let total = emails.len();
@@ -37,17 +30,23 @@ pub fn into_database<Mail: ParseableEmail + 'static>(
     // Iterate over the mails..
     emails
         // in paralell..
-        .par_iter()
+        //.par_iter()
+        .par_iter_mut()
         // parsing them
-        .map(|raw_mail| (raw_mail.path(), parse_email(raw_mail)))
+        .map(|raw_mail| {
+            // Due to lifetime issues, we can't use raw_mail.path() or raw_mail.path().display()
+            // or raw_mail.path().to_path_buf().display() as all of those retain a reference to
+            // `raw_mail`. So we just format the context into a string
+            parse_email(raw_mail).with_context(|| format!("{}", raw_mail.path().display()))
+        })
         // and inserting them into SQLite
-        .for_each(|(path, entry)| {
+        .for_each(|entry| {
             if let Err(e) = tx.send(Message::WriteOne) {
                 tracing::error!("Channel Failure: {:?}", &e);
             }
             if let Err(e) = match entry {
                 Ok(mail) => sender.send(DBMessage::Mail(mail)),
-                Err(e) => sender.send(DBMessage::Error(e, path.to_path_buf())),
+                Err(e) => sender.send(DBMessage::Error(e)),
             } {
                 tracing::error!("Error Inserting into Database: {:?}", &e);
             }

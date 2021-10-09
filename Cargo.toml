@@ -27,6 +27,8 @@ num-format = "0.4.0"
 strum = "0.21"
 strum_macros = "0.21"
 lru = { version = "0.7.0", optional = true }
+emlx = "0.1"
+walkdir = "*"
 
 [features]
 default = ["gui"]

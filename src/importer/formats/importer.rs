@@ -1,9 +1,9 @@
 use super::{shared, Config, ImporterFormat};
 
-use super::{Message, MessageReceiver, MessageSender};
+use super::MessageReceiver;
 
-use crossbeam_channel::{self, unbounded, Receiver, Sender};
-use eyre::{Report, Result};
+use crossbeam_channel::{self, unbounded};
+use eyre::Result;
 use std::thread::JoinHandle;
 
 pub struct Importer<'a, Format: ImporterFormat> {

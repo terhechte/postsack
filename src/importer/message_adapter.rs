@@ -4,8 +4,7 @@ use std::sync::{Arc, RwLock};
 use std::thread::JoinHandle;
 
 use super::formats::{Importer, ImporterFormat};
-use super::{Message, MessageReceiver};
-use crate::types::Config;
+use super::Message;
 
 #[derive(Clone, Debug, Copy, Default)]
 struct Data {
