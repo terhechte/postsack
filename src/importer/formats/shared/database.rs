@@ -33,7 +33,7 @@ pub fn into_database<Mail: ParseableEmail + 'static>(
         //.par_iter()
         .par_iter_mut()
         // parsing them
-        .map(|raw_mail| parse_email(raw_mail))
+        .map(|raw_mail| parse_email(raw_mail, config.sender_email.as_str()))
         // and inserting them into SQLite
         .for_each(|entry| {
             // Try to write the message into the database

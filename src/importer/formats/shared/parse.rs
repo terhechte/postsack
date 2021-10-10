@@ -22,7 +22,10 @@ pub trait ParseableEmail: Send + Sized + Sync {
     fn meta(&self) -> Result<Option<EmailMeta>>;
 }
 
-pub fn parse_email<Entry: ParseableEmail>(entry: &mut Entry) -> Result<EmailEntry> {
+pub fn parse_email<Entry: ParseableEmail>(
+    entry: &mut Entry,
+    config_sender_email: &str,
+) -> Result<EmailEntry> {
     if let Err(e) = entry.prepare() {
         tracing::error!("Prepare Error: {:?}", e);
         return Err(e);
@@ -53,8 +56,10 @@ pub fn parse_email<Entry: ParseableEmail>(entry: &mut Entry) -> Result<EmailEntr
 
             let meta = entry.meta()?;
 
-            // FIXME: This is filled out at a later stage
-            let is_send = false;
+            // In order to determine the sender, we have to
+            // build up the address again :-(
+            let is_send =
+                format!("{}@{}", sender_local_part, sender_domain).as_str() == config_sender_email;
 
             Ok(EmailEntry {
                 path: path.to_path_buf(),
