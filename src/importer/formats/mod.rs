@@ -2,7 +2,6 @@ pub use eyre::Result;
 
 mod apple_mail;
 mod gmailbackup;
-mod importer;
 pub mod shared;
 
 pub use apple_mail::AppleMail;
@@ -12,7 +11,6 @@ pub use crate::types::Config;
 use shared::parse::ParseableEmail;
 
 pub use super::{Message, MessageReceiver, MessageSender};
-pub use importer::Importer;
 
 /// This is implemented by the various formats
 /// to define how they return email data.

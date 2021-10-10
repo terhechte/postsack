@@ -9,16 +9,29 @@ use std::{
 use gmaildb::{
     self,
     importer::{Adapter, State},
+    types::ImporterFormat,
 };
 
 fn main() -> Result<()> {
     gmaildb::setup_tracing();
 
     let config = gmaildb::make_config();
-    let importer = gmaildb::importer::gmail_importer(&config);
 
     let adapter = gmaildb::importer::Adapter::new();
-    let handle = adapter.process(importer)?;
+
+    // Could not figure out how to build this properly
+    // with dynamic dispatch. (to abstract away the match)
+    // Will try again when I'm online.
+    let handle = match config.format {
+        ImporterFormat::AppleMail => {
+            let importer = gmaildb::importer::applemail_importer(config.clone());
+            adapter.process(importer)?
+        }
+        ImporterFormat::GmailVault => {
+            let importer = gmaildb::importer::gmail_importer(config.clone());
+            adapter.process(importer)?
+        }
+    };
 
     let mut stdout = stdout();
 

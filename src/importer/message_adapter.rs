@@ -3,7 +3,8 @@ use eyre::{bail, eyre, Result};
 use std::sync::{Arc, RwLock};
 use std::thread::JoinHandle;
 
-use super::formats::{Importer, ImporterFormat};
+use super::formats::ImporterFormat;
+use super::importer::Importerlike;
 use super::Message;
 
 #[derive(Clone, Debug, Copy, Default)]
@@ -49,9 +50,9 @@ impl Adapter {
 
     /// Starts up a thread that handles the `MessageReceiver` messages
     /// into state that can be accessed via [`read_count`], [`write_count`] and [`finished`]
-    pub fn process<'a, Format: ImporterFormat + 'static>(
+    pub fn process<Format: ImporterFormat + 'static>(
         &self,
-        importer: Importer<'a, Format>,
+        importer: super::importer::Importer<Format>,
     ) -> Result<JoinHandle<Result<()>>> {
         let (receiver, handle) = importer.import()?;
         let lock = self.producer_lock.clone();
