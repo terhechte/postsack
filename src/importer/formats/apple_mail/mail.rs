@@ -18,7 +18,12 @@ pub struct Mail {
 }
 
 impl Mail {
-    pub fn new(path: &Path) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Option<Self> {
+        let path = path.as_ref();
+        let name = path.file_name()?.to_str()?;
+        if !name.ends_with(".emlx") {
+            return None;
+        }
         // find the folder ending with `.mbox` in the path
         let ext = ".mbox";
         let label = path
@@ -27,7 +32,7 @@ impl Mail {
             .flatten()
             .find(|s| s.ends_with(ext))
             .map(|s| s.replace(ext, "").to_string());
-        Ok(Self {
+        Some(Self {
             path: path.to_path_buf(),
             is_seen: false,
             label,

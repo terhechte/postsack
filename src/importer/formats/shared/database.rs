@@ -4,7 +4,7 @@ use crate::types::Config;
 
 use super::super::{Message, MessageSender};
 
-use eyre::{bail, Context, Result};
+use eyre::{bail, Result};
 use rayon::prelude::*;
 
 pub fn into_database<Mail: ParseableEmail + 'static>(
@@ -33,22 +33,19 @@ pub fn into_database<Mail: ParseableEmail + 'static>(
         //.par_iter()
         .par_iter_mut()
         // parsing them
-        .map(|raw_mail| {
-            // Due to lifetime issues, we can't use raw_mail.path() or raw_mail.path().display()
-            // or raw_mail.path().to_path_buf().display() as all of those retain a reference to
-            // `raw_mail`. So we just format the context into a string
-            parse_email(raw_mail).with_context(|| format!("{}", raw_mail.path().display()))
-        })
+        .map(|raw_mail| parse_email(raw_mail))
         // and inserting them into SQLite
         .for_each(|entry| {
-            if let Err(e) = tx.send(Message::WriteOne) {
-                tracing::error!("Channel Failure: {:?}", &e);
-            }
+            // Try to write the message into the database
             if let Err(e) = match entry {
                 Ok(mail) => sender.send(DBMessage::Mail(mail)),
                 Err(e) => sender.send(DBMessage::Error(e)),
             } {
                 tracing::error!("Error Inserting into Database: {:?}", &e);
+            }
+            // Signal the write
+            if let Err(e) = tx.send(Message::WriteOne) {
+                tracing::error!("Channel Failure: {:?}", &e);
             }
         });
 

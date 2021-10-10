@@ -2,8 +2,7 @@ use chrono::prelude::*;
 use email_parser::address::{Address, EmailAddress, Mailbox};
 use eyre::{eyre, Result};
 
-use std::borrow::{Borrow, Cow};
-use std::convert::{TryFrom, TryInto};
+use std::borrow::Cow;
 use std::path::Path;
 
 use super::email::{EmailEntry, EmailMeta};
@@ -24,11 +23,15 @@ pub trait ParseableEmail: Send + Sized + Sync {
 }
 
 pub fn parse_email<Entry: ParseableEmail>(entry: &mut Entry) -> Result<EmailEntry> {
-    entry.prepare()?;
+    if let Err(e) = entry.prepare() {
+        tracing::error!("Prepare Error: {:?}", e);
+        return Err(e);
+    }
     let content = entry.message()?;
     match email_parser::email::Email::parse(&content) {
         Ok(email) => {
             let path = entry.path();
+            tracing::trace!("Parsing {}", path.display());
             let (sender_name, _, sender_local_part, sender_domain) =
                 mailbox_to_string(&email.sender);
 
@@ -69,13 +72,18 @@ pub fn parse_email<Entry: ParseableEmail>(entry: &mut Entry) -> Result<EmailEntr
             })
         }
         Err(error) => {
-            //let content_string = String::from_utf8(content.clone())?;
-            //println!("{}|{}", &error, &raw_entry.eml_path.display());
-            Err(eyre!(
-                "Could not parse email: {:?} [{}]",
+            let error = eyre!(
+                "Could not parse email (trace to see contents): {:?} [{}]",
                 &error,
                 entry.path().display()
-            ))
+            );
+            tracing::error!("{:?}", &error);
+            if let Ok(content_string) = String::from_utf8(content.into_owned()) {
+                tracing::trace!("Contents:\n{}\n---\n", content_string);
+            } else {
+                tracing::trace!("Contents:\nInvalid UTF8\n---\n");
+            }
+            Err(error)
         }
     }
 }

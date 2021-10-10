@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use eyre::Report;
 
 use crate::importer::EmailEntry;

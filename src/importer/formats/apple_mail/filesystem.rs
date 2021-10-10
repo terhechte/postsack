@@ -4,43 +4,46 @@
 
 use eyre::Result;
 use rayon::prelude::*;
-use tracing::trace;
 use walkdir::WalkDir;
 
-use super::super::shared::filesystem::folders_in;
-use super::super::{Message, MessageSender};
-use super::raw_email::RawEmailEntry;
+use super::super::shared::filesystem::emails_in;
+use super::super::MessageSender;
 use crate::types::Config;
 
-use std::path::Path;
+use super::mail::Mail;
+use std::path::PathBuf;
 
-fn test_walkdir() {
-    for entry in WalkDir::new("foo").int_par_iter().filter_map(|e| e.ok()) {
-        println!("{}", entry.path().display());
-    }
-}
-
-pub fn read_emails(config: &Config, sender: MessageSender) -> Result<Vec<RawEmailEntry>> {
-    Ok(folders_in(&config.emails_folder_path, sender, read_folder)?)
-}
-
-fn read_folder(path: &Path, sender: MessageSender) -> Result<Vec<RawEmailEntry>> {
-    let result = Ok(std::fs::read_dir(path)?
+pub fn read_emails(config: &Config, sender: MessageSender) -> Result<Vec<Mail>> {
+    // As `walkdir` does not support `par_iter` (see https://www.reddit.com/r/rust/comments/6eif7r/walkdir_users_we_need_you/)
+    // - -we first collect all folders,
+    // then all sub-folders in those ending in mboxending in .mbox and then iterate over them in paralell
+    let folders: Vec<PathBuf> = WalkDir::new(&config.emails_folder_path)
         .into_iter()
-        .par_bridge()
-        .filter_map(|entry| {
-            let path = entry
-                .map_err(|e| tracing::error!("{} {:?}", &path.display(), &e))
-                .ok()?
-                .path();
-            if path.is_dir() {
-                return None;
+        .filter_map(|e| match e {
+            Ok(n)
+                if n.path().is_dir()
+                    && n.path()
+                        .to_str()
+                        .map(|e| e.contains(".mbox"))
+                        .unwrap_or(false) =>
+            {
+                Some(n.path().to_path_buf())
             }
-            trace!("Reading {}", &path.display());
-            RawEmailEntry::new(path)
+            _ => None,
         })
-        .collect());
-    // We're done reading the folder
-    sender.send(Message::ReadOne).unwrap();
-    result
+        .collect();
+    let mails = folders
+        .into_par_iter()
+        .filter_map(
+            |path| match emails_in(path.clone(), sender.clone(), Mail::new) {
+                Ok(n) => Some(n),
+                Err(e) => {
+                    tracing::error!("{} {:?}", path.display(), &e);
+                    None
+                }
+            },
+        )
+        .flatten()
+        .collect();
+    Ok(mails)
 }

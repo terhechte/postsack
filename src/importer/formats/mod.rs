@@ -5,6 +5,7 @@ mod gmailbackup;
 mod importer;
 pub mod shared;
 
+pub use apple_mail::AppleMail;
 pub use gmailbackup::Gmail;
 
 pub use crate::types::Config;

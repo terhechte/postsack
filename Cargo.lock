@@ -538,7 +538,7 @@ checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 [[package]]
 name = "email-parser"
 version = "0.5.0"
-source = "git+https://github.com/terhechte/email-parser#da8582a266385b8f1b2f7e150ac891e3f850d41a"
+source = "git+https://github.com/terhechte/email-parser#dba59d86771f7df67bb9e7f3a2c4b1e36b02d19b"
 dependencies = [
  "textcode",
  "timezone-abbreviations",
@@ -552,10 +552,10 @@ checksum = "cca5179aa9d15128cebb79bb56dda73a79cc66b402056ff19a992e54b365e15c"
 
 [[package]]
 name = "emlx"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f41d97755f64845fb52dbff2acc01853ba51343e2076c4ab3099bb669d0e71e"
+version = "0.1.5"
+source = "git+https://github.com/terhechte/emlx#44c2f278551d9e7a9ae0c3c3207c4471da3049fe"
 dependencies = [
+ "email-parser",
  "plist",
  "thiserror",
 ]

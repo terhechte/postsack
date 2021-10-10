@@ -45,7 +45,7 @@ VALUES
 
 pub const QUERY_ERRORS: &str = r#"
 INSERT INTO errors
-    (message, path)
+    (message)
 VALUES
-    (?, ?)
+    (?)
 "#;

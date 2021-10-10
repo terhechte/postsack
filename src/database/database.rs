@@ -4,10 +4,7 @@ use eyre::{bail, Report, Result};
 use rusqlite::{self, params, Connection, Statement};
 
 use core::panic;
-use std::{
-    path::{Path, PathBuf},
-    thread::JoinHandle,
-};
+use std::{path::Path, thread::JoinHandle};
 
 use super::{query::Query, query_result::QueryResult, sql::*, DBMessage};
 use crate::{database::RowConversion, importer::EmailEntry};

@@ -38,3 +38,7 @@ pub type MessageReceiver = crossbeam_channel::Receiver<Message>;
 pub fn gmail_importer(config: &Config) -> Importer<formats::Gmail> {
     Importer::new(config, formats::Gmail::default())
 }
+
+pub fn applemail_importer(config: &Config) -> Importer<formats::AppleMail> {
+    Importer::new(config, formats::AppleMail::default())
+}

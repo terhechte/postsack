@@ -13,7 +13,7 @@ tracing-subscriber = "0.2.24"
 rusqlite = {version = "0.25.3", features = ["chrono", "trace", "serde_json"]}
 regex = "1.5.3"
 flate2 = "1.0.22"
-email-parser = { git = "https://github.com/terhechte/email-parser", features = ["sender", "to", "in-reply-to", "date", "subject", "mime", "allow-duplicate-headers"]}
+email-parser = { git = "https://github.com/terhechte/email-parser", features = ["sender", "to", "in-reply-to", "date", "subject", "mime", "allow-duplicate-headers", "compatibility-fixes"]}
 rayon = "1.5.1"
 chrono = "0.4.19"
 lazy_static = "*"
@@ -27,7 +27,7 @@ num-format = "0.4.0"
 strum = "0.21"
 strum_macros = "0.21"
 lru = { version = "0.7.0", optional = true }
-emlx = "0.1"
+emlx = { git = "https://github.com/terhechte/emlx", features = []}
 walkdir = "*"
 
 [features]
