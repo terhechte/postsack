@@ -32,8 +32,7 @@ pub fn make_config() -> types::Config {
         .get(4)
         .unwrap_or_else(|| usage("Missing sender email address argument"))
         .into();
-    let config = crate::types::Config::new(database, folder, sender.to_string(), format);
-    config
+    crate::types::Config::new(database, folder, sender.to_string(), format)
 }
 
 fn usage(error: &'static str) -> ! {

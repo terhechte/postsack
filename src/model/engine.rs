@@ -43,7 +43,7 @@ pub struct Engine {
 
 impl Engine {
     pub fn new(config: &Config) -> Result<Self> {
-        let link = super::link::run(&config)?;
+        let link = super::link::run(config)?;
         let engine = Engine {
             link,
             search_stack: Vec::new(),
@@ -58,9 +58,8 @@ impl Engine {
     /// asynchronously communicate with the underlying backend
     /// in a non-blocking manner.
     pub fn start(&mut self) -> Result<()> {
-        Ok(self
-            .link
-            .request(&segmentations::make_query(&self)?, Action::PushSegmentation)?)
+        self.link
+            .request(&segmentations::make_query(self)?, Action::PushSegmentation)
     }
 
     /// Return the current stack of `Segmentations`
@@ -97,7 +96,7 @@ impl Engine {
 
         // Block UI & Wait for updates
         self.link
-            .request(&segmentations::make_query(&self)?, Action::PushSegmentation)
+            .request(&segmentations::make_query(self)?, Action::PushSegmentation)
     }
 
     /// Pop the current `Segmentation` from the stack.
@@ -122,7 +121,9 @@ impl Engine {
         self.search_stack.remove(self.search_stack.len() - 1);
 
         // Remove the selection in the last segmentation
-        self.segmentations.last_mut().map(|e| e.selected = None);
+        if let Some(e) = self.segmentations.last_mut() {
+            e.selected = None
+        }
 
         // Remove any rows that were cached for this segmentation
         self.item_cache.clear();

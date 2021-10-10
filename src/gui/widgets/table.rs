@@ -28,10 +28,12 @@ pub struct Table<'selection, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usi
 struct Column<R> {
     name: String,
     value_mapper: Box<dyn FnMut(&Option<R>) -> String>,
+    #[allow(dead_code)]
     max_width: Option<f32>,
 }
 
 impl<R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Table<'static, R, C, RowMaker> {
+    #[allow(dead_code)]
     pub fn new(id_source: impl Hash, num_rows: usize, row_maker: RowMaker) -> Self {
         Self {
             id_source: Id::new(id_source),
@@ -79,6 +81,7 @@ impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Table<'s,
         self
     }
 
+    #[allow(dead_code)]
     fn supports_selection(&self) -> bool {
         self.selected_row.is_some()
     }
@@ -179,7 +182,7 @@ impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Widget
                 let row_size = vec2(ui.available_width(), self.row_height);
                 let cell_text_style = ui.style().body_text_style;
 
-                for (row_idx, row) in rows.as_ref().into_iter().enumerate() {
+                for (row_idx, row) in rows.as_ref().iter().enumerate() {
                     let (row_id, row_rect) = ui.allocate_space(row_size);
                     // let row_id = self.id_source.with("_row_").with(row_idx);
                     let row_response = ui.interact(row_rect, row_id, Sense::click());

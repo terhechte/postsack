@@ -24,21 +24,20 @@ impl<'a> Widget for MailPanel<'a> {
                 Table::new_selectable(
                     "mail_list",
                     &mut selected_row,
-                    items::count(&self.engine),
+                    items::count(self.engine),
                     |range| {
                         // we overshoot the range a bit, as otherwise somehow the bottom is always empty
                         let range = std::ops::Range {
                             start: range.start,
                             end: range.end + 6,
                         };
-                        let rows = match items::items(self.engine, Some(range)) {
+                        match items::items(self.engine, Some(range)) {
                             Ok(n) => n,
                             Err(e) => {
                                 *self.error = Some(e);
                                 empty_vec.clone()
                             }
-                        };
-                        rows
+                        }
                     },
                 )
                 .column("Sender", 130.0, |sample| {

@@ -16,7 +16,7 @@ pub struct GmailDBApp {
 
 impl GmailDBApp {
     pub fn new(config: &Config) -> Result<Self> {
-        let engine = Engine::new(&config)?;
+        let engine = Engine::new(config)?;
         Ok(Self {
             _config: config.clone(),
             engine,
@@ -55,7 +55,7 @@ impl epi::App for GmailDBApp {
 
         if let Some(error) = error {
             dbg!(&error);
-            egui::CentralPanel::default().show(ctx, |ui| ui.add(widgets::ErrorBox(&error)));
+            egui::CentralPanel::default().show(ctx, |ui| ui.add(widgets::ErrorBox(error)));
         } else {
             if *show_emails {
                 egui::SidePanel::right("my_left_panel")

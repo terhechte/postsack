@@ -54,7 +54,7 @@ pub fn items(engine: &mut Engine, range: Option<Range<usize>>) -> Result<Vec<Opt
     }
     // Only if at least some data is missing do we perform the request
     if missing_data && !range.is_empty() {
-        let request = make_query(&engine, range.clone());
+        let request = make_query(engine, range);
         engine.link.request(&request, Action::LoadItems)?;
     }
     Ok(rows)

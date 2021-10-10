@@ -56,11 +56,11 @@ impl Database {
         while let Some(row) = rows.next()? {
             match query {
                 Query::Grouped { group_by, .. } => {
-                    let result = QueryResult::grouped_from_row(&group_by, &row)?;
+                    let result = QueryResult::grouped_from_row(group_by, row)?;
                     query_results.push(result);
                 }
                 Query::Normal { fields, .. } => {
-                    let result = QueryResult::from_row(&fields, &row)?;
+                    let result = QueryResult::from_row(fields, row)?;
                     query_results.push(result);
                 }
             }

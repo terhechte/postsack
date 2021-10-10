@@ -1,5 +1,3 @@
-use gmaildb;
-
 #[cfg(feature = "gui")]
 fn main() {
     let config = gmaildb::make_config();

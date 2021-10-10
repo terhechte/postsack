@@ -19,7 +19,7 @@ impl<'a> Widget for TopBar<'a> {
             let groupings = segmentations::aggregated_by(self.engine);
             let has_back = groupings.len() > 1;
             for (id_index, group) in groupings.iter().enumerate() {
-                let alternatives = segmentations::aggregation_fields(self.engine, &group);
+                let alternatives = segmentations::aggregation_fields(self.engine, group);
                 if let Some(value) = group.value() {
                     let label = egui::Label::new(format!("{}: {}", group.name(), value));
                     ui.add(label);
@@ -33,7 +33,7 @@ impl<'a> Widget for TopBar<'a> {
                     if p.changed() {
                         *self.error = segmentations::set_aggregation(
                             self.engine,
-                            &group,
+                            group,
                             &alternatives[selected],
                         )
                         .err();
@@ -41,10 +41,8 @@ impl<'a> Widget for TopBar<'a> {
                 }
             }
 
-            if has_back {
-                if ui.button("Back").clicked() {
-                    self.engine.pop();
-                }
+            if has_back && ui.button("Back").clicked() {
+                self.engine.pop();
             }
         })
         .response

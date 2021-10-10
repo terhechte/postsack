@@ -53,21 +53,21 @@ pub struct ValueField {
 impl ValueField {
     pub fn string<S: AsRef<str>>(field: &Field, value: S) -> ValueField {
         ValueField {
-            field: field.clone(),
+            field: *field,
             value: Value::String(value.as_ref().to_string()),
         }
     }
 
     pub fn bool(field: &Field, value: bool) -> ValueField {
         ValueField {
-            field: field.clone(),
+            field: *field,
             value: Value::Bool(value),
         }
     }
 
     pub fn usize(field: &Field, value: usize) -> ValueField {
         ValueField {
-            field: field.clone(),
+            field: *field,
             value: Value::Number(value.into()),
         }
     }
@@ -97,8 +97,8 @@ pub enum Query {
 impl Query {
     fn filters(&self) -> &[Filter] {
         match self {
-            &Query::Grouped { ref filters, .. } => &filters,
-            &Query::Normal { ref filters, .. } => &filters,
+            Query::Grouped { ref filters, .. } => filters,
+            Query::Normal { ref filters, .. } => filters,
         }
     }
 }

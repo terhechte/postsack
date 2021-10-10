@@ -56,7 +56,7 @@ pub fn set_segments_range(engine: &mut Engine, range: Option<RangeInclusive<usiz
         if let Some(r) = range {
             let len = n.len();
             if len > *r.start() && *r.end() < len {
-                n.range = Some(r.clone());
+                n.range = Some(r);
             }
         } else {
             n.range = None;
@@ -79,12 +79,12 @@ pub fn aggregation_fields(engine: &Engine, aggregation: &Aggregation) -> Vec<Fie
     Field::all_cases()
         .filter_map(|f| {
             if f == aggregation.field {
-                return Some(f.clone());
+                return Some(f);
             }
             if engine.group_by_stack.contains(&f) {
                 None
             } else {
-                Some(f.clone())
+                Some(f)
             }
         })
         .collect()
@@ -112,7 +112,7 @@ pub fn aggregated_by(engine: &Engine) -> Vec<Aggregation> {
         };
         result.push(Aggregation {
             value,
-            field: field.clone(),
+            field: *field,
             index,
         });
     }
@@ -136,10 +136,9 @@ pub fn set_aggregation(
     aggregation: &Aggregation,
     field: &Field,
 ) -> Result<()> {
-    engine
-        .group_by_stack
-        .get_mut(aggregation.index)
-        .map(|e| *e = field.clone());
+    if let Some(e) = engine.group_by_stack.get_mut(aggregation.index) {
+        *e = *field;
+    }
     // Remove any rows that were cached for this Segmentation
     engine.item_cache.clear();
     engine
@@ -173,9 +172,9 @@ pub(super) fn make_query(engine: &Engine) -> Result<Query> {
     let last = engine
         .group_by_stack
         .last()
-        .ok_or(eyre!("Invalid Segmentation state"))?;
+        .ok_or_else(|| eyre!("Invalid Segmentation state"))?;
     Ok(Query::Grouped {
         filters,
-        group_by: last.clone(),
+        group_by: *last,
     })
 }

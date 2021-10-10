@@ -42,6 +42,8 @@ impl RawEmailEntry {
     }
 
     pub fn read_gmail_meta(&self) -> Option<Result<Vec<u8>>> {
+        // Just using map here returns a `&Option` whereas we want `Option`
+        #[allow(clippy::manual_map)]
         match &self.gmail_meta_path {
             Some(p) => Some(std::fs::read(p).map_err(|e| eyre!("IO Error: {}", &e))),
             None => None,
@@ -68,8 +70,7 @@ impl RawEmailEntry {
         // Build a meta path
         let meta_path = path
             .parent()?
-            .join(format!("{}.meta", stem.replace(".eml", "")))
-            .to_path_buf();
+            .join(format!("{}.meta", stem.replace(".eml", "")));
 
         // Only embed it, if it exists
         let gmail_meta_path = if meta_path.exists() {
@@ -97,7 +98,7 @@ impl ParseableEmail for RawEmailEntry {
     fn prepare(&mut self) -> Result<()> {
         Ok(())
     }
-    fn message<'a>(&'a self) -> Result<Cow<'a, [u8]>> {
+    fn message(&self) -> Result<Cow<'_, [u8]>> {
         Ok(Cow::Owned(self.read()?))
     }
 

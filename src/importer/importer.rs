@@ -27,7 +27,7 @@ impl<Format: ImporterFormat + 'static> Importerlike for Importer<Format> {
         let Importer { format, .. } = self;
         let (sender, receiver) = unbounded();
 
-        let config = self.config.clone();
+        let config = self.config;
         let handle: JoinHandle<Result<usize>> = std::thread::spawn(move || {
             let emails = format.emails(&config, sender.clone())?;
             let processed = shared::database::into_database(&config, emails, sender.clone())?;

@@ -24,11 +24,11 @@ fn main() -> Result<()> {
     // Will try again when I'm online.
     let handle = match config.format {
         ImporterFormat::AppleMail => {
-            let importer = gmaildb::importer::applemail_importer(config.clone());
+            let importer = gmaildb::importer::applemail_importer(config);
             adapter.process(importer)?
         }
         ImporterFormat::GmailVault => {
-            let importer = gmaildb::importer::gmail_importer(config.clone());
+            let importer = gmaildb::importer::gmail_importer(config);
             adapter.process(importer)?
         }
     };

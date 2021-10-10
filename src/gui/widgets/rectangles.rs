@@ -65,7 +65,7 @@ fn rectangle_ui(ui: &mut egui::Ui, segment: &Segment) -> egui::Response {
         Stroke::default()
     };
 
-    let color = segment_to_color(&segment);
+    let color = segment_to_color(segment);
 
     let painter = ui.painter();
 
@@ -73,6 +73,7 @@ fn rectangle_ui(ui: &mut egui::Ui, segment: &Segment) -> egui::Response {
     let mut center = rect.center();
 
     let align_bottom = |galley: &std::sync::Arc<Galley>, center: &mut Pos2, spacing: f32| {
+        #[allow(clippy::clone_on_copy)]
         let mut position = center.clone();
         position.x -= galley.size.x / 2.0;
         position.y -= galley.size.y / 2.0;

@@ -16,15 +16,15 @@ use crate::importer::{EmailEntry, EmailMeta};
 pub fn json_to_value(input: &Value) -> Result<types::Value> {
     let ok = match input {
         Value::Number(n) if n.is_i64() => {
-            types::Value::Integer(n.as_i64().ok_or(eyre!("Invalid Number {:?}", n))?)
+            types::Value::Integer(n.as_i64().ok_or_else(|| eyre!("Invalid Number {:?}", n))?)
         }
         Value::Number(n) if n.is_u64() => {
-            let value = n.as_u64().ok_or(eyre!("Invalid Number {:?}", n))?;
+            let value = n.as_u64().ok_or_else(|| eyre!("Invalid Number {:?}", n))?;
             let converted: i64 = value.try_into()?;
             types::Value::Integer(converted)
         }
         Value::Number(n) if n.is_f64() => {
-            types::Value::Real(n.as_f64().ok_or(eyre!("Invalid Number {:?}", n))?)
+            types::Value::Real(n.as_f64().ok_or_else(|| eyre!("Invalid Number {:?}", n))?)
         }
         Value::Bool(n) => types::Value::Integer(*n as i64),
         Value::String(n) => types::Value::Text(n.clone()),
@@ -41,7 +41,7 @@ pub trait RowConversion<'a>: Sized {
 impl<'a> RowConversion<'a> for QueryResult {
     fn grouped_from_row<'stmt>(field: &'a Field, row: &Row<'stmt>) -> Result<Self> {
         let amount: usize = row.get(AMOUNT_FIELD_NAME)?;
-        let values = values_from_fields(&[*field], &row)?;
+        let values = values_from_fields(&[*field], row)?;
 
         Ok(QueryResult::Grouped {
             count: amount,
@@ -49,7 +49,7 @@ impl<'a> RowConversion<'a> for QueryResult {
         })
     }
     fn from_row<'stmt>(fields: &'a [Field], row: &Row<'stmt>) -> Result<Self> {
-        let values = values_from_fields(&fields, &row)?;
+        let values = values_from_fields(fields, row)?;
         Ok(QueryResult::Normal(values))
     }
 }
@@ -65,19 +65,19 @@ fn values_from_fields<'stmt>(
         match field {
             SenderDomain | SenderLocalPart | SenderName | ToGroup | ToName | ToAddress
             | Subject => {
-                let string: String = row.get::<&str, String>(field.as_str())?.into();
-                values.insert(*field, ValueField::string(&field, &string));
+                let string: String = row.get::<&str, String>(field.as_str())?;
+                values.insert(*field, ValueField::string(field, &string));
             }
             Year | Month | Day => {
                 values.insert(
                     *field,
-                    ValueField::usize(&field, row.get::<&str, usize>(field.as_str())?.into()),
+                    ValueField::usize(field, row.get::<&str, usize>(field.as_str())?),
                 );
             }
             IsReply | IsSend => {
                 values.insert(
                     *field,
-                    ValueField::bool(&field, row.get::<&str, bool>(field.as_str())?.into()),
+                    ValueField::bool(field, row.get::<&str, bool>(field.as_str())?),
                 );
             }
         }
@@ -87,7 +87,7 @@ fn values_from_fields<'stmt>(
 
 impl EmailEntry {
     #[allow(unused)]
-    fn from_row<'stmt>(row: &Row<'stmt>) -> Result<Self> {
+    fn from_row(row: &Row<'_>) -> Result<Self> {
         let path: String = row.get("path")?;
         let path = std::path::PathBuf::from_str(&path)?;
         let sender_domain: String = row.get("sender_domain")?;

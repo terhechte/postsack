@@ -11,10 +11,8 @@ pub struct Gmail {}
 impl ImporterFormat for Gmail {
     type Item = raw_email::RawEmailEntry;
     fn emails(&self, config: &Config, sender: MessageSender) -> Result<Vec<Self::Item>> {
-        Ok(folders_in(
-            &config.emails_folder_path,
-            sender,
-            |path, sender| emails_in(path, sender, RawEmailEntry::new),
-        )?)
+        folders_in(&config.emails_folder_path, sender, |path, sender| {
+            emails_in(path, sender, RawEmailEntry::new)
+        })
     }
 }

@@ -14,7 +14,7 @@ pub trait ParseableEmail: Send + Sized + Sync {
     /// are called. It can be used to perform parsing operations
     fn prepare(&mut self) -> Result<()>;
     /// The message content as bytes
-    fn message<'a>(&'a self) -> Result<Cow<'a, [u8]>>;
+    fn message(&self) -> Result<Cow<'_, [u8]>>;
     /// The original path of the email in the filesystem
     fn path(&self) -> &Path;
     /// Optional meta information if they're available.
@@ -100,13 +100,13 @@ fn address_to_name_string(address: &Address) -> Option<(Option<String>, String, 
         Address::Group((names, boxes)) => match (names.first(), boxes.first()) {
             (group_name, Some(mailbox)) => {
                 let group = group_name.map(|e| e.to_string());
-                let (display_name, address, _, _) = mailbox_to_string(&mailbox);
+                let (display_name, address, _, _) = mailbox_to_string(mailbox);
                 Some((group, display_name, address))
             }
             _ => None,
         },
         Address::Mailbox(mailbox) => {
-            let (display_name, address, _, _) = mailbox_to_string(&mailbox);
+            let (display_name, address, _, _) = mailbox_to_string(mailbox);
             Some((None, display_name, address))
         }
     }

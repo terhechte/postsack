@@ -31,7 +31,7 @@ impl Mail {
             .map(|e| e.to_str())
             .flatten()
             .find(|s| s.ends_with(ext))
-            .map(|s| s.replace(ext, "").to_string());
+            .map(|s| s.replace(ext, ""));
         Some(Self {
             path: path.to_path_buf(),
             is_seen: false,
@@ -49,7 +49,7 @@ impl ParseableEmail for Mail {
         self.data = parsed.message.to_vec();
         Ok(())
     }
-    fn message<'a>(&'a self) -> Result<Cow<'a, [u8]>> {
+    fn message(&self) -> Result<Cow<'_, [u8]>> {
         Ok(Cow::Borrowed(self.data.as_slice()))
     }
     fn path(&self) -> &Path {

@@ -38,9 +38,13 @@ pub struct Adapter {
 }
 
 impl Adapter {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let rw_lock = Arc::new(RwLock::default());
+        // FIXME: Look up this warning. It looks like the clones are necessary?
+        #[allow(clippy::redundant_clone)]
         let producer_lock = rw_lock.clone();
+        #[allow(clippy::redundant_clone)]
         let consumer_lock = rw_lock.clone();
         Self {
             producer_lock,
