@@ -81,7 +81,13 @@ fn make_query(engine: &Engine, range: Range<usize>) -> Query {
     }
     Query::Normal {
         filters,
-        fields: vec![Field::SenderDomain, Field::SenderLocalPart, Field::Subject],
+        fields: vec![
+            Field::SenderDomain,
+            Field::SenderLocalPart,
+            Field::Subject,
+            Field::Path,
+            Field::Timestamp,
+        ],
         range,
     }
 }

@@ -63,12 +63,12 @@ fn values_from_fields<'stmt>(
         use Field::*;
         // Use type safety when unpacking
         match field {
-            SenderDomain | SenderLocalPart | SenderName | ToGroup | ToName | ToAddress
+            Path | SenderDomain | SenderLocalPart | SenderName | ToGroup | ToName | ToAddress
             | Subject => {
                 let string: String = row.get::<&str, String>(field.as_str())?;
                 values.insert(*field, ValueField::string(field, &string));
             }
-            Year | Month | Day => {
+            Year | Month | Day | Timestamp => {
                 values.insert(
                     *field,
                     ValueField::usize(field, row.get::<&str, usize>(field.as_str())?),

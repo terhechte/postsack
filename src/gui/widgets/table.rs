@@ -13,7 +13,13 @@ const DEFAULT_COLUMN_WIDTH: f32 = 200.0;
 /// - `R`: The data type of a single row displayed.
 /// - `C`: The type of collection holding the rows to display. Any collection
 ///   implementing `AsRef<[R]>` can be used.
-pub struct Table<'selection, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> {
+pub struct Table<
+    'selection,
+    R,
+    C: AsRef<[Option<R>]>,
+    RowMaker: FnMut(Range<usize>) -> C,
+    RowSelection: Fn(&Option<R>),
+> {
     id_source: Id,
     columns: Vec<Column<R>>,
     selected_row: Option<&'selection mut Option<usize>>,
@@ -22,17 +28,23 @@ pub struct Table<'selection, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usi
     cell_padding: Vec2,
     row_maker: RowMaker,
     num_rows: usize,
+    pub row_action: Option<RowSelection>,
 }
 
 /// Table column definition.
 struct Column<R> {
     name: String,
     value_mapper: Box<dyn FnMut(&Option<R>) -> String>,
-    #[allow(dead_code)]
     max_width: Option<f32>,
 }
 
-impl<R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Table<'static, R, C, RowMaker> {
+impl<
+        R,
+        C: AsRef<[Option<R>]>,
+        RowMaker: FnMut(Range<usize>) -> C,
+        RowSelection: Fn(&Option<R>),
+    > Table<'static, R, C, RowMaker, RowSelection>
+{
     #[allow(dead_code)]
     pub fn new(id_source: impl Hash, num_rows: usize, row_maker: RowMaker) -> Self {
         Self {
@@ -44,15 +56,24 @@ impl<R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Table<'static
             cell_padding: vec2(8.0, 4.0),
             row_maker,
             num_rows,
+            row_action: None,
         }
     }
 }
 
-impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Table<'s, R, C, RowMaker> {
+impl<
+        's,
+        R,
+        C: AsRef<[Option<R>]>,
+        RowMaker: FnMut(Range<usize>) -> C,
+        RowSelection: Fn(&Option<R>),
+    > Table<'s, R, C, RowMaker, RowSelection>
+{
     pub fn new_selectable(
         id_source: impl Hash,
         selected_row: &'s mut Option<usize>,
         num_rows: usize,
+        selection: RowSelection,
         row_maker: RowMaker,
     ) -> Self {
         Self {
@@ -64,6 +85,7 @@ impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Table<'s,
             cell_padding: vec2(8.0, 4.0),
             row_maker,
             num_rows,
+            row_action: Some(selection),
         }
     }
 
@@ -101,6 +123,7 @@ impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Table<'s,
         );
 
         let mut column_offset = 0.0;
+        let column_len = self.columns.len();
 
         for (i, column) in self.columns.iter().enumerate() {
             let column_id = self.id_source.with("_column_").with(i);
@@ -113,7 +136,8 @@ impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Table<'s,
             let mut column_rect = rect;
             column_rect.min.x += column_offset;
 
-            if column_rect.width() > desired_column_width {
+            let is_last = i == (column_len - 1);
+            if !is_last && column_rect.width() > desired_column_width {
                 column_rect.set_width(desired_column_width);
             }
 
@@ -145,8 +169,13 @@ impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Table<'s,
     }
 }
 
-impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Widget
-    for Table<'s, R, C, RowMaker>
+impl<
+        's,
+        R: std::fmt::Debug,
+        C: AsRef<[Option<R>]>,
+        RowMaker: FnMut(Range<usize>) -> C,
+        RowAction: Fn(&Option<R>),
+    > Widget for Table<'s, R, C, RowMaker, RowAction>
 {
     fn ui(mut self, ui: &mut Ui) -> Response {
         if self.columns.is_empty() {
@@ -158,6 +187,13 @@ impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Widget
             .id_data_temp
             .get_or_default::<State>(self.id_source)
             .clone();
+
+        // set the sizes on the state
+        state.column_widths = self
+            .columns
+            .iter()
+            .map(|e| e.max_width.unwrap_or(DEFAULT_COLUMN_WIDTH))
+            .collect();
 
         // First step: compute some sizes used during rendering. Since this is a
         // homogenous table, we can figure out its exact sizes based on the
@@ -181,11 +217,11 @@ impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Widget
                 // TODO: Decide row height more intelligently...
                 let row_size = vec2(ui.available_width(), self.row_height);
                 let cell_text_style = ui.style().body_text_style;
+                let column_len = self.columns.len();
 
                 for (row_idx, row) in rows.as_ref().iter().enumerate() {
                     let (row_id, row_rect) = ui.allocate_space(row_size);
-                    // let row_id = self.id_source.with("_row_").with(row_idx);
-                    let row_response = ui.interact(row_rect, row_id, Sense::click());
+                    let mut row_response = ui.interact(row_rect, row_id, Sense::click());
                     let mut cell_text_color = ui.style().visuals.text_color();
 
                     // If this row is currently selected, make it look like it is.
@@ -207,6 +243,18 @@ impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Widget
                             .rect_filled(row_rect, 0.0, ui.visuals().faint_bg_color);
                     }
 
+                    // Give the hovered mails a tooltip
+                    if row_response.hovered() {
+                        //let data = self.columns[row_id];
+                        let mut hover_data = Vec::new();
+                        for (_, column) in self.columns.iter_mut().enumerate() {
+                            let cell_text = (column.value_mapper)(row);
+                            hover_data.push(cell_text);
+                        }
+                        let hover_string = hover_data.join("\n");
+                        row_response = row_response.on_hover_text(hover_string);
+                    }
+
                     let mut column_offset = 0.0;
 
                     for (col_idx, column) in self.columns.iter_mut().enumerate() {
@@ -216,7 +264,9 @@ impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Widget
                         let mut column_rect = row_rect;
                         column_rect.min.x += column_offset;
 
-                        if column_rect.width() > desired_column_width {
+                        // Auto-expand the last column
+                        let is_last = col_idx == (column_len - 1);
+                        if !is_last && column_rect.width() > desired_column_width {
                             column_rect.set_width(desired_column_width);
                         }
 
@@ -232,12 +282,16 @@ impl<'s, R, C: AsRef<[Option<R>]>, RowMaker: FnMut(Range<usize>) -> C> Widget
                         column_offset += column_rect.width();
                     }
 
-                    // INTERACTION
-                    //if let Some(selected_row) = self.selected_row.as_mut() {
-                    //    if row_response.clicked() {
-                    //        **selected_row = Some(row_idx);
-                    //    }
-                    //}
+                    if let Some(selected_row) = self.selected_row.as_mut() {
+                        if row_response.clicked() {
+                            if let Some(ref n) = self.row_action {
+                                if let Some(a) = rows.as_ref().get(row_idx) {
+                                    n(a)
+                                }
+                            }
+                            **selected_row = Some(row_idx);
+                        }
+                    }
                 }
             });
         });

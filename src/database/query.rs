@@ -18,12 +18,14 @@ pub enum Filter {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IntoStaticStr, EnumIter)]
 #[strum(serialize_all = "snake_case")]
 pub enum Field {
+    Path,
     SenderDomain,
     SenderLocalPart,
     SenderName,
     Year,
     Month,
     Day,
+    Timestamp,
     ToGroup,
     ToName,
     ToAddress,
@@ -32,9 +34,17 @@ pub enum Field {
     Subject,
 }
 
+const INVALID_FIELDS: &[Field] = &[
+    Field::Path,
+    Field::Subject,
+    Field::Timestamp,
+    Field::IsReply,
+    Field::IsSend,
+];
+
 impl Field {
     pub fn all_cases() -> impl Iterator<Item = Field> {
-        Field::iter()
+        Field::iter().filter(|f| !INVALID_FIELDS.contains(f))
     }
 
     /// Just a wrapper to offer `into` without the type ambiguity
