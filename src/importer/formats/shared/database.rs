@@ -30,7 +30,6 @@ pub fn into_database<Mail: ParseableEmail + 'static>(
     // Iterate over the mails..
     emails
         // in paralell..
-        //.par_iter()
         .par_iter_mut()
         // parsing them
         .map(|raw_mail| parse_email(raw_mail, config.sender_email.as_str()))

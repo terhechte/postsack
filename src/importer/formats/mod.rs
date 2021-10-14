@@ -2,10 +2,12 @@ pub use eyre::Result;
 
 mod apple_mail;
 mod gmailbackup;
+mod mbox;
 pub mod shared;
 
 pub use apple_mail::AppleMail;
 pub use gmailbackup::Gmail;
+pub use mbox::Mbox;
 
 pub use crate::types::Config;
 use shared::parse::ParseableEmail;

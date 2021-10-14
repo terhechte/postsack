@@ -1,9 +1,10 @@
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ImporterFormat {
     AppleMail,
     GmailVault,
+    MboxVault,
 }
 
 impl From<&String> for ImporterFormat {
@@ -11,6 +12,7 @@ impl From<&String> for ImporterFormat {
         match format.as_str() {
             "apple" => ImporterFormat::AppleMail,
             "gmailvault" => ImporterFormat::GmailVault,
+            "mbox" => ImporterFormat::MboxVault,
             _ => panic!("Unknown format: {}", &format),
         }
     }
@@ -43,7 +45,8 @@ impl Config {
             );
         }
         let emails_folder_path = mails.as_ref().to_path_buf();
-        if !emails_folder_path.is_dir() {
+        // For non-mbox files, we make sure we have a directory
+        if format != ImporterFormat::MboxVault && !emails_folder_path.is_dir() {
             panic!(
                 "Emails Folder Path is not a directory: {}",
                 &emails_folder_path.display()

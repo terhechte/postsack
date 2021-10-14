@@ -31,6 +31,10 @@ fn main() -> Result<()> {
             let importer = gmaildb::importer::gmail_importer(config);
             adapter.process(importer)?
         }
+        ImporterFormat::MboxVault => {
+            let importer = gmaildb::importer::mbox_importer(config);
+            adapter.process(importer)?
+        }
     };
 
     let mut stdout = stdout();

@@ -766,6 +766,7 @@ dependencies = [
  "flate2",
  "lazy_static",
  "lru",
+ "mbox-reader",
  "num-format",
  "rayon",
  "regex",
@@ -979,10 +980,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "mbox-reader"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6231e973c0a8caceed71fac7355555012ba73fe230365989b298b36022e9e2ab"
+dependencies = [
+ "memmap",
+]
+
+[[package]]
 name = "memchr"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
+
+[[package]]
+name = "memmap"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6585fd95e7bb50d6cc31e20d4cf9afb4e2ba16c5846fc76793f11218da9c475b"
+dependencies = [
+ "libc",
+ "winapi",
+]
 
 [[package]]
 name = "memmap2"
