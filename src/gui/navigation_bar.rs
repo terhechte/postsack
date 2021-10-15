@@ -32,9 +32,9 @@ impl<'a> Widget for NavigationBar<'a> {
         // Override the button spacing
         ui.spacing_mut().button_padding = (6.0, 3.0).into();
 
-        ui.visuals_mut().widgets.inactive.corner_radius = 6.0;
-        ui.visuals_mut().widgets.active.corner_radius = 6.0;
-        ui.visuals_mut().widgets.hovered.corner_radius = 6.0;
+        ui.visuals_mut().widgets.inactive.corner_radius = 5.0;
+        ui.visuals_mut().widgets.active.corner_radius = 5.0;
+        ui.visuals_mut().widgets.hovered.corner_radius = 5.0;
 
         let response = ui
             .horizontal(|ui| {

@@ -1,9 +1,11 @@
 use std::collections::hash_map::DefaultHasher;
 
 use crate::model::{segmentations, Engine, Segment};
-use eframe::egui::{self, epaint::Galley, Pos2, Rgba, Stroke, TextStyle, Widget};
+use eframe::egui::{self, epaint::Galley, Color32, Pos2, Rgba, Stroke, TextStyle, Widget};
 use eyre::Report;
 use num_format::{Locale, ToFormattedString};
+
+use super::super::platform::platform_colors;
 
 fn segment_to_color(segment: &Segment) -> Rgba {
     let mut hasher = DefaultHasher::new();
@@ -43,8 +45,13 @@ impl<'a> Widget for Rectangles<'a> {
 
         let active = crate::model::segmentations::can_aggregate_more(self.engine);
 
+        let colors = platform_colors();
+
         for item in items {
-            let item_response = ui.put(item.layout_rect(), rectangle(&item, active));
+            let item_response = ui.put(
+                item.layout_rect(),
+                rectangle(&item, active, colors.content_background_dark),
+            );
             if item_response.clicked() && active {
                 *self.error = self.engine.push(item.clone()).err();
                 response.mark_changed();
@@ -55,13 +62,18 @@ impl<'a> Widget for Rectangles<'a> {
     }
 }
 
-fn rectangle_ui(ui: &mut egui::Ui, segment: &Segment, active: bool) -> egui::Response {
+fn rectangle_ui(
+    ui: &mut egui::Ui,
+    segment: &Segment,
+    active: bool,
+    stroke_color: Color32,
+) -> egui::Response {
     let size = ui.available_size();
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
 
-    let visuals = ui.style().interact_selectable(&response, true);
+    //let visuals = ui.style().interact_selectable(&response, true);
 
-    let stroke = Stroke::new(1.0, visuals.bg_fill);
+    let stroke = Stroke::new(1.0, stroke_color);
 
     let color = segment_to_color(segment);
     let color = if ui.ui_contains_pointer() && active {
@@ -72,7 +84,7 @@ fn rectangle_ui(ui: &mut egui::Ui, segment: &Segment, active: bool) -> egui::Res
 
     let painter = ui.painter();
 
-    painter.rect(rect, 0.0, color, stroke);
+    painter.rect(rect, 2.0, color, stroke);
     let mut center = rect.center();
 
     let align_bottom = |galley: &std::sync::Arc<Galley>, center: &mut Pos2, spacing: f32| {
@@ -112,6 +124,6 @@ fn rectangle_ui(ui: &mut egui::Ui, segment: &Segment, active: bool) -> egui::Res
     response.on_hover_text(&label)
 }
 
-fn rectangle(segment: &Segment, active: bool) -> impl egui::Widget + '_ {
-    move |ui: &mut egui::Ui| rectangle_ui(ui, segment, active)
+fn rectangle(segment: &Segment, active: bool, stroke_color: Color32) -> impl egui::Widget + '_ {
+    move |ui: &mut egui::Ui| rectangle_ui(ui, segment, active, stroke_color)
 }
