@@ -47,7 +47,7 @@ impl Engine {
         let engine = Engine {
             link,
             search_stack: Vec::new(),
-            group_by_stack: vec![default_group_by_stack(0)],
+            group_by_stack: vec![default_group_by_stack(0).unwrap()],
             segmentations: Vec::new(),
             item_cache: LruCache::new(10000),
         };
@@ -91,7 +91,8 @@ impl Engine {
 
         // Add the next group by
         let index = self.group_by_stack.len();
-        let next = default_group_by_stack(index);
+        let next = default_group_by_stack(index)
+            .ok_or(eyre::eyre!("default group by stack out of bounds"))?;
         self.group_by_stack.push(next);
 
         // Block UI & Wait for updates
@@ -183,13 +184,13 @@ impl Engine {
 }
 
 /// Return the default aggregation fields for each segmentation stack level
-pub fn default_group_by_stack(index: usize) -> Field {
+pub fn default_group_by_stack(index: usize) -> Option<Field> {
     match index {
-        0 => Field::Year,
-        1 => Field::SenderDomain,
-        2 => Field::SenderLocalPart,
-        3 => Field::Month,
-        4 => Field::Day,
-        _ => panic!(),
+        0 => Some(Field::Year),
+        1 => Some(Field::SenderDomain),
+        2 => Some(Field::SenderLocalPart),
+        3 => Some(Field::Month),
+        4 => Some(Field::Day),
+        _ => None,
     }
 }

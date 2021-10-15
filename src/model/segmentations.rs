@@ -163,6 +163,13 @@ pub fn layouted_segments(engine: &mut Engine, bounds: eframe::egui::Rect) -> Opt
     Some(segmentation.items())
 }
 
+/// Can another level of aggregation be performed? Based on
+/// [`Engine::default_group_by_stack`]
+pub fn can_aggregate_more(engine: &Engine) -> bool {
+    let index = engine.group_by_stack.len();
+    super::engine::default_group_by_stack(index).is_some()
+}
+
 /// Perform the query that returns an aggregated `Segmentation`
 pub(super) fn make_query(engine: &Engine) -> Result<Query> {
     let mut filters = Vec::new();

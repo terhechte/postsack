@@ -41,9 +41,11 @@ impl<'a> Widget for Rectangles<'a> {
             None => return response,
         };
 
+        let active = crate::model::segmentations::can_aggregate_more(self.engine);
+
         for item in items {
-            let item_response = ui.put(item.layout_rect(), rectangle(&item));
-            if item_response.clicked() {
+            let item_response = ui.put(item.layout_rect(), rectangle(&item, active));
+            if item_response.clicked() && active {
                 *self.error = self.engine.push(item.clone()).err();
                 response.mark_changed();
             }
@@ -53,7 +55,7 @@ impl<'a> Widget for Rectangles<'a> {
     }
 }
 
-fn rectangle_ui(ui: &mut egui::Ui, segment: &Segment) -> egui::Response {
+fn rectangle_ui(ui: &mut egui::Ui, segment: &Segment, active: bool) -> egui::Response {
     let size = ui.available_size();
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
 
@@ -62,7 +64,7 @@ fn rectangle_ui(ui: &mut egui::Ui, segment: &Segment) -> egui::Response {
     let stroke = Stroke::new(1.0, visuals.bg_fill);
 
     let color = segment_to_color(segment);
-    let color = if ui.ui_contains_pointer() {
+    let color = if ui.ui_contains_pointer() && active {
         Rgba::from_rgb(color.r() + 0.1, color.g() + 0.1, color.b() + 0.1)
     } else {
         color
@@ -110,6 +112,6 @@ fn rectangle_ui(ui: &mut egui::Ui, segment: &Segment) -> egui::Response {
     response.on_hover_text(&label)
 }
 
-fn rectangle(segment: &Segment) -> impl egui::Widget + '_ {
-    move |ui: &mut egui::Ui| rectangle_ui(ui, segment)
+fn rectangle(segment: &Segment, active: bool) -> impl egui::Widget + '_ {
+    move |ui: &mut egui::Ui| rectangle_ui(ui, segment, active)
 }
