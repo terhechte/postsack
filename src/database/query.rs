@@ -4,7 +4,7 @@ pub use serde_json::Value;
 use strum::{self, IntoEnumIterator};
 use strum_macros::{EnumIter, IntoStaticStr};
 
-use std::ops::Range;
+use std::ops::{Range, Sub};
 
 pub const AMOUNT_FIELD_NAME: &str = "amount";
 
@@ -51,6 +51,30 @@ impl Field {
     /// that sometimes arises
     pub fn as_str(&self) -> &'static str {
         self.into()
+    }
+
+    /// A human readable name
+    pub fn name(&self) -> &str {
+        use Field::*;
+        match self {
+            SenderDomain => "Domain",
+            SenderLocalPart => "Address",
+            SenderName => "Name",
+            ToGroup => "Group",
+            ToName => "To name",
+            ToAddress => "To address",
+            Year => "Year",
+            Month => "Month",
+            Day => "Day",
+            Subject => "Subject",
+            _ => self.as_str(),
+        }
+    }
+}
+
+impl std::fmt::Display for Field {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.name())
     }
 }
 

@@ -23,14 +23,16 @@ impl<'a> Widget for SegmentationBar<'a> {
             for (id_index, group) in groupings.iter().enumerate() {
                 let alternatives = segmentations::aggregation_fields(self.engine, group);
                 if let Some(value) = group.value() {
-                    let label = egui::Label::new(format!("{}: {}", group.name(), value));
-                    ui.add(label);
+                    let button = egui::Button::new(format!("{} {}", group.name(), value))
+                        .enabled(false)
+                        .text_color(egui::Color32::WHITE);
+                    ui.add(button);
                 } else if let Some(mut selected) = group.index(&alternatives) {
                     let p = egui::ComboBox::from_id_source(&id_index).show_index(
                         ui,
                         &mut selected,
                         alternatives.len(),
-                        |i| alternatives[i].as_str().to_string(),
+                        |i| alternatives[i].name().to_string(),
                     );
                     if p.changed() {
                         *self.error = segmentations::set_aggregation(
@@ -43,7 +45,7 @@ impl<'a> Widget for SegmentationBar<'a> {
                 }
             }
 
-            if has_back && ui.button("Back").clicked() {
+            if has_back && ui.button("\u{2716}").clicked() {
                 self.engine.pop();
             }
         })

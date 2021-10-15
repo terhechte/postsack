@@ -17,7 +17,7 @@ impl Aggregation {
 
     /// The name of the field as a `String`
     pub fn name(&self) -> &str {
-        self.field.as_str()
+        self.field.name()
     }
 
     /// The indes of the field within the given fields
