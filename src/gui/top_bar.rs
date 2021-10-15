@@ -34,11 +34,13 @@ impl<'a> Widget for TopBar<'a> {
 
                 ui.add_space(15.0);
 
-                if ui.add(egui::Button::new("Close")).clicked() {
+                let close_text = "\u{23F4} Close";
+                if ui.add(egui::Button::new(close_text)).clicked() {
                     self.state.action_close = true;
                 }
 
-                let filter_response = ui.add(egui::Button::new("Filters"));
+                let filter_text = "\u{1f50D} Filters";
+                let filter_response = ui.add(egui::Button::new(filter_text));
                 let popup_id = ui.make_persistent_id("my_unique_id");
 
                 if filter_response.clicked() {
@@ -54,12 +56,12 @@ impl<'a> Widget for TopBar<'a> {
                 // and then use ~that for these buttons
                 let mut w = ui.available_width();
 
-                let mail_text = "Mails";
+                let mail_text = "\u{1F4E7} Mails";
                 let mail_galley = ui
                     .painter()
                     .layout_no_wrap(egui::TextStyle::Button, mail_text.to_owned());
 
-                let filter_text = "Export";
+                let filter_text = "\u{1F5B9} Export";
                 let filter_galley = ui
                     .painter()
                     .layout_no_wrap(egui::TextStyle::Button, filter_text.to_owned());
