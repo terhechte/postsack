@@ -19,3 +19,7 @@ pub fn setup(ctx: &egui::CtxRef) {}
 
 /// This is called once from `App::update` on the first run.
 pub fn initial_update(ctx: &egui::CtxRef) -> Result<()> {}
+
+pub fn navigation_button(title: &str) -> egui::Button {
+    egui::Button::new(title)
+}

@@ -7,7 +7,7 @@ const SYSTEM_FONT: &[u8] = include_bytes!("../fonts/mac_regular.otf");
 const SYSTEM_MONO_FONT: &[u8] = include_bytes!("../fonts/mac_mono.ttc");
 
 use cocoa;
-use eframe::egui::{self, Color32, FontDefinitions, FontFamily};
+use eframe::egui::{self, Color32, FontDefinitions, FontFamily, Stroke};
 use eyre::{bail, Result};
 use objc::runtime::{Object, YES};
 
@@ -39,6 +39,20 @@ pub fn initial_update(_ctx: &egui::CtxRef) -> Result<()> {
         let _: () = msg_send![main_window, setTitlebarAppearsTransparent: YES];
     }
     Ok(())
+}
+
+/// Return a primary button intended for the top navigation in the
+/// platform style.
+/// FIXME: Dark / Light Mode distinction!
+pub fn navigation_button(title: &str) -> egui::Button {
+    // Finder info panel bottom button.
+    let fill = Color32::from_rgb(87, 84, 92);
+    // let stroke = Color32::from_rgb(97, 94, 102);
+    let text = Color32::WHITE;
+    egui::Button::new(title)
+        .text_color(text)
+        .stroke(Stroke::new(1.0, fill))
+        .fill(fill)
 }
 
 fn install_fonts(egui_ctx: &egui::CtxRef) {
