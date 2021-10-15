@@ -1,4 +1,5 @@
 pub mod background;
+mod color_utils;
 mod error_box;
 mod filter_panel;
 mod rectangles;

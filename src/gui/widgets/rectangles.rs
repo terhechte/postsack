@@ -7,19 +7,13 @@ use num_format::{Locale, ToFormattedString};
 
 use super::super::platform::platform_colors;
 
-fn segment_to_color(segment: &Segment) -> Rgba {
+fn segment_to_color(segment: &Segment, total: usize, position: usize) -> Color32 {
     let mut hasher = DefaultHasher::new();
     use std::hash::{Hash, Hasher};
     let value = segment.field.value().to_string();
     value.hash(&mut hasher);
     let value = hasher.finish();
-    let [r1, r2, g1, g2, b1, b2, _, _] = value.to_be_bytes();
-
-    Rgba::from_rgb(
-        (r1 as f32 + r2 as f32) / (u8::MAX as f32 * 2.0),
-        (g1 as f32 + g2 as f32) / (u8::MAX as f32 * 2.0),
-        (b1 as f32 + b2 as f32) / (u8::MAX as f32 * 2.0),
-    )
+    super::color_utils::color(value, total, position)
 }
 
 pub struct Rectangles<'a> {
@@ -47,10 +41,11 @@ impl<'a> Widget for Rectangles<'a> {
 
         let colors = platform_colors();
 
-        for item in items {
+        let total = items.len();
+        for (index, item) in items.iter().enumerate() {
             let item_response = ui.put(
                 item.layout_rect(),
-                rectangle(&item, active, colors.content_background_dark),
+                rectangle(&item, active, colors.content_background_dark, index, total),
             );
             if item_response.clicked() && active {
                 *self.error = self.engine.push(item.clone()).err();
@@ -67,6 +62,8 @@ fn rectangle_ui(
     segment: &Segment,
     active: bool,
     stroke_color: Color32,
+    position: usize,
+    total: usize,
 ) -> egui::Response {
     let size = ui.available_size();
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
@@ -75,9 +72,10 @@ fn rectangle_ui(
 
     let stroke = Stroke::new(1.0, stroke_color);
 
-    let color = segment_to_color(segment);
+    let color = segment_to_color(segment, total, position);
     let color = if ui.ui_contains_pointer() && active {
-        Rgba::from_rgb(color.r() + 0.1, color.g() + 0.1, color.b() + 0.1)
+        //Rgba::from_rgb(color.r() + 0.1, color.g() + 0.1, color.b() + 0.1)
+        color
     } else {
         color
     };
@@ -124,6 +122,12 @@ fn rectangle_ui(
     response.on_hover_text(&label)
 }
 
-fn rectangle(segment: &Segment, active: bool, stroke_color: Color32) -> impl egui::Widget + '_ {
-    move |ui: &mut egui::Ui| rectangle_ui(ui, segment, active, stroke_color)
+fn rectangle(
+    segment: &Segment,
+    active: bool,
+    stroke_color: Color32,
+    position: usize,
+    total: usize,
+) -> impl egui::Widget + '_ {
+    move |ui: &mut egui::Ui| rectangle_ui(ui, segment, active, stroke_color, position, total)
 }
