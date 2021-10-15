@@ -37,6 +37,11 @@ default = ["gui"]
 trace-sql = []
 gui = ["eframe", "lru"]
 
+[target."cfg(target_os = \"macos\")".dependencies.cocoa]
+version = "0.24" 
+[target."cfg(target_os = \"macos\")".dependencies.objc]
+version = "0.2.7" 
+
 [profile.dev]
 split-debuginfo = "unpacked"
 

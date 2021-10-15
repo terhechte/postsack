@@ -1,17 +1,27 @@
-use eframe::epi::{Frame, Storage};
+use eframe::{
+    egui::{self, Stroke},
+    epi::{self, Frame, Storage},
+};
 use eyre::{Report, Result};
 
-use eframe::{egui, epi};
-
 use super::widgets::{self, Spinner};
-use crate::model::{segmentations, Engine};
+use crate::model::Engine;
 use crate::types::Config;
+
+#[derive(Default)]
+pub struct UIState {
+    pub show_emails: bool,
+    pub show_filters: bool,
+    pub show_export: bool,
+    pub action_close: bool,
+}
 
 pub struct GmailDBApp {
     _config: Config,
     engine: Engine,
     error: Option<Report>,
-    show_emails: bool,
+    state: UIState,
+    platform_custom_setup: bool,
 }
 
 impl GmailDBApp {
@@ -21,7 +31,8 @@ impl GmailDBApp {
             _config: config.clone(),
             engine,
             error: None,
-            show_emails: false,
+            state: UIState::default(),
+            platform_custom_setup: false,
         })
     }
 }
@@ -33,11 +44,18 @@ impl epi::App for GmailDBApp {
 
     fn setup(
         &mut self,
-        _ctx: &egui::CtxRef,
+        ctx: &egui::CtxRef,
         _frame: &mut Frame<'_>,
         _storage: Option<&dyn Storage>,
     ) {
         self.error = self.engine.start().err();
+        super::platform::setup(ctx);
+
+        // Adapt to the platform colors
+        let platform_colors = super::platform::platform_colors();
+        let mut visuals = egui::Visuals::dark();
+        visuals.widgets.noninteractive.bg_fill = platform_colors.window_background_dark;
+        ctx.set_visuals(visuals);
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
@@ -46,18 +64,34 @@ impl epi::App for GmailDBApp {
             self.error = self.engine.process().err();
         }
 
+        if !self.platform_custom_setup {
+            self.platform_custom_setup = true;
+            self.error = super::platform::initial_update(&ctx).err();
+        }
+
         let Self {
             engine,
             error,
-            show_emails,
+            state,
             ..
         } = self;
+
+        let platform_colors = super::platform::platform_colors();
 
         if let Some(error) = error {
             dbg!(&error);
             egui::CentralPanel::default().show(ctx, |ui| ui.add(widgets::ErrorBox(error)));
         } else {
-            if *show_emails {
+            let frame = egui::containers::Frame::none()
+                .fill(platform_colors.window_background_dark)
+                .stroke(Stroke::none());
+            egui::TopBottomPanel::top("my_panel")
+                .frame(frame)
+                .show(ctx, |ui| {
+                    ui.add(super::top_bar::TopBar::new(engine, error, state));
+                });
+
+            if state.show_emails {
                 egui::SidePanel::right("my_left_panel")
                     .default_width(500.0)
                     .show(ctx, |ui| {
@@ -65,45 +99,26 @@ impl epi::App for GmailDBApp {
                     });
             }
 
-            egui::TopBottomPanel::top("my_panel").show(ctx, |ui| {
-                ui.add(super::top_bar::TopBar::new(engine, error));
-            });
-
-            egui::CentralPanel::default().show(ctx, |ui| {
-                if engine.segmentations().is_empty() {
-                    ui.centered_and_justified(|ui| {
-                        ui.add(Spinner::new(egui::vec2(50.0, 50.0)));
-                    });
-                } else {
-                    ui.vertical(|ui| {
-                        ui.horizontal(|ui| {
-                            if let Some((range, total)) = segmentations::segments_range(engine) {
-                                ui.label("Limit");
-                                let mut selected = total;
-                                let response = ui.add(egui::Slider::new(&mut selected, range));
-                                if response.changed() {
-                                    segmentations::set_segments_range(engine, Some(0..=selected));
-                                }
-                            }
-                            // This is a hack to get right-alignment.
-                            // we can't size the button, we can only size text. We will size text
-                            // and then use ~that for the button
-                            let text = "Mail";
-                            let galley = ui
-                                .painter()
-                                .layout_no_wrap(egui::TextStyle::Button, text.to_owned());
-                            ui.add_space(
-                                ui.available_width()
-                                    - (galley.size.x + ui.spacing().button_padding.x * 2.0),
-                            );
-                            if ui.add(egui::Button::new(text)).clicked() {
-                                *show_emails = !*show_emails;
-                            }
+            egui::CentralPanel::default()
+                .frame(egui::containers::Frame::none())
+                .show(ctx, |ui| {
+                    if engine.segmentations().is_empty() {
+                        ui.centered_and_justified(|ui| {
+                            ui.add(Spinner::new(egui::vec2(50.0, 50.0)));
                         });
-                        ui.add(super::widgets::Rectangles::new(engine, error));
-                    });
-                }
-            });
+                    } else {
+                        let stroke = Stroke::none();
+                        let fill = platform_colors.content_background_dark;
+                        super::widgets::background::background_color(ui, 15.0, stroke, fill, |ui| {
+                            ui.vertical(|ui: &mut egui::Ui| {
+                                ui.add(super::segmentation_bar::SegmentationBar::new(
+                                    engine, error,
+                                ));
+                                ui.add(super::widgets::Rectangles::new(engine, error));
+                            });
+                        })
+                    }
+                });
         }
 
         // Resize the native window to be just the size we need it to be:

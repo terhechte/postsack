@@ -59,13 +59,14 @@ fn rectangle_ui(ui: &mut egui::Ui, segment: &Segment) -> egui::Response {
 
     let visuals = ui.style().interact_selectable(&response, true);
 
-    let stroke = if ui.ui_contains_pointer() {
-        Stroke::new(4.0, visuals.fg_stroke.color)
-    } else {
-        Stroke::default()
-    };
+    let stroke = Stroke::new(1.0, visuals.bg_fill);
 
     let color = segment_to_color(segment);
+    let color = if ui.ui_contains_pointer() {
+        Rgba::from_rgb(color.r() + 0.1, color.g() + 0.1, color.b() + 0.1)
+    } else {
+        color
+    };
 
     let painter = ui.painter();
 

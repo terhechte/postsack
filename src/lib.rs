@@ -1,3 +1,7 @@
+#![cfg(target_os = "macos")]
+#[macro_use]
+extern crate objc;
+
 use tracing_subscriber::EnvFilter;
 
 pub mod database;

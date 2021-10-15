@@ -758,6 +758,7 @@ name = "gmaildb"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "cocoa",
  "crossbeam-channel",
  "eframe",
  "email-parser",
@@ -768,6 +769,7 @@ dependencies = [
  "lru",
  "mbox-reader",
  "num-format",
+ "objc",
  "rayon",
  "regex",
  "rsql_builder",

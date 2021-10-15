@@ -3,6 +3,8 @@ use eframe::{self, egui, epi};
 
 mod app;
 mod mail_panel;
+mod platform;
+mod segmentation_bar;
 mod top_bar;
 pub(crate) mod widgets;
 
