@@ -16,6 +16,8 @@ impl<'a> SegmentationBar<'a> {
 impl<'a> Widget for SegmentationBar<'a> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.horizontal(|ui| {
+            ui.label("Group By:");
+
             ui.set_height(30.0);
 
             let groupings = segmentations::aggregated_by(self.engine);

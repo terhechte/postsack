@@ -1,16 +1,17 @@
 use crate::model::Engine;
-use eframe::egui::{self, Button, Widget};
+use eframe::egui::{self, Widget};
 use eyre::Report;
 
 use super::app::UIState;
 use super::platform::navigation_button;
-use super::widgets::FilterPanel;
+use super::widgets::{FilterPanel, FilterState};
 
 pub struct NavigationBar<'a> {
     engine: &'a mut Engine,
     #[allow(unused)]
     error: &'a mut Option<Report>,
     state: &'a mut UIState,
+    filter_state: &'a mut FilterState,
 }
 
 impl<'a> NavigationBar<'a> {
@@ -18,11 +19,13 @@ impl<'a> NavigationBar<'a> {
         engine: &'a mut Engine,
         error: &'a mut Option<Report>,
         state: &'a mut UIState,
+        filter_state: &'a mut FilterState,
     ) -> Self {
         NavigationBar {
             engine,
             error,
             state,
+            filter_state,
         }
     }
 }
@@ -51,12 +54,8 @@ impl<'a> Widget for NavigationBar<'a> {
                 let filter_response = ui.add(navigation_button(filter_text));
                 let popup_id = ui.make_persistent_id("filter_panel_id");
 
-                if filter_response.clicked() {
-                    ui.memory().toggle_popup(popup_id);
-                }
-
-                egui::popup_below_widget(ui, popup_id, &filter_response, |ui| {
-                    ui.add(FilterPanel::new(self.engine));
+                super::widgets::popover(ui, popup_id, &filter_response, |ui| {
+                    ui.add(FilterPanel::new(self.engine, self.filter_state));
                 });
 
                 // This is a hack to get right-alignment.

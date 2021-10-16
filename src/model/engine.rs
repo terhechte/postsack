@@ -62,6 +62,18 @@ impl Engine {
             .request(&segmentations::make_query(self)?, Action::PushSegmentation)
     }
 
+    /// Information on the underlying `Format`. Does it have tags
+    pub fn format_has_tags(&self) -> bool {
+        // FIXME: Implement this
+        true
+    }
+
+    /// Information on the underlying `Format`. Does it have `seen` information
+    pub fn format_has_seen(&self) -> bool {
+        // FIXME: Implement this
+        true
+    }
+
     /// Return the current stack of `Segmentations`
     pub fn segmentations(&self) -> &[Segmentation] {
         &self.segmentations

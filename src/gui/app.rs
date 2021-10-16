@@ -4,7 +4,7 @@ use eframe::{
 };
 use eyre::{Report, Result};
 
-use super::widgets::{self, Spinner};
+use super::widgets::{self, FilterState, Spinner};
 use crate::model::Engine;
 use crate::types::Config;
 
@@ -21,6 +21,7 @@ pub struct GmailDBApp {
     engine: Engine,
     error: Option<Report>,
     state: UIState,
+    filter_state: FilterState,
     platform_custom_setup: bool,
 }
 
@@ -32,6 +33,7 @@ impl GmailDBApp {
             engine,
             error: None,
             state: UIState::default(),
+            filter_state: FilterState::new(),
             platform_custom_setup: false,
         })
     }
@@ -73,6 +75,7 @@ impl epi::App for GmailDBApp {
             engine,
             error,
             state,
+            filter_state,
             ..
         } = self;
 
@@ -88,7 +91,12 @@ impl epi::App for GmailDBApp {
             egui::TopBottomPanel::top("my_panel")
                 .frame(frame)
                 .show(ctx, |ui| {
-                    ui.add(super::top_bar::TopBar::new(engine, error, state));
+                    ui.add(super::navigation_bar::NavigationBar::new(
+                        engine,
+                        error,
+                        state,
+                        filter_state,
+                    ));
                 });
 
             if state.show_emails {
