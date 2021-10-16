@@ -113,6 +113,13 @@ impl ValueField {
     pub fn value(&self) -> &Value {
         &self.value
     }
+
+    pub fn to_string(&self) -> String {
+        match &self.value {
+            Value::String(s) => s.clone(),
+            _ => format!("{}", &self.value),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
