@@ -1,3 +1,3 @@
 mod config;
 
-pub use config::{Config, ImporterFormat};
+pub use config::{Config, FormatType};

@@ -2,7 +2,7 @@ use crate::model::Engine;
 use eframe::egui::{self, Widget};
 use eyre::Report;
 
-use super::app::UIState;
+use super::app_state::UIState;
 use super::platform::navigation_button;
 use super::widgets::{FilterPanel, FilterState};
 

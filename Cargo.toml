@@ -2,8 +2,26 @@
 name = "gmaildb"
 version = "0.1.0"
 edition = "2018"
+description = "Bam"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[package.metadata.bundle.bin.gui]
+name = "ExampleApplication"
+identifier = "com.doe.exampleapplication"
+#icon = ["128x128@2x.png"]
+version = "1.0.0"
+#resources = ["assets", "images/**/*.png", "secrets/public_key.txt"]
+copyright = "Copyright (c) Jane Doe 2016. All rights reserved."
+category = "Developer Tool"
+short_description = "An example application."
+long_description = """
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+eiusmod tempor incididunt ut labore et dolore magna aliqua.  Ut
+enim ad minim veniam, quis nostrud exercitation ullamco laboris
+nisi ut aliquip ex ea commodo consequat.
+"""
 
 [dependencies]
 eyre = "0.6.5"
@@ -30,6 +48,7 @@ lru = { version = "0.7.0", optional = true }
 emlx = { git = "https://github.com/terhechte/emlx", features = []}
 walkdir = "*"
 mbox-reader = "0.2.0"
+rfd = "0.5.1"
 
 [features]
 default = ["gui"]

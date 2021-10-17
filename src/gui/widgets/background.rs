@@ -1,15 +1,15 @@
 /// This will draw Ui with a background color and margins.
 /// This can be used for calls that don't provide a `Frame`,
 /// such as `horizontal` or `vertical`
-use eframe::egui::{self, Color32, Rect, Stroke, Ui};
+use eframe::egui::{self, Color32, Rect, Response, Stroke, Ui};
 
-pub fn background_color<R>(
+pub fn background_color(
     ui: &mut Ui,
     padding: f32,
     stroke: Stroke,
     fill: Color32,
-    show: impl FnOnce(&mut Ui) -> R,
-) -> R {
+    show: impl FnOnce(&mut Ui) -> Response,
+) -> Response {
     let outer_rect_bounds = ui.available_rect_before_wrap();
     let where_to_put_background = ui.painter().add(egui::Shape::Noop);
     let margin = egui::Vec2::splat(padding);

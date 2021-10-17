@@ -4,7 +4,7 @@ pub use serde_json::Value;
 use strum::{self, IntoEnumIterator};
 use strum_macros::{EnumIter, IntoStaticStr};
 
-use std::ops::{Range, Sub};
+use std::ops::Range;
 
 pub const AMOUNT_FIELD_NAME: &str = "amount";
 

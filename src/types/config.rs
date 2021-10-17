@@ -1,18 +1,57 @@
+use strum::{self, IntoEnumIterator};
+use strum_macros::{EnumIter, IntoStaticStr};
+
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ImporterFormat {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoStaticStr, EnumIter)]
+pub enum FormatType {
     AppleMail,
     GmailVault,
-    MboxVault,
+    Mbox,
 }
 
-impl From<&String> for ImporterFormat {
+impl FormatType {
+    pub fn all_cases() -> impl Iterator<Item = FormatType> {
+        FormatType::iter()
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            FormatType::AppleMail => "Apple Mail",
+            FormatType::GmailVault => "Gmail Vault Download",
+            FormatType::Mbox => "Mbox",
+        }
+    }
+
+    /// Forward the importer format location
+    pub fn default_path(&self) -> Option<&'static Path> {
+        use crate::importer::formats::{self, ImporterFormat};
+        match self {
+            FormatType::AppleMail => formats::AppleMail::default_path(),
+            FormatType::GmailVault => formats::Gmail::default_path(),
+            FormatType::Mbox => formats::Mbox::default_path(),
+        }
+    }
+}
+
+impl Default for FormatType {
+    /// We return a different default, based on the platform we're on
+    /// FIXME: We don't have support for Outlook yet, so on windows we go with Mbox as well
+    fn default() -> Self {
+        #[cfg(target_os = "macos")]
+        return FormatType::AppleMail;
+
+        #[cfg(not(target_os = "macos"))]
+        return FormatType::MboxVault;
+    }
+}
+
+impl From<&String> for FormatType {
     fn from(format: &String) -> Self {
         match format.as_str() {
-            "apple" => ImporterFormat::AppleMail,
-            "gmailvault" => ImporterFormat::GmailVault,
-            "mbox" => ImporterFormat::MboxVault,
+            "apple" => FormatType::AppleMail,
+            "gmailvault" => FormatType::GmailVault,
+            "mbox" => FormatType::Mbox,
             _ => panic!("Unknown format: {}", &format),
         }
     }
@@ -27,34 +66,14 @@ pub struct Config {
     /// The address used to send emails
     pub sender_email: String,
     /// The importer format we're using
-    pub format: ImporterFormat,
+    pub format: FormatType,
 }
 
 impl Config {
-    pub fn new<A: AsRef<Path>>(
-        db: A,
-        mails: A,
-        sender_email: String,
-        format: ImporterFormat,
-    ) -> Self {
-        let database_path = db.as_ref().to_path_buf();
-        if database_path.is_dir() {
-            panic!(
-                "Database Path can't be a directory: {}",
-                &database_path.display()
-            );
-        }
-        let emails_folder_path = mails.as_ref().to_path_buf();
-        // For non-mbox files, we make sure we have a directory
-        if format != ImporterFormat::MboxVault && !emails_folder_path.is_dir() {
-            panic!(
-                "Emails Folder Path is not a directory: {}",
-                &emails_folder_path.display()
-            );
-        }
+    pub fn new<A: AsRef<Path>>(db: A, mails: A, sender_email: String, format: FormatType) -> Self {
         Config {
-            database_path,
-            emails_folder_path,
+            database_path: db.as_ref().to_path_buf(),
+            emails_folder_path: mails.as_ref().to_path_buf(),
             sender_email,
             format,
         }

@@ -1,40 +1,22 @@
 use eframe::{
-    egui::{self, Stroke},
+    egui::{self},
     epi::{self, Frame, Storage},
 };
-use eyre::{Report, Result};
+use eyre::Result;
 
-use super::widgets::{self, FilterState, Spinner};
-use crate::model::Engine;
-use crate::types::Config;
+use super::app_state::{self, Startup, Visualize};
 
-#[derive(Default)]
-pub struct UIState {
-    pub show_emails: bool,
-    pub show_filters: bool,
-    pub show_export: bool,
-    pub action_close: bool,
-}
-
-pub struct GmailDBApp {
-    _config: Config,
-    engine: Engine,
-    error: Option<Report>,
-    state: UIState,
-    filter_state: FilterState,
-    platform_custom_setup: bool,
+pub enum GmailDBApp {
+    Startup { panel: Startup },
+    Visualize { panel: Visualize },
 }
 
 impl GmailDBApp {
-    pub fn new(config: &Config) -> Result<Self> {
-        let engine = Engine::new(config)?;
-        Ok(Self {
-            _config: config.clone(),
-            engine,
-            error: None,
-            state: UIState::default(),
-            filter_state: FilterState::new(),
-            platform_custom_setup: false,
+    pub fn new() -> Result<Self> {
+        // Temporarily create config without state machine
+        let config = app_state::make_temporary_ui_config();
+        Ok(GmailDBApp::Startup {
+            panel: Startup::default(),
         })
     }
 }
@@ -50,7 +32,8 @@ impl epi::App for GmailDBApp {
         _frame: &mut Frame<'_>,
         _storage: Option<&dyn Storage>,
     ) {
-        self.error = self.engine.start().err();
+        // FIXME: Bring back
+        //self.error = self.engine.start().err();
         super::platform::setup(ctx);
 
         // Adapt to the platform colors
@@ -58,83 +41,29 @@ impl epi::App for GmailDBApp {
         let mut visuals = egui::Visuals::dark();
         visuals.widgets.noninteractive.bg_fill = platform_colors.window_background_dark;
         ctx.set_visuals(visuals);
+
+        // Make the UI a bit bigger
+        let pixels = ctx.pixels_per_point();
+        ctx.set_pixels_per_point(pixels * 1.2)
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        // Avoid any processing if there is an unhandled error.
-        if self.error.is_none() {
-            self.error = self.engine.process().err();
-        }
-
-        if !self.platform_custom_setup {
-            self.platform_custom_setup = true;
-            self.error = super::platform::initial_update(&ctx).err();
-        }
-
-        let Self {
-            engine,
-            error,
-            state,
-            filter_state,
-            ..
-        } = self;
-
-        let platform_colors = super::platform::platform_colors();
-
-        if let Some(error) = error {
-            dbg!(&error);
-            egui::CentralPanel::default().show(ctx, |ui| ui.add(widgets::ErrorBox(error)));
-        } else {
-            let frame = egui::containers::Frame::none()
-                .fill(platform_colors.window_background_dark)
-                .stroke(Stroke::none());
-            egui::TopBottomPanel::top("my_panel")
-                .frame(frame)
-                .show(ctx, |ui| {
-                    ui.add(super::navigation_bar::NavigationBar::new(
-                        engine,
-                        error,
-                        state,
-                        filter_state,
-                    ));
-                });
-
-            if state.show_emails {
-                egui::SidePanel::right("my_left_panel")
-                    .default_width(500.0)
-                    .show(ctx, |ui| {
-                        ui.add(super::mail_panel::MailPanel::new(engine, error));
-                    });
-            }
-
-            egui::CentralPanel::default()
-                .frame(egui::containers::Frame::none())
-                .show(ctx, |ui| {
-                    if engine.segmentations().is_empty() {
-                        ui.centered_and_justified(|ui| {
-                            ui.add(Spinner::new(egui::vec2(50.0, 50.0)));
-                        });
-                    } else {
-                        let stroke = Stroke::none();
-                        let fill = platform_colors.content_background_dark;
-                        super::widgets::background::background_color(ui, 15.0, stroke, fill, |ui| {
-                            ui.vertical(|ui: &mut egui::Ui| {
-                                ui.add(super::segmentation_bar::SegmentationBar::new(
-                                    engine, error,
-                                ));
-                                ui.add(super::widgets::Rectangles::new(engine, error));
-                            });
-                        })
-                    }
-                });
+        match self {
+            GmailDBApp::Startup { panel } => Self::update_panel(panel, ctx, frame),
+            _ => panic!(),
         }
 
         // Resize the native window to be just the size we need it to be:
         frame.set_window_size(ctx.used_size());
+    }
+}
 
-        // If we're waiting for a computation to succeed, we re-render again.
-        if engine.is_busy() {
-            ctx.request_repaint();
-        }
+impl GmailDBApp {
+    fn update_panel(panel: &mut Startup, ctx: &egui::CtxRef, _frame: &mut epi::Frame<'_>) {
+        egui::CentralPanel::default()
+            .frame(egui::containers::Frame::none())
+            .show(ctx, |ui| {
+                ui.add(panel);
+            });
     }
 }

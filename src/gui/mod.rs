@@ -1,16 +1,16 @@
-use crate::types::Config;
 use eframe::{self, egui, epi};
 
 mod app;
+mod app_state;
 mod mail_panel;
 mod navigation_bar;
 mod platform;
 mod segmentation_bar;
 pub(crate) mod widgets;
 
-pub fn run_gui(config: Config) {
+pub fn run_gui() {
     let options = eframe::NativeOptions::default();
-    let app: Box<dyn epi::App> = match app::GmailDBApp::new(&config) {
+    let app: Box<dyn epi::App> = match app::GmailDBApp::new() {
         Ok(n) => Box::new(n),
         Err(e) => Box::new(ErrorApp(e)),
     };

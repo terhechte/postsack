@@ -9,7 +9,7 @@ use std::{
 use gmaildb::{
     self,
     importer::{Adapter, State},
-    types::ImporterFormat,
+    types::FormatType,
 };
 
 fn main() -> Result<()> {
@@ -23,15 +23,15 @@ fn main() -> Result<()> {
     // with dynamic dispatch. (to abstract away the match)
     // Will try again when I'm online.
     let handle = match config.format {
-        ImporterFormat::AppleMail => {
+        FormatType::AppleMail => {
             let importer = gmaildb::importer::applemail_importer(config);
             adapter.process(importer)?
         }
-        ImporterFormat::GmailVault => {
+        FormatType::GmailVault => {
             let importer = gmaildb::importer::gmail_importer(config);
             adapter.process(importer)?
         }
-        ImporterFormat::MboxVault => {
+        FormatType::Mbox => {
             let importer = gmaildb::importer::mbox_importer(config);
             adapter.process(importer)?
         }

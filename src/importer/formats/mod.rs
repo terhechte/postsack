@@ -1,3 +1,5 @@
+use std::path::Path;
+
 pub use eyre::Result;
 
 mod apple_mail;
@@ -18,6 +20,10 @@ pub use super::{Message, MessageReceiver, MessageSender};
 /// to define how they return email data.
 pub trait ImporterFormat: Send + Sync {
     type Item: ParseableEmail;
+
+    /// The default location path where the data for this format resides
+    /// on system. If there is none (such as for mbox) return `None`
+    fn default_path() -> Option<&'static Path>;
 
     /// Return all the emails in this format.
     /// Use the sneder to give progress updates via the `ReadProgress` case.

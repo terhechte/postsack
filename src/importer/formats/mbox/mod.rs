@@ -64,6 +64,11 @@ fn inner_emails(config: &Config) -> Result<Vec<Mail>> {
 
 impl ImporterFormat for Mbox {
     type Item = Mail;
+
+    fn default_path() -> Option<&'static Path> {
+        None
+    }
+
     fn emails(&self, config: &Config, _sender: MessageSender) -> Result<Vec<Self::Item>> {
         inner_emails(config)
     }

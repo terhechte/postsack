@@ -1,6 +1,6 @@
 use crossbeam_channel;
 
-mod formats;
+pub(crate) mod formats;
 mod importer;
 mod message_adapter;
 
@@ -37,11 +37,11 @@ pub type MessageSender = crossbeam_channel::Sender<Message>;
 pub type MessageReceiver = crossbeam_channel::Receiver<Message>;
 
 pub fn importer(config: &Config) -> Box<dyn importer::Importerlike> {
-    use crate::types::ImporterFormat::*;
+    use crate::types::FormatType::*;
     match config.format {
         AppleMail => Box::new(applemail_importer(config.clone())),
         GmailVault => Box::new(gmail_importer(config.clone())),
-        MboxVault => Box::new(gmail_importer(config.clone())),
+        Mbox => Box::new(gmail_importer(config.clone())),
     }
 }
 

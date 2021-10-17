@@ -20,8 +20,10 @@ pub fn setup_tracing() {
         .init();
 }
 
+/// Create a config for the `cli` and validate the input
 pub fn make_config() -> types::Config {
-    use types::ImporterFormat;
+    use std::path::Path;
+    use types::FormatType;
     let arguments: Vec<String> = std::env::args().collect();
     let folder = arguments
         .get(1)
@@ -32,10 +34,27 @@ pub fn make_config() -> types::Config {
     let sender = arguments
         .get(3)
         .unwrap_or_else(|| usage("Missing sender email address argument"));
-    let format: ImporterFormat = arguments
+    let format: FormatType = arguments
         .get(4)
         .unwrap_or_else(|| usage("Missing sender email address argument"))
         .into();
+
+    let database_path = Path::new(database);
+    if database_path.is_dir() {
+        panic!(
+            "Database Path can't be a directory: {}",
+            &database_path.display()
+        );
+    }
+    let emails_folder_path = Path::new(folder);
+    // For non-mbox files, we make sure we have a directory
+    if format != FormatType::Mbox && !emails_folder_path.is_dir() {
+        panic!(
+            "Emails Folder Path is not a directory: {}",
+            &emails_folder_path.display()
+        );
+    }
+
     crate::types::Config::new(database, folder, sender.to_string(), format)
 }
 
