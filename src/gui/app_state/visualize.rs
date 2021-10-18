@@ -81,7 +81,7 @@ impl Widget for &mut Visualize {
                     } else {
                         let stroke = Stroke::none();
                         let fill = platform_colors.content_background_dark;
-                        super::super::widgets::background::background_color(
+                        super::super::widgets::background::color_background(
                             ui,
                             15.0,
                             stroke,

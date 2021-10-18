@@ -1,9 +1,14 @@
+//! Various background utilities
+use eframe::egui::{
+    self, epaint::Shadow, vec2, Color32, Painter, Pos2, Rect, Response, Shape, Stroke, Ui, Vec2,
+};
+
+use std::ops::Rem;
+
 /// This will draw Ui with a background color and margins.
 /// This can be used for calls that don't provide a `Frame`,
 /// such as `horizontal` or `vertical`
-use eframe::egui::{self, Color32, Rect, Response, Stroke, Ui};
-
-pub fn background_color(
+pub fn color_background(
     ui: &mut Ui,
     padding: f32,
     stroke: Stroke,
@@ -30,4 +35,145 @@ pub fn background_color(
         },
     );
     ret
+}
+
+/// Draw a rectangular background with a shadow
+pub fn shadow_background(
+    painter: &Painter,
+    paint_rect: Rect,
+    fill: Color32,
+    stroke: Stroke,
+    corner_radius: f32,
+    shadow: Shadow,
+) {
+    let frame_shape = Shape::Rect {
+        rect: paint_rect,
+        corner_radius,
+        fill,
+        stroke,
+    };
+
+    let shadow = shadow.tessellate(paint_rect, corner_radius);
+    let shadow = Shape::Mesh(shadow);
+    let shape = Shape::Vec(vec![shadow, frame_shape]);
+    painter.add(shape);
+}
+
+/// A animated backwround with some parameters.
+/// Used in some `app_states`.
+pub struct AnimatedBackground<'a> {
+    /// time counter
+    pub timer: &'a mut f64,
+    /// recursive offset counter
+    pub offset_counter: &'a mut usize,
+}
+
+impl<'a> AnimatedBackground<'a> {
+    pub fn draw_background(&mut self, ui: &mut egui::Ui, size: Vec2) {
+        let painter = ui.painter();
+
+        let division = 6.0;
+
+        // paint stuff
+        let rect_size = vec2(size.x / division, size.y / division);
+
+        let offset = *self.timer * 42.5;
+
+        if offset > rect_size.x as f64 {
+            *self.timer = 0.0;
+            *self.offset_counter += 1;
+        }
+
+        // Reset the offset counter as we're going out of the size
+        if (*self.offset_counter as f32 * rect_size.x) > (size.x * 1.1) {
+            *self.offset_counter = 0;
+        }
+
+        // figure out the offset addition
+        let add = *self.offset_counter as i8;
+
+        Self::draw_rectangles(
+            painter,
+            offset,
+            division,
+            rect_size,
+            &[
+                (4 + add, 4, 3),
+                (3 + add, 3, 2),
+                (1 + add, 1, 5),
+                (5 + add, 2, 5),
+                (2 + add, 1, 6),
+                (3 + add, 3, 7),
+                (4 + add, 5, 1),
+                (3 + add, 3, 7),
+                (6 + add, 1, 3),
+                (1 + add, 5, 4),
+                (3 + add, 6, 5),
+            ],
+            division as usize,
+        );
+
+        let diff = ui.input().unstable_dt as f64;
+        *self.timer += diff;
+
+        ui.ctx().request_repaint();
+    }
+
+    fn draw_rectangles(
+        painter: &Painter,
+        offset: f64,
+        division: f32,
+        size: Vec2,
+        recurse: &[(i8, i8, i8)],
+        total: usize,
+    ) {
+        for y in 0..=(division + 2.0) as i8 {
+            for x in 0..=(division + 2.0) as i8 {
+                let fx = ((x - 1) as f32 * size.x) + (offset as f32);
+                let fy = (y - 1) as f32 * size.y;
+                let pos = Pos2::new(fx, fy);
+                let rect = Rect::from_min_size(pos, size);
+                painter.rect_stroke(rect, 0.0, Stroke::new(1.0, Color32::from_gray(70)));
+                for (rx, ry, rd) in recurse {
+                    // on the x axis take the offset into account
+                    let rx = (*rx).rem((total as i8) + 1);
+                    if rx == x && ry == &y {
+                        Self::draw_segmentation(painter, rect, *rd);
+                    }
+                }
+            }
+        }
+    }
+
+    fn draw_segmentation(painter: &Painter, into: Rect, divisions: i8) {
+        let mut rect = into;
+        for d in 0..=divisions {
+            // division back and forth in direction
+            let next = if d % 2 == 0 {
+                Rect::from_min_size(
+                    Pos2 {
+                        x: rect.center().x,
+                        y: rect.top(),
+                    },
+                    Vec2 {
+                        x: rect.width() / 2.0,
+                        y: rect.height(),
+                    },
+                )
+            } else {
+                Rect::from_min_size(
+                    Pos2 {
+                        x: rect.left(),
+                        y: rect.center().y,
+                    },
+                    Vec2 {
+                        x: rect.width(),
+                        y: rect.height() / 2.0,
+                    },
+                )
+            };
+            painter.rect_stroke(next, 0.0, Stroke::new(1.0, Color32::from_gray(70)));
+            rect = next;
+        }
+    }
 }
