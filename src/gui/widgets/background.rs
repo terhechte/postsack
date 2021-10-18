@@ -62,6 +62,10 @@ pub fn shadow_background(
 /// A animated backwround with some parameters.
 /// Used in some `app_states`.
 pub struct AnimatedBackground<'a> {
+    /// The divisions
+    pub divisions: usize,
+    /// For each division cell, we take 8 sub divisions
+    pub animate_progress: Option<(&'a [usize], usize)>,
     /// time counter
     pub timer: &'a mut f64,
     /// recursive offset counter
@@ -72,30 +76,37 @@ impl<'a> AnimatedBackground<'a> {
     pub fn draw_background(&mut self, ui: &mut egui::Ui, size: Vec2) {
         let painter = ui.painter();
 
-        let division = 6.0;
+        let divisions = self.divisions as f32;
 
         // paint stuff
-        let rect_size = vec2(size.x / division, size.y / division);
+        let rect_size = vec2(size.x / divisions, size.y / divisions);
 
-        let offset = *self.timer * 42.5;
+        // we only animate if there's no progress
+        let (offset, add) = if self.animate_progress.is_none() {
+            // Define the animation speed
+            let offset = *self.timer * 42.5;
 
-        if offset > rect_size.x as f64 {
-            *self.timer = 0.0;
-            *self.offset_counter += 1;
-        }
+            if offset > rect_size.x as f64 {
+                *self.timer = 0.0;
+                *self.offset_counter += 1;
+            }
 
-        // Reset the offset counter as we're going out of the size
-        if (*self.offset_counter as f32 * rect_size.x) > (size.x * 1.1) {
-            *self.offset_counter = 0;
-        }
+            // Reset the offset counter as we're going out of the size
+            if (*self.offset_counter as f32 * rect_size.x) > (size.x * 1.1) {
+                *self.offset_counter = 0;
+            }
 
-        // figure out the offset addition
-        let add = *self.offset_counter as i8;
+            // figure out the offset addition
+            let add = *self.offset_counter as i8;
+            (offset, add)
+        } else {
+            (0.0, 0)
+        };
 
         Self::draw_rectangles(
             painter,
             offset,
-            division,
+            divisions,
             rect_size,
             &[
                 (4 + add, 4, 3),
@@ -110,8 +121,32 @@ impl<'a> AnimatedBackground<'a> {
                 (1 + add, 5, 4),
                 (3 + add, 6, 5),
             ],
-            division as usize,
+            self.divisions,
         );
+
+        // Next, draw the rectangles
+        if let Some((blocks, d)) = self.animate_progress {
+            // the resolution of the block animation
+            let divisor = self.divisions * d;
+            let w = rect_size.x / d as f32;
+            let h = rect_size.y / d as f32;
+            let mut color_adder = self.divisions;
+            for n in blocks {
+                // calculate x/y from the value
+                let y = n / divisor;
+                let x = n % divisor;
+                let y = y as f32;
+                let x = x as f32;
+                let pos = Pos2::new(x * w, y * h);
+                let size = vec2(w, h);
+                let rect = Rect::from_min_size(pos, size);
+                // the fill color is based on the added block count
+                color_adder += *n;
+                let color = (color_adder % 50) as u8;
+                painter.rect_filled(rect, 0.0, Color32::from_gray(color));
+                painter.rect_stroke(rect, 0.0, Stroke::new(1.0, Color32::from_gray(110)));
+            }
+        }
 
         let diff = ui.input().unstable_dt as f64;
         *self.timer += diff;

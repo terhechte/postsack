@@ -860,6 +860,7 @@ dependencies = [
  "mbox-reader",
  "num-format",
  "objc",
+ "rand",
  "rayon",
  "regex",
  "rfd",

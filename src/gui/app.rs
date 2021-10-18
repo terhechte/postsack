@@ -4,10 +4,11 @@ use eframe::{
 };
 use eyre::Result;
 
-use super::app_state::{self, Startup, Visualize};
+use super::app_state::{self, Import, Startup, Visualize};
 
 pub enum GmailDBApp {
     Startup { panel: Startup },
+    Import { panel: Import },
     Visualize { panel: Visualize },
 }
 
@@ -15,8 +16,8 @@ impl GmailDBApp {
     pub fn new() -> Result<Self> {
         // Temporarily create config without state machine
         let config = app_state::make_temporary_ui_config();
-        Ok(GmailDBApp::Startup {
-            panel: Startup::default(),
+        Ok(GmailDBApp::Import {
+            panel: Import::new(config),
         })
     }
 }
@@ -50,6 +51,7 @@ impl epi::App for GmailDBApp {
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
         match self {
             GmailDBApp::Startup { panel } => Self::update_panel(panel, ctx, frame),
+            GmailDBApp::Import { panel } => Self::update_panel(panel, ctx, frame),
             _ => panic!(),
         }
 
@@ -59,7 +61,7 @@ impl epi::App for GmailDBApp {
 }
 
 impl GmailDBApp {
-    fn update_panel(panel: &mut Startup, ctx: &egui::CtxRef, _frame: &mut epi::Frame<'_>) {
+    fn update_panel(panel: impl egui::Widget, ctx: &egui::CtxRef, _frame: &mut epi::Frame<'_>) {
         egui::CentralPanel::default()
             .frame(egui::containers::Frame::none())
             .show(ctx, |ui| {

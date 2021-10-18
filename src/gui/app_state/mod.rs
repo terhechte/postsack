@@ -2,6 +2,7 @@ mod import;
 mod startup;
 mod visualize;
 
+pub use import::Import;
 pub use startup::Startup;
 pub use visualize::{UIState, Visualize};
 

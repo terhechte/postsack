@@ -1,7 +1,6 @@
+//! The startup form to configure what and how to import
 use eframe::egui::epaint::Shadow;
-use eframe::egui::{
-    self, vec2, Color32, Painter, Pos2, Rect, Response, Shape, Stroke, TextStyle, Vec2, Widget,
-};
+use eframe::egui::{self, vec2, Color32, Pos2, Rect, Response, Stroke, TextStyle, Vec2, Widget};
 use rfd;
 
 use std::path::PathBuf;
@@ -34,6 +33,8 @@ impl Widget for &mut Startup {
         let available = ui.available_size();
 
         AnimatedBackground {
+            divisions: 6,
+            animate_progress: None,
             timer: &mut self.timer,
             offset_counter: &mut self.offset_counter,
         }
