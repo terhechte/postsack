@@ -7,7 +7,7 @@ use rayon::prelude::*;
 use walkdir::WalkDir;
 
 use super::super::shared::filesystem::emails_in;
-use super::super::MessageSender;
+use super::super::{Message, MessageSender};
 use crate::types::Config;
 
 use super::mail::Mail;
@@ -32,7 +32,8 @@ pub fn read_emails(config: &Config, sender: MessageSender) -> Result<Vec<Mail>> 
             _ => None,
         })
         .collect();
-    let mails = folders
+    sender.send(Message::ReadTotal(folders.len()))?;
+    let mails: Vec<Mail> = folders
         .into_par_iter()
         .filter_map(
             |path| match emails_in(path.clone(), sender.clone(), Mail::new) {

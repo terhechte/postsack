@@ -1,6 +1,9 @@
+use rand::Rng;
 use strum::{self, IntoEnumIterator};
 use strum_macros::{EnumIter, IntoStaticStr};
 
+use std::collections::HashSet;
+use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, IntoStaticStr, EnumIter)]
@@ -24,7 +27,7 @@ impl FormatType {
     }
 
     /// Forward the importer format location
-    pub fn default_path(&self) -> Option<&'static Path> {
+    pub fn default_path(&self) -> Option<PathBuf> {
         use crate::importer::formats::{self, ImporterFormat};
         match self {
             FormatType::AppleMail => formats::AppleMail::default_path(),
@@ -63,19 +66,39 @@ pub struct Config {
     pub database_path: PathBuf,
     /// The path where the emails are
     pub emails_folder_path: PathBuf,
-    /// The address used to send emails
-    pub sender_email: String,
+    /// The addresses used to send emails
+    pub sender_emails: HashSet<String>,
     /// The importer format we're using
     pub format: FormatType,
 }
 
 impl Config {
-    pub fn new<A: AsRef<Path>>(db: A, mails: A, sender_email: String, format: FormatType) -> Self {
-        Config {
-            database_path: db.as_ref().to_path_buf(),
+    pub fn new<A: AsRef<Path>>(
+        db: Option<A>,
+        mails: A,
+        sender_emails: Vec<String>,
+        format: FormatType,
+    ) -> eyre::Result<Self> {
+        // If we don't have a database path, we use a temporary folder.
+        let database_path = match db {
+            Some(n) => n.as_ref().to_path_buf(),
+            None => {
+                let number: u32 = rand::thread_rng().gen();
+                let folder = "gmaildb";
+                let filename = format!("{}.sqlite", number);
+                let mut temp_dir = std::env::temp_dir();
+                temp_dir.push(folder);
+                // the folder has to be created
+                std::fs::create_dir_all(&temp_dir)?;
+                temp_dir.push(filename);
+                temp_dir
+            }
+        };
+        Ok(Config {
+            database_path,
             emails_folder_path: mails.as_ref().to_path_buf(),
-            sender_email,
+            sender_emails: HashSet::from_iter(sender_emails.into_iter()),
             format,
-        }
+        })
     }
 }

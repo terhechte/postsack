@@ -50,6 +50,7 @@ walkdir = "*"
 mbox-reader = "0.2.0"
 rfd = "0.5.1"
 rand = "0.8.4"
+shellexpand = "*"
 
 [features]
 default = ["gui"]

@@ -3,6 +3,7 @@ use email_parser::address::{Address, EmailAddress, Mailbox};
 use eyre::{eyre, Result};
 
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::path::Path;
 
 use super::email::{EmailEntry, EmailMeta};
@@ -24,7 +25,7 @@ pub trait ParseableEmail: Send + Sized + Sync {
 
 pub fn parse_email<Entry: ParseableEmail>(
     entry: &mut Entry,
-    config_sender_email: &str,
+    sender_emails: &HashSet<String>,
 ) -> Result<EmailEntry> {
     if let Err(e) = entry.prepare() {
         tracing::error!("Prepare Error: {:?}", e);
@@ -58,8 +59,10 @@ pub fn parse_email<Entry: ParseableEmail>(
 
             // In order to determine the sender, we have to
             // build up the address again :-(
-            let is_send =
-                format!("{}@{}", sender_local_part, sender_domain).as_str() == config_sender_email;
+            let is_send = {
+                let email = format!("{}@{}", sender_local_part, sender_domain);
+                sender_emails.contains(&email)
+            };
 
             Ok(EmailEntry {
                 path: path.to_path_buf(),

@@ -17,6 +17,12 @@ pub struct Database {
 impl Database {
     /// Open database at path `Path`.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
+        // FIXME: if the file exists, we're re-opening it.
+        // this means we need to query the `meta` table
+        // to retrieve the contents of the config...
+
+        dbg!(path.as_ref());
+
         #[allow(unused_mut)]
         let mut connection = Connection::open(path.as_ref())?;
 
@@ -140,6 +146,7 @@ impl Database {
     fn create_tables(connection: &Connection) -> Result<()> {
         connection.execute(TBL_EMAILS, params![])?;
         connection.execute(TBL_ERRORS, params![])?;
+        connection.execute(TBL_META, params![])?;
         Ok(())
     }
 }

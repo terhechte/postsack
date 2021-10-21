@@ -55,7 +55,10 @@ pub fn make_config() -> types::Config {
         );
     }
 
-    crate::types::Config::new(database, folder, sender.to_string(), format)
+    match crate::types::Config::new(Some(database), folder, vec![sender.to_string()], format) {
+        Ok(n) => n,
+        Err(r) => panic!("Error: {:?}", &r),
+    }
 }
 
 fn usage(error: &'static str) -> ! {

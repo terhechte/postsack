@@ -1,4 +1,4 @@
-use eyre::{bail, eyre, Result};
+use eyre::{bail, eyre, Report, Result};
 
 use std::sync::{Arc, RwLock};
 use std::thread::JoinHandle;
@@ -7,7 +7,7 @@ use super::formats::ImporterFormat;
 use super::importer::Importerlike;
 use super::Message;
 
-#[derive(Clone, Debug, Copy, Default)]
+#[derive(Debug, Default)]
 struct Data {
     total_read: usize,
     read: usize,
@@ -15,6 +15,7 @@ struct Data {
     write: usize,
     finishing: bool,
     done: bool,
+    error: Option<Report>,
 }
 
 #[derive(Clone, Debug, Copy)]
@@ -69,13 +70,24 @@ impl Adapter {
                 for entry in receiver.try_iter() {
                     match entry {
                         Message::ReadTotal(n) => write_guard.total_read = n,
-                        Message::ReadOne => write_guard.read += 1,
+                        Message::ReadOne => {
+                            write_guard.read += 1;
+                            // Depending on the implementation, we may receive read calls before
+                            // the total size is known. We prevent division by zero by
+                            // always setting the total to read + 1 in these cases
+                            if write_guard.total_read <= write_guard.read {
+                                write_guard.total_read = write_guard.read + 1;
+                            }
+                        }
                         Message::WriteTotal(n) => write_guard.total_write = n,
                         Message::WriteOne => write_guard.write += 1,
                         Message::FinishingUp => write_guard.finishing = true,
                         Message::Done => {
                             write_guard.done = true;
                             break 'outer;
+                        }
+                        Message::Error(e) => {
+                            write_guard.error = Some(e);
                         }
                     };
                 }
@@ -110,5 +122,18 @@ impl Adapter {
             finishing: item.finishing,
             done: item.done,
         })
+    }
+
+    pub fn error(&self) -> Result<Option<Report>> {
+        // We take the error of out of the write lock only if there is an error.
+        let item = self.consumer_lock.read().map_err(|e| eyre!("{:?}", &e))?;
+        let is_error = item.error.is_some();
+        drop(item);
+        if is_error {
+            let mut item = self.producer_lock.write().map_err(|e| eyre!("{:?}", &e))?;
+            Ok(item.error.take())
+        } else {
+            Ok(None)
+        }
     }
 }

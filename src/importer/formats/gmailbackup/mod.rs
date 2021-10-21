@@ -11,7 +11,7 @@ pub struct Gmail {}
 impl ImporterFormat for Gmail {
     type Item = raw_email::RawEmailEntry;
 
-    fn default_path() -> Option<&'static std::path::Path> {
+    fn default_path() -> Option<std::path::PathBuf> {
         None
     }
 

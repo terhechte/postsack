@@ -1,28 +1,24 @@
 use eframe::{
     egui::{self},
-    epi::{self, Frame, Storage},
+    epi::{self, App, Frame, Storage},
 };
-use eyre::Result;
+use eyre::{Report, Result};
 
-use super::app_state::{self, Import, Startup, Visualize};
+use super::app_state::StateUI;
 
-pub enum GmailDBApp {
-    Startup { panel: Startup },
-    Import { panel: Import },
-    Visualize { panel: Visualize },
-}
+pub struct GmailDBApp(StateUI);
 
 impl GmailDBApp {
     pub fn new() -> Result<Self> {
         // Temporarily create config without state machine
-        let config = app_state::make_temporary_ui_config();
-        Ok(GmailDBApp::Import {
-            panel: Import::new(config),
-        })
+        //let config = app_state::make_temporary_ui_config();
+        // let config = crate::make_config();
+        let state = StateUI::new();
+        Ok(GmailDBApp(state))
     }
 }
 
-impl epi::App for GmailDBApp {
+impl App for GmailDBApp {
     fn name(&self) -> &str {
         "Gmail DB"
     }
@@ -49,23 +45,25 @@ impl epi::App for GmailDBApp {
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        match self {
-            GmailDBApp::Startup { panel } => Self::update_panel(panel, ctx, frame),
-            GmailDBApp::Import { panel } => Self::update_panel(panel, ctx, frame),
-            _ => panic!(),
-        }
+        self.0.update(ctx);
+
+        // match self {
+        //     GmailDBApp::Startup { panel } => Self::update_panel(panel, ctx, frame),
+        //     GmailDBApp::Import { panel } => Self::update_panel(panel, ctx, frame),
+        //     _ => panic!(),
+        // }
 
         // Resize the native window to be just the size we need it to be:
         frame.set_window_size(ctx.used_size());
     }
 }
 
-impl GmailDBApp {
-    fn update_panel(panel: impl egui::Widget, ctx: &egui::CtxRef, _frame: &mut epi::Frame<'_>) {
-        egui::CentralPanel::default()
-            .frame(egui::containers::Frame::none())
-            .show(ctx, |ui| {
-                ui.add(panel);
-            });
-    }
-}
+// impl GmailDBApp {
+//     fn update_panel(panel: impl egui::Widget, ctx: &egui::CtxRef, _frame: &mut epi::Frame<'_>) {
+//         egui::CentralPanel::default()
+//             .frame(egui::containers::Frame::none())
+//             .show(ctx, |ui| {
+//                 ui.add(panel);
+//             });
+//     }
+// }

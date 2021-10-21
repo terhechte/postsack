@@ -69,6 +69,7 @@ impl<Context: Send + Sync + 'static> Link<Context> {
 }
 
 pub(super) fn run<Context: Send + Sync + 'static>(config: &Config) -> Result<Link<Context>> {
+    // Create a new database connection, just for reading
     let database = Database::new(&config.database_path)?;
     let (input_sender, input_receiver) = unbounded();
     let (output_sender, output_receiver) = unbounded();

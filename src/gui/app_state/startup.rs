@@ -7,10 +7,12 @@ use std::path::PathBuf;
 
 use super::super::platform::platform_colors;
 use super::super::widgets::background::{shadow_background, AnimatedBackground};
-use crate::types::FormatType;
+use super::{StateUI, StateUIAction, StateUIVariant};
+use crate::database;
+use crate::types::{Config, FormatType};
 
 #[derive(Default)]
-pub struct Startup {
+pub struct StartupUI {
     /// Which importer format are we using
     format: FormatType,
     /// Where are the emails located
@@ -26,10 +28,46 @@ pub struct Startup {
     timer: f64,
     /// recursive offset counter
     offset_counter: usize,
+    /// Potential error message to display to the user
+    error_message: Option<String>,
+    /// The result of the actions
+    action: Option<StateUIAction>,
 }
 
-impl Widget for &mut Startup {
-    fn ui(self, ui: &mut egui::Ui) -> Response {
+impl StartupUI {
+    pub fn from_config(config: Config) -> Self {
+        let emails = if !config.sender_emails.is_empty() {
+            let mails: Vec<String> = config.sender_emails.iter().map(|e| e.to_owned()).collect();
+            Some(mails.join(", "))
+        } else {
+            None
+        };
+        Self {
+            format: config.format,
+            email_folder: Some(config.emails_folder_path),
+            database_path: Some(config.database_path),
+            save_to_disk: true,
+            email_address: emails,
+            ..Default::default()
+        }
+    }
+}
+
+impl StateUIVariant for StartupUI {
+    fn update_panel(&mut self, ctx: &egui::CtxRef) -> super::StateUIAction {
+        egui::CentralPanel::default()
+            .frame(egui::containers::Frame::none())
+            .show(ctx, |ui| {
+                ui.add(|ui: &mut egui::Ui| self.ui(ui));
+            });
+        // If we generated an action above, return it
+        self.action.take().unwrap_or(StateUIAction::Nothing)
+    }
+}
+
+impl StartupUI {
+    /// Separated to have a less stuff happening
+    fn ui(&mut self, ui: &mut egui::Ui) -> Response {
         let available = ui.available_size();
 
         AnimatedBackground {
@@ -75,7 +113,10 @@ impl Widget for &mut Startup {
         let hyperlink_color = visuals.hyperlink_color;
 
         // placeholder text
-        let mut txt = "john@example.org".to_string();
+        let mut txt = self
+            .email_address
+            .clone()
+            .unwrap_or("john@example.org".to_string());
 
         let response = ui.allocate_ui_at_rect(center, |ui| {
             // We use a grid as that gives us more spacing opportunities
@@ -105,7 +146,7 @@ impl Widget for &mut Startup {
                         }
                         if self.format == FormatType::AppleMail {
                             if ui.button("or Mail.app default folder").clicked() {
-                                self.email_folder = self.format.default_path().map(|e| e.to_path_buf())
+                                self.email_folder = self.format.default_path();
                             }
                         }
                     });
@@ -162,15 +203,31 @@ impl Widget for &mut Startup {
                     let button_size1: Vec2 = ((center.width() / 2.0) - 25.0, 25.0).into();
                     let button_size2: Vec2 = ((center.width() / 2.0) - 25.0, 25.0).into();
                     ui.horizontal(|ui| {
-                        ui.add_sized(
+                        let response = ui.add_sized(
                             button_size1,
                             egui::Button::new("Start")
-                            .enabled(self.email_folder.is_some())
+                            .enabled(
+                                // if we have an email folder,
+                                // and - if we want to save to disk -
+                                // if we have a database path
+                                self.email_folder.is_some() &&
+                                (self.save_to_disk == self.database_path.is_some())
+                            )
                             .text_color(Color32::WHITE),
                         );
-                        ui.add_sized(button_size2, egui::Button::new("Or Open Database"));
+                        if response.clicked() {
+                            self.action_start();
+                        }
+                        let response = ui.add_sized(button_size2, egui::Button::new("Or Open Database"));
+                        if response.clicked() {
+                            self.action_open_database();
+                        }
                     });
                     ui.end_row();
+                    if let Some(ref e) = self.error_message {
+                        let r = Color32::from_rgb(255, 0, 0);
+                        ui.colored_label(r, e);
+                    }
                 });
         });
 
@@ -178,7 +235,44 @@ impl Widget for &mut Startup {
     }
 }
 
-impl Startup {
+impl StartupUI {
+    fn action_start(&mut self) {
+        let email = match &self.email_folder {
+            Some(n) => n.clone(),
+            _ => return,
+        };
+
+        // Split by comma, remove whitespace
+        let emails: Vec<String> = self
+            .email_address
+            .iter()
+            .map(|e| e.split(",").map(|e| e.trim().to_string()).collect())
+            .collect();
+        //.unwrap_or_default();
+
+        if !email.exists() {
+            self.error_message = Some(format!("Email folder doesn't exist"));
+            return;
+        }
+
+        if self.save_to_disk && !self.database_path.is_some() {
+            self.error_message = Some(format!("Please select a database folder"));
+            return;
+        }
+
+        self.action = Some(StateUIAction::CreateDatabase {
+            database_path: self.database_path.clone(),
+            emails_folder_path: email,
+            sender_emails: emails,
+            format: self.format,
+        });
+    }
+
+    fn action_open_database(&mut self) {
+        // somehow ask the database to open and return a config...
+        // this should rather lie in a in-between model-layer...
+    }
+
     fn format_selection(&mut self, ui: &mut egui::Ui, width: f32) {
         let mut selected = self.format;
         let response = egui::ComboBox::from_id_source("mailbox_type_comboox")
@@ -198,7 +292,7 @@ impl Startup {
         let default_path = self
             .format
             .default_path()
-            .unwrap_or(std::path::Path::new("~/"));
+            .unwrap_or(std::path::Path::new("~/").to_path_buf());
 
         let folder = rfd::FileDialog::new()
             .set_directory(default_path)
@@ -229,4 +323,12 @@ impl Startup {
         };
         self.database_path = Some(path);
     }
+
+    // fn set_default_folder(&self) -> PathBuf {
+    //     let path = self.format.default_path() {
+    //         Some(n) => n,
+    //     }
+
+    //                             self.email_folder = self.format.default_path().map(|e| e.to_path_buf())
+    // }
 }

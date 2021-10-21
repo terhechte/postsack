@@ -15,3 +15,11 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
 - [ ] try `iced` or `druid` as well
 - [ ] maybe add blocking versions of the calls, too (in model)
 - [ ] abstract over `Fields` and backend
+
+- [ ] open database support
+- [ ] add the read, send, filtres
+- [ ] mbox is multiple files
+- [ ] rename
+- [ ] store last opened sqlite file
+- [ ] save config into sqlite
+- [ ] split up into multiple crates

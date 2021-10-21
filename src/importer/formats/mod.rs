@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::PathBuf;
 
 pub use eyre::Result;
 
@@ -23,7 +23,7 @@ pub trait ImporterFormat: Send + Sync {
 
     /// The default location path where the data for this format resides
     /// on system. If there is none (such as for mbox) return `None`
-    fn default_path() -> Option<&'static Path>;
+    fn default_path() -> Option<PathBuf>;
 
     /// Return all the emails in this format.
     /// Use the sneder to give progress updates via the `ReadProgress` case.

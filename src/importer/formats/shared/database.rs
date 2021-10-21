@@ -20,8 +20,8 @@ pub fn into_database<Mail: ParseableEmail + 'static>(
         bail!("Channel Failure {:?}", &e);
     }
 
-    // Create a new database connection
-    let database = Database::new(config.database_path.clone())?;
+    // Create a new database connection, just for writing
+    let database = Database::new(config.database_path.clone()).unwrap();
 
     // Consume the connection to begin the import. It will return the `handle` to use for
     // waiting for the database to finish importing, and the `sender` to submit work.
@@ -32,7 +32,7 @@ pub fn into_database<Mail: ParseableEmail + 'static>(
         // in paralell..
         .par_iter_mut()
         // parsing them
-        .map(|raw_mail| parse_email(raw_mail, config.sender_email.as_str()))
+        .map(|raw_mail| parse_email(raw_mail, &config.sender_emails))
         // and inserting them into SQLite
         .for_each(|entry| {
             // Try to write the message into the database

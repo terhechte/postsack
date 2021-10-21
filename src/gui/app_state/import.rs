@@ -1,15 +1,28 @@
 //! The startup form to configure what and how to import
+use std::thread::JoinHandle;
+
 use eframe::egui::epaint::Shadow;
 use eframe::egui::{self, vec2, Color32, Pos2, Rect, Response, Stroke, TextStyle, Vec2, Widget};
+use eyre::Result;
 use rand::seq::SliceRandom;
 
 use super::super::platform::platform_colors;
 use super::super::widgets::background::{shadow_background, AnimatedBackground};
+use super::{StateUI, StateUIAction, StateUIVariant};
 use crate::types::Config;
-use crate::types::FormatType;
+use crate::{
+    importer::{self, Adapter, State},
+    types::FormatType,
+};
 
-pub struct Import {
+pub struct ImporterUI {
+    /// The config for this configuration
     config: Config,
+    /// The adapter handling the import
+    adapter: Adapter,
+    /// The handle to the adapter thread
+    /// As handle.join takes `self` it has to be optional
+    handle: Option<JoinHandle<Result<()>>>,
     /// The animation divisions
     animation_divisions: usize,
     /// time counter
@@ -24,10 +37,21 @@ pub struct Import {
     progress_blocks: Vec<usize>,
     /// The progress divisions
     progress_divisions: usize,
+    /// we're done importing
+    pub done_importing: bool,
+    /// Any errors during importing
+    pub importer_error: Option<eyre::Report>,
 }
 
-impl Import {
-    pub fn new(config: Config) -> Self {
+// impl super::StateUI for ImporterUI {
+//     fn next(&self) -> Option<super::MainApp> {
+//         self.importer_error.map(|e| super::MainApp::E)
+//     }
+// }
+
+impl ImporterUI {
+    pub fn new(config: Config) -> Result<Self> {
+        let cloned_config = config.clone();
         // Build a random distribution of elements
         // to animate the import process
         let mut rng = rand::thread_rng();
@@ -38,34 +62,101 @@ impl Import {
         let progress_block_count =
             (animation_divisions * progress_divisions) * (animation_divisions * progress_divisions);
         let mut progress_blocks: Vec<usize> = (0..progress_block_count).collect();
-        dbg!(progress_block_count);
         progress_blocks.shuffle(&mut rng);
 
-        Self {
+        // The adapter that controls the syncing
+        let adapter = Adapter::new();
+
+        // Could not figure out how to build this properly
+        // with dynamic dispatch. (to abstract away the match)
+        // Will try again when I'm online.
+        let handle = match config.format {
+            FormatType::AppleMail => {
+                let importer = importer::applemail_importer(config);
+                adapter.process(importer)?
+            }
+            FormatType::GmailVault => {
+                let importer = importer::gmail_importer(config);
+                adapter.process(importer)?
+            }
+            FormatType::Mbox => {
+                let importer = importer::mbox_importer(config);
+                adapter.process(importer)?
+            }
+        };
+
+        Ok(Self {
+            config: cloned_config,
+            adapter,
+            handle: Some(handle),
             animation_divisions,
-            config,
             timer: 0.0,
             offset_counter: 0,
             intro_timer: 0.0,
             progress_blocks,
             progress_divisions,
+            done_importing: false,
+            importer_error: None,
+        })
+    }
+}
+impl StateUIVariant for ImporterUI {
+    fn update_panel(&mut self, ctx: &egui::CtxRef) -> StateUIAction {
+        egui::CentralPanel::default()
+            .frame(egui::containers::Frame::none())
+            .show(ctx, |ui| {
+                ui.add(|ui: &mut egui::Ui| self.ui(ui));
+            });
+        // If we generated an action above, return it
+        //self.action.take().unwrap_or(StateUIAction::Nothing)
+        match (self.importer_error.take(), self.done_importing) {
+            (Some(report), _) => StateUIAction::Error {
+                report,
+                config: self.config.clone(),
+            },
+            (_, true) => StateUIAction::ImportDone {
+                config: self.config.clone(),
+            },
+            (_, false) => StateUIAction::Nothing,
         }
     }
 }
 
-impl Widget for &mut Import {
-    fn ui(self, ui: &mut egui::Ui) -> Response {
+impl ImporterUI {
+    fn ui(&mut self, ui: &mut egui::Ui) -> Response {
         self.intro_timer += ui.input().unstable_dt as f64;
         let growth = self.intro_timer.clamp(0.0, 1.0);
 
         let available = ui.available_size();
 
-        // We take the progress as a value fromt the blocks
-        // FIXME: temporary using intro timer
-        let p = ((self.intro_timer * 5.0) / 100.0);
-        let n = (self.progress_blocks.len() as f64 * p) as usize;
-        //println!("{} / {}", n, self.progress_blocks.len());
-        let slice = &self.progress_blocks[0..=n];
+        let (label, progress, writing, done) = match self.handle_adapter() {
+            Ok(n) => n,
+            Err(e) => {
+                self.importer_error = Some(e);
+                todo!();
+                // return e;
+            }
+        };
+
+        if let Ok(Some(error)) = self.adapter.error() {
+            println!("Has error");
+            self.importer_error = Some(error);
+        }
+
+        if done {
+            // if we're done, the join handle should not lock
+            println!("Done!");
+            if let Some(handle) = self.handle.take() {
+                println!("Wait Join Handle!");
+                self.importer_error = handle.join().ok().map(|e| e.err()).flatten();
+            }
+            println!("Done Importing");
+            self.done_importing = true;
+        }
+
+        let n = (self.progress_blocks.len() as f32 * progress) as usize;
+        let n = n.min(self.progress_blocks.len());
+        let slice = &self.progress_blocks[0..n];
 
         AnimatedBackground {
             divisions: self.animation_divisions,
@@ -105,12 +196,50 @@ impl Widget for &mut Import {
             ui.centered_and_justified(|ui| {
                 ui.vertical_centered_justified(|ui| {
                     ui.heading("Import in Progress");
-                    let bar = egui::widgets::ProgressBar::new(0.5).animate(true);
-                    ui.add(bar);
-                    ui.small("133 / 1000");
+                    ui.add_space(10.0);
+                    if writing {
+                        let bar = egui::widgets::ProgressBar::new(1.0).animate(false);
+                        ui.add(bar);
+                        let bar = egui::widgets::ProgressBar::new(progress).animate(true);
+                        ui.add(bar);
+                    } else {
+                        let bar = egui::widgets::ProgressBar::new(progress).animate(true);
+                        ui.add(bar);
+                        ui.add_space(20.0);
+                    }
+                    ui.small(label);
                 });
             })
         })
         .response
+    }
+}
+
+impl ImporterUI {
+    /// Returns the current label, the progress (0-1), writing? (true), and done? (true)
+    fn handle_adapter(&mut self) -> Result<(String, f32, bool, bool)> {
+        let (mut label, progress, writing) = {
+            let write = self.adapter.write_count()?;
+            if write.count > 0 {
+                (
+                    format!("\rParsing emails {}/{}...", write.count, write.total),
+                    (write.count as f32 / write.total as f32),
+                    true,
+                )
+            } else {
+                let read = self.adapter.read_count()?;
+                (
+                    format!("Reading emails {}/{}...", read.count, read.total),
+                    (read.count as f32 / read.total as f32),
+                    false,
+                )
+            }
+        };
+
+        let State { done, finishing } = self.adapter.finished()?;
+        if finishing {
+            label = format!("Finishing Up");
+        }
+        Ok((label, progress, writing, done))
     }
 }

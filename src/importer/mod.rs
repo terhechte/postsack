@@ -11,6 +11,7 @@ pub use message_adapter::*;
 use formats::ImporterFormat;
 
 /// The message that informs of the importers progress
+#[derive(Debug)]
 pub enum Message {
     /// How much progress are we making on reading the contents
     /// of the emails.
@@ -31,6 +32,8 @@ pub enum Message {
     FinishingUp,
     /// Finally, this indicates that we're done.
     Done,
+    /// An error happened during processing
+    Error(eyre::Report),
 }
 
 pub type MessageSender = crossbeam_channel::Sender<Message>;
