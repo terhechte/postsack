@@ -80,6 +80,11 @@ pub trait StateUIVariant {
 }
 
 impl StateUI {
+    /// Create an error state
+    pub fn error(report: Report) -> StateUI {
+        StateUI::Error(error::ErrorUI::new(report, None))
+    }
+
     /// This proxies the `update` call to the individual calls in
     /// the `app_state` types
     pub fn update(&mut self, ctx: &egui::CtxRef) {

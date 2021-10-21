@@ -21,7 +21,6 @@ pub struct MainUI {
     error: Option<Report>,
     state: UIState,
     filter_state: FilterState,
-    platform_custom_setup: bool,
 }
 
 impl MainUI {
@@ -34,7 +33,6 @@ impl MainUI {
             error: None,
             state: UIState::default(),
             filter_state: FilterState::new(),
-            platform_custom_setup: false,
         })
     }
 }
@@ -44,15 +42,6 @@ impl StateUIVariant for MainUI {
         // Avoid any processing if there is an unhandled error.
         if self.error.is_none() {
             self.error = self.engine.process().err();
-        }
-
-        if !self.platform_custom_setup {
-            self.platform_custom_setup = true;
-            self.error = super::super::platform::initial_update(&ctx).err();
-
-            // Make the UI a bit bigger
-            let pixels = ctx.pixels_per_point();
-            ctx.set_pixels_per_point(pixels * 1.2)
         }
 
         let platform_colors = super::super::platform::platform_colors();

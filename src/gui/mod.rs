@@ -10,21 +10,5 @@ pub(crate) mod widgets;
 
 pub fn run_gui() {
     let options = eframe::NativeOptions::default();
-    let app: Box<dyn epi::App> = match app::GmailDBApp::new() {
-        Ok(n) => Box::new(n),
-        Err(e) => Box::new(ErrorApp(e)),
-    };
-    eframe::run_native(app, options);
-}
-
-struct ErrorApp(eyre::Report);
-impl epi::App for ErrorApp {
-    fn name(&self) -> &str {
-        "Error"
-    }
-
-    fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        egui::CentralPanel::default().show(ctx, |ui| ui.add(widgets::ErrorBox(&self.0)));
-        frame.set_window_size(ctx.used_size());
-    }
+    eframe::run_native(Box::new(app::GmailDBApp::new()), options);
 }
