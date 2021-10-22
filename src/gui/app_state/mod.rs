@@ -5,9 +5,9 @@ mod startup;
 
 use std::path::PathBuf;
 
-use eframe::egui::{self, Widget};
+use eframe::egui::{self};
 pub use error::ErrorUI;
-use eyre::{Report, Result};
+use eyre::Report;
 pub use import::ImporterUI;
 pub use main::{MainUI, UIState};
 pub use startup::StartupUI;
@@ -37,37 +37,6 @@ pub enum StateUIAction {
     Nothing,
 }
 
-// FIXME: Removve
-// pub fn make_temporary_ui_config() -> crate::types::Config {
-//     crate::types::Config::new(
-//         "./db6.sql",
-//         "",
-//         vec!["terhechte@me.com".to_string()],
-//         crate::types::FormatType::AppleMail,
-//     )
-// }
-
-// pub enum MainApp {
-//     Startup { panel: StartupUI },
-//     Import { panel: ImporterUI },
-//     Main { panel: MainUI },
-//     Error { panel: ErrorUI },
-// }
-
-/// This defines the state machine switches between the `MainApp`
-/// states.
-/// FIXME: I'm not particularly happy with this abstraction right now.
-// impl MainApp {
-//     /// An Error state can always happen
-//     pub fn error(report: eyre::Report) -> MainApp {
-//         MainApp::Error {
-//             panel: ErrorUI(report),
-//         }
-//     }
-//     // pub fn import(startup: &) -> MainApp {
-
-//     // }
-// }
 pub enum StateUI {
     Startup(startup::StartupUI),
     Import(import::ImporterUI),

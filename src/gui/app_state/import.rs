@@ -2,13 +2,13 @@
 use std::thread::JoinHandle;
 
 use eframe::egui::epaint::Shadow;
-use eframe::egui::{self, vec2, Color32, Pos2, Rect, Response, Stroke, TextStyle, Vec2, Widget};
+use eframe::egui::{self, Color32, Pos2, Rect, Response, Stroke};
 use eyre::Result;
 use rand::seq::SliceRandom;
 
 use super::super::platform::platform_colors;
 use super::super::widgets::background::{shadow_background, AnimatedBackground};
-use super::{StateUI, StateUIAction, StateUIVariant};
+use super::{StateUIAction, StateUIVariant};
 use crate::types::Config;
 use crate::{
     importer::{self, Adapter, State},
@@ -42,12 +42,6 @@ pub struct ImporterUI {
     /// Any errors during importing
     pub importer_error: Option<eyre::Report>,
 }
-
-// impl super::StateUI for ImporterUI {
-//     fn next(&self) -> Option<super::MainApp> {
-//         self.importer_error.map(|e| super::MainApp::E)
-//     }
-// }
 
 impl ImporterUI {
     pub fn new(config: Config) -> Result<Self> {
@@ -108,7 +102,6 @@ impl StateUIVariant for ImporterUI {
                 ui.add(|ui: &mut egui::Ui| self.ui(ui));
             });
         // If we generated an action above, return it
-        //self.action.take().unwrap_or(StateUIAction::Nothing)
         match (self.importer_error.take(), self.done_importing) {
             (Some(report), _) => StateUIAction::Error {
                 report,
@@ -124,7 +117,8 @@ impl StateUIVariant for ImporterUI {
 
 impl ImporterUI {
     fn ui(&mut self, ui: &mut egui::Ui) -> Response {
-        self.intro_timer += ui.input().unstable_dt as f64;
+        // The speed with which we initially scale down.
+        self.intro_timer += (ui.input().unstable_dt as f64) * 2.0;
         let growth = self.intro_timer.clamp(0.0, 1.0);
 
         let available = ui.available_size();
@@ -132,25 +126,22 @@ impl ImporterUI {
         let (label, progress, writing, done) = match self.handle_adapter() {
             Ok(n) => n,
             Err(e) => {
+                // Generate a response signifying we're done - as there was an error
+                let response = (format!("Error {}", &e), 1.0, false, true);
                 self.importer_error = Some(e);
-                todo!();
-                // return e;
+                response
             }
         };
 
         if let Ok(Some(error)) = self.adapter.error() {
-            println!("Has error");
             self.importer_error = Some(error);
         }
 
         if done {
             // if we're done, the join handle should not lock
-            println!("Done!");
             if let Some(handle) = self.handle.take() {
-                println!("Wait Join Handle!");
                 self.importer_error = handle.join().ok().map(|e| e.err()).flatten();
             }
-            println!("Done Importing");
             self.done_importing = true;
         }
 
@@ -166,7 +157,7 @@ impl ImporterUI {
         }
         .draw_background(ui, available);
 
-        let desired_height = 370.0 - (270.0 * growth) as f32;
+        let desired_height = 370.0 - (220.0 * growth) as f32;
         let desired_size = egui::vec2(330.0, desired_height);
 
         let paint_rect = Rect::from_min_size(

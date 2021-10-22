@@ -1,14 +1,13 @@
 //! The startup form to configure what and how to import
 use eframe::egui::epaint::Shadow;
-use eframe::egui::{self, vec2, Color32, Pos2, Rect, Response, Stroke, TextStyle, Vec2, Widget};
+use eframe::egui::{self, vec2, Color32, Pos2, Rect, Response, Stroke, TextStyle, Vec2};
 use rfd;
 
 use std::path::PathBuf;
 
 use super::super::platform::platform_colors;
 use super::super::widgets::background::{shadow_background, AnimatedBackground};
-use super::{StateUI, StateUIAction, StateUIVariant};
-use crate::database;
+use super::{StateUIAction, StateUIVariant};
 use crate::types::{Config, FormatType};
 
 #[derive(Default)]
@@ -42,11 +41,17 @@ impl StartupUI {
         } else {
             None
         };
+        // Only for persistent config do we re-populate the database path
+        // otherwise it would hsow the temporary path
+        let (save_to_disk, database_path) = match config.persistent {
+            true => (true, Some(config.database_path)),
+            false => (false, None),
+        };
         Self {
             format: config.format,
             email_folder: Some(config.emails_folder_path),
-            database_path: Some(config.database_path),
-            save_to_disk: true,
+            database_path,
+            save_to_disk,
             email_address: emails,
             ..Default::default()
         }

@@ -1,5 +1,3 @@
-use eframe::{self, egui, epi};
-
 mod app;
 mod app_state;
 mod mail_panel;

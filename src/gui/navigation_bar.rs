@@ -45,7 +45,7 @@ impl<'a> Widget for NavigationBar<'a> {
 
                 ui.add_space(15.0);
 
-                let close_text = "\u{23F4} Close";
+                let close_text = "Close";
                 if ui.add(navigation_button(close_text)).clicked() {
                     self.state.action_close = true;
                 }

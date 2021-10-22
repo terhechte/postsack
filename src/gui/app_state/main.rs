@@ -1,8 +1,8 @@
-use eframe::egui::{self, Response, Stroke, Widget};
+use eframe::egui::{self, Stroke};
 use eyre::{Report, Result};
 
-use super::super::widgets::{self, FilterState, Spinner};
-use super::{StateUI, StateUIAction, StateUIVariant};
+use super::super::widgets::{FilterState, Spinner};
+use super::{StateUIAction, StateUIVariant};
 use crate::types::Config;
 
 use crate::model::Engine;

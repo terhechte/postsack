@@ -70,6 +70,9 @@ pub struct Config {
     pub sender_emails: HashSet<String>,
     /// The importer format we're using
     pub format: FormatType,
+    /// Did the user intend to keep the database
+    /// (e.g. is the database path temporary?)
+    pub persistent: bool,
 }
 
 impl Config {
@@ -80,6 +83,7 @@ impl Config {
         format: FormatType,
     ) -> eyre::Result<Self> {
         // If we don't have a database path, we use a temporary folder.
+        let persistent = db.is_some();
         let database_path = match db {
             Some(n) => n.as_ref().to_path_buf(),
             None => {
@@ -99,6 +103,7 @@ impl Config {
             emails_folder_path: mails.as_ref().to_path_buf(),
             sender_emails: HashSet::from_iter(sender_emails.into_iter()),
             format,
+            persistent,
         })
     }
 }

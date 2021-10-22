@@ -21,8 +21,6 @@ impl Database {
         // this means we need to query the `meta` table
         // to retrieve the contents of the config...
 
-        dbg!(path.as_ref());
-
         #[allow(unused_mut)]
         let mut connection = Connection::open(path.as_ref())?;
 

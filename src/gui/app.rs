@@ -2,7 +2,6 @@ use eframe::{
     egui::{self},
     epi::{self, App, Frame, Storage},
 };
-use eyre::{Report, Result};
 
 use super::app_state::StateUI;
 
@@ -13,9 +12,6 @@ pub struct GmailDBApp {
 
 impl GmailDBApp {
     pub fn new() -> Self {
-        // Temporarily create config without state machine
-        //let config = app_state::make_temporary_ui_config();
-        // let config = crate::make_config();
         let state = StateUI::new();
         GmailDBApp {
             state,
@@ -60,23 +56,7 @@ impl App for GmailDBApp {
 
         self.state.update(ctx);
 
-        // match self {
-        //     GmailDBApp::Startup { panel } => Self::update_panel(panel, ctx, frame),
-        //     GmailDBApp::Import { panel } => Self::update_panel(panel, ctx, frame),
-        //     _ => panic!(),
-        // }
-
         // Resize the native window to be just the size we need it to be:
         frame.set_window_size(ctx.used_size());
     }
 }
-
-// impl GmailDBApp {
-//     fn update_panel(panel: impl egui::Widget, ctx: &egui::CtxRef, _frame: &mut epi::Frame<'_>) {
-//         egui::CentralPanel::default()
-//             .frame(egui::containers::Frame::none())
-//             .show(ctx, |ui| {
-//                 ui.add(panel);
-//             });
-//     }
-// }
