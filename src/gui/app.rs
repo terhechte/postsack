@@ -4,6 +4,7 @@ use eframe::{
 };
 
 use super::app_state::StateUI;
+use super::platform::Theme;
 use super::textures::Textures;
 
 pub struct PostsackApp {
@@ -30,13 +31,7 @@ impl App for PostsackApp {
     }
 
     fn setup(&mut self, ctx: &egui::CtxRef, frame: &mut Frame<'_>, _storage: Option<&dyn Storage>) {
-        super::platform::setup(ctx);
-
-        // Adapt to the platform colors
-        let platform_colors = super::platform::platform_colors();
-        let mut visuals = egui::Visuals::dark();
-        visuals.widgets.noninteractive.bg_fill = platform_colors.window_background_dark;
-        ctx.set_visuals(visuals);
+        super::platform::setup(ctx, Theme::Dark);
 
         // Load textures
         self.textures = Some(Textures::populated(frame));

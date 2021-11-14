@@ -1,25 +1,29 @@
 #![cfg(target_os = "linux")]
 
-use eyre::Result;
 use eframe::egui::{self, Color32};
+use eyre::Result;
 
-use super::PlatformColors;
+use super::{PlatformColors, Theme};
 
-pub fn platform_colors() -> PlatformColors {
+pub fn platform_colors(theme: Theme) -> PlatformColors {
     // From Google images, Gtk
-    PlatformColors {
-        window_background_dark: Color32::from_rgb(53, 53, 53),
-        window_background_light: Color32::from_rgb(246, 245, 244),
-        content_background_dark: Color32::from_rgb(34, 32, 40),
-        content_background_light: Color32::from_rgb(254, 254, 254),
+    match theme {
+        Theme::Light => PlatformColors {
+            window_background: Color32::from_rgb(246, 245, 244),
+            content_background: Color32::from_rgb(254, 254, 254),
+        },
+        Theme::Dark => PlatformColors {
+            window_background: Color32::from_rgb(73, 73, 73),
+            content_background: Color32::from_rgb(34, 32, 40),
+        },
     }
 }
 
 /// This is called from `App::setup`
-pub fn setup(ctx: &egui::CtxRef) {}
+pub fn setup(_ctx: &egui::CtxRef) {}
 
 /// This is called once from `App::update` on the first run.
-pub fn initial_update(ctx: &egui::CtxRef) -> Result<()> {
+pub fn initial_update(_ctx: &egui::CtxRef) -> Result<()> {
     Ok(())
 }
 

@@ -11,14 +11,18 @@ use eframe::egui::{self, Color32, FontDefinitions, FontFamily, Stroke};
 use eyre::{bail, Result};
 use objc::runtime::{Object, YES};
 
-use super::PlatformColors;
+use super::{PlatformColors, Theme};
 
-pub fn platform_colors() -> PlatformColors {
-    PlatformColors {
-        window_background_dark: Color32::from_rgb(36, 30, 42),
-        window_background_light: Color32::from_rgb(238, 236, 242),
-        content_background_dark: Color32::from_rgb(20, 14, 26),
-        content_background_light: Color32::from_rgb(236, 234, 238),
+pub fn platform_colors(theme: THeme) -> PlatformColors {
+    match theme {
+        Theme::Light => PlatformColors {
+            window_background: Color32::from_rgb(238, 236, 242),
+            content_background: Color32::from_rgb(236, 234, 238),
+        },
+        Theme::Dark => PlatformColors {
+            window_background: Color32::from_rgb(36, 30, 42),
+            content_background: Color32::from_rgb(20, 14, 26),
+        },
     }
 }
 

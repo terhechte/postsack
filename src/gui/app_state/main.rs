@@ -52,7 +52,7 @@ impl StateUIVariant for MainUI {
         let platform_colors = super::super::platform::platform_colors();
 
         let frame = egui::containers::Frame::none()
-            .fill(platform_colors.window_background_dark)
+            .fill(platform_colors.window_background)
             .stroke(Stroke::none());
 
         egui::TopBottomPanel::top("my_panel")
@@ -86,7 +86,7 @@ impl StateUIVariant for MainUI {
                     });
                 } else {
                     let stroke = Stroke::none();
-                    let fill = platform_colors.content_background_dark;
+                    let fill = platform_colors.content_background;
                     super::super::widgets::background::color_background(
                         ui,
                         15.0,

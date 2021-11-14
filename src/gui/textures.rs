@@ -16,7 +16,7 @@ pub struct Textures {
 }
 
 impl Textures {
-    pub fn populated(frame: &mut epi::Frame<'_>) -> Textures {
+    pub fn populated(_frame: &mut epi::Frame<'_>) -> Textures {
         #[cfg(target_os = "macos")]
         {
             let missing_permissions_image = install_missing_permission_image(
@@ -35,6 +35,7 @@ impl Textures {
 
 /// Load the permission image
 // via: https://github.com/emilk/egui/blob/master/eframe/examples/image.rs
+#[allow(unused)]
 fn install_missing_permission_image(
     image_data: &[u8],
     frame: &mut epi::Frame<'_>,

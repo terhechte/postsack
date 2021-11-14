@@ -202,7 +202,7 @@ impl ImporterUI {
             shadow_background(
                 ui.painter(),
                 paint_rect,
-                colors.window_background_dark,
+                colors.window_background,
                 Stroke::new(1.0, Color32::from_gray(90)),
                 12.0,
                 Shadow::big_dark(),
@@ -271,7 +271,7 @@ impl ImporterUI {
     }
 
     #[cfg(not(target_os = "macos"))]
-    fn permission_ui(&mut self, ui: &mut egui::Ui, textures: &Option<Textures>) -> Response {
+    fn permission_ui(&mut self, ui: &mut egui::Ui, _textures: &Option<Textures>) -> Response {
         ui.label("")
     }
 }

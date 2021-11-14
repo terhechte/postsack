@@ -1,16 +1,20 @@
 #![cfg(target_os = "windows")]
 
-use eframe::egui;
+use eframe::egui::{self, Color32};
 
-use super::PlatformColors;
+use super::{PlatformColors, Theme};
 
 pub fn platform_colors() -> PlatformColors {
     // From Google images, Windows 11
-    PlatformColors {
-        window_background_dark: Color32::from_rgb(32, 32, 32),
-        window_background_light: Color32::from_rgb(241, 243, 246),
-        content_background_dark: Color32::from_rgb(34, 32, 40),
-        content_background_light: Color32::from_rgb(251, 251, 253),
+    match theme {
+        Theme::Light => PlatformColors {
+            window_background: Color32::from_rgb(241, 243, 246),
+            content_background: Color32::from_rgb(251, 251, 253),
+        },
+        Theme::Dark => PlatformColors {
+            window_background: Color32::from_rgb(32, 32, 32),
+            content_background: Color32::from_rgb(34, 32, 40),
+        },
     }
 }
 

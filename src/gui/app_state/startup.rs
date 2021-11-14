@@ -113,7 +113,7 @@ impl StartupUI {
         shadow_background(
             ui.painter(),
             paint_rect,
-            colors.window_background_dark,
+            colors.window_background,
             Stroke::new(1.0, Color32::from_gray(90)),
             12.0,
             Shadow::big_dark(),
