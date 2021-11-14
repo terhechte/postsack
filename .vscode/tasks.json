@@ -1,0 +1,24 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cargo",
+			"command": "run",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"args": [
+				"--bin",
+				"gui",
+				"--",
+				"/tmp/",
+				"/tmp/db2.sql"
+			],
+			"label": "rust: cargo run gui",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+		}
+	]
+}

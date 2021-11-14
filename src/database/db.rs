@@ -4,13 +4,11 @@ use eyre::{bail, Report, Result};
 use rusqlite::{self, params, Connection, Statement};
 
 use core::panic;
-use std::{
-    path::{Path, PathBuf},
-    thread::JoinHandle,
-};
+use std::{collections::HashMap, path::Path, thread::JoinHandle};
 
-use super::{query_result::QueryResult, sql::*, DBMessage};
-use crate::{database::RowConversion, types::EmailEntry};
+use super::{query::Query, query_result::QueryResult, sql::*, DBMessage};
+use crate::types::Config;
+use crate::{database::RowConversion, importer::EmailEntry};
 
 #[derive(Debug)]
 pub struct Database {
@@ -18,6 +16,13 @@ pub struct Database {
 }
 
 impl Database {
+    /// Open a database and try to retrieve a config from the information stored in there
+    pub fn config<P: AsRef<Path>>(path: P) -> Result<Config> {
+        let database = Self::new(path.as_ref())?;
+        let fields = database.select_config_fields()?;
+        Config::from_fields(path.as_ref(), fields)
+    }
+
     /// Open database at path `Path`.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         #[allow(unused_mut)]
@@ -29,10 +34,9 @@ impl Database {
 
         Self::create_tables(&connection)?;
 
-        //#[cfg(feature = "trace-sql")]
+        #[cfg(feature = "trace-sql")]
         connection.trace(Some(|query| {
-            //tracing::trace!("SQL: {}", &query);
-            //println!("SQL: {}", &query);
+            tracing::trace!("SQL: {}", &query);
         }));
 
         Ok(Database {
@@ -40,7 +44,14 @@ impl Database {
         })
     }
 
-    pub fn query<'a>(&self, query: super::query::Query<'a>) -> Result<Vec<QueryResult>> {
+    pub fn save_config(&self, config: Config) -> Result<()> {
+        let fields = config
+            .into_fields()
+            .ok_or(eyre::eyre!("Could not create fields from config"))?;
+        self.insert_config_fields(fields)
+    }
+
+    pub fn query(&self, query: &super::query::Query) -> Result<Vec<QueryResult>> {
         use rusqlite::params_from_iter;
         let c = match &self.connection {
             Some(n) => n,
@@ -58,8 +69,16 @@ impl Database {
 
         let mut rows = stmt.query(p)?;
         while let Some(row) = rows.next()? {
-            let result = QueryResult::grouped_from_row(&query.group_by, &row)?;
-            query_results.push(result);
+            match query {
+                Query::Grouped { group_by, .. } => {
+                    let result = QueryResult::grouped_from_row(group_by, row)?;
+                    query_results.push(result);
+                }
+                Query::Normal { fields, .. } => {
+                    let result = QueryResult::from_row(fields, row)?;
+                    query_results.push(result);
+                }
+            }
         }
         Ok(query_results)
     }
@@ -106,9 +125,7 @@ impl Database {
                                 counter += 1;
                                 insert_mail(&mut mail_prepared, &mail)
                             }
-                            DBMessage::Error(report, path) => {
-                                insert_error(&mut error_prepared, &report, &path)
-                            }
+                            DBMessage::Error(report) => insert_error(&mut error_prepared, &report),
                             DBMessage::Done => {
                                 tracing::trace!("Received DBMessage::Done");
                                 break;
@@ -138,6 +155,43 @@ impl Database {
     fn create_tables(connection: &Connection) -> Result<()> {
         connection.execute(TBL_EMAILS, params![])?;
         connection.execute(TBL_ERRORS, params![])?;
+        connection.execute(TBL_META, params![])?;
+        Ok(())
+    }
+
+    fn select_config_fields(&self) -> Result<HashMap<String, serde_json::Value>> {
+        let connection = match &self.connection {
+            Some(n) => n,
+            None => bail!("No connection to database available in query"),
+        };
+        let mut stmt = connection.prepare(&QUERY_SELECT_META)?;
+        let mut query_results = HashMap::new();
+        let mut rows = stmt.query([])?;
+        while let Some(row) = rows.next()? {
+            let (k, v) = match (
+                row.get::<_, String>("key"),
+                row.get::<_, serde_json::Value>("value"),
+            ) {
+                (Ok(k), Ok(v)) => (k, v),
+                (a, b) => {
+                    tracing::error!("Invalid row data. Missing fields key and or value:\nkey: {:?}\nvalue: {:?}\n", a, b);
+                    continue;
+                }
+            };
+            query_results.insert(k, v);
+        }
+        Ok(query_results)
+    }
+
+    fn insert_config_fields(&self, fields: HashMap<String, serde_json::Value>) -> Result<()> {
+        let connection = match &self.connection {
+            Some(n) => n,
+            None => bail!("No connection to database available in query"),
+        };
+        let mut stmt = connection.prepare(&QUERY_INSERT_META)?;
+        for (key, value) in fields {
+            stmt.execute(params![key, value])?;
+        }
         Ok(())
     }
 }
@@ -177,8 +231,8 @@ fn insert_mail(statement: &mut Statement, entry: &EmailEntry) -> Result<()> {
     Ok(())
 }
 
-fn insert_error(statement: &mut Statement, message: &Report, path: &PathBuf) -> Result<()> {
-    statement.execute(params![message.to_string(), path.display().to_string()])?;
-    tracing::trace!("Insert Error {}", &path.display());
+fn insert_error(statement: &mut Statement, message: &Report) -> Result<()> {
+    statement.execute(params![message.to_string()])?;
+    tracing::trace!("Insert Error {}", message);
     Ok(())
 }

@@ -1,26 +1,30 @@
 use std::collections::hash_map::DefaultHasher;
 
-use super::super::app::CanvasState;
-use crate::canvas_calc::{Partition, Partitions};
-use eframe::egui::{self, Align2, Rgba, Stroke, TextStyle, Widget};
+use crate::model::{segmentations, Engine, Segment};
+use eframe::egui::{self, epaint::Galley, Color32, Pos2, Rect, Rgba, Stroke, TextStyle, Widget};
+use eyre::Report;
+use num_format::{Locale, ToFormattedString};
 
-fn partition_to_color(partition: &Partition) -> Rgba {
+use super::super::platform::platform_colors;
+
+fn segment_to_color(segment: &Segment, total: usize, position: usize) -> Color32 {
     let mut hasher = DefaultHasher::new();
     use std::hash::{Hash, Hasher};
-    partition.field.hash(&mut hasher);
+    let value = segment.field.value().to_string();
+    value.hash(&mut hasher);
     let value = hasher.finish();
-    let [r1, r2, g1, g2, b1, b2, _, _] = value.to_be_bytes();
-
-    Rgba::from_rgb(
-        (r1 as f32 + r2 as f32) / (u8::MAX as f32 * 2.0),
-        (g1 as f32 + g2 as f32) / (u8::MAX as f32 * 2.0),
-        (b1 as f32 + b2 as f32) / (u8::MAX as f32 * 2.0),
-    )
+    super::color_utils::color(value, total, position)
 }
 
 pub struct Rectangles<'a> {
-    pub partitions: &'a mut Partitions,
-    pub select_next: &'a mut Option<Partition>,
+    engine: &'a mut Engine,
+    error: &'a mut Option<Report>,
+}
+
+impl<'a> Rectangles<'a> {
+    pub fn new(engine: &'a mut Engine, error: &'a mut Option<Report>) -> Self {
+        Rectangles { engine, error }
+    }
 }
 
 impl<'a> Widget for Rectangles<'a> {
@@ -28,86 +32,141 @@ impl<'a> Widget for Rectangles<'a> {
         let size = ui.available_size();
         let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::hover());
 
-        // let visuals = ui.style().interact_selectable(&response, true);
+        let items = match segmentations::layouted_segments(self.engine, rect) {
+            Some(n) => n.to_owned(),
+            None => return response,
+        };
 
-        self.partitions.update_layout(rect);
+        let active = crate::model::segmentations::can_aggregate_more(self.engine);
 
-        for item in &self.partitions.items {
-            let item_response = ui.put(item.layout_rect(), rectangle(&item));
-            if item_response.clicked() {
-                //self.partitions.selected = Some(item.clone());
-                *self.select_next = Some(item.clone());
-                //*should_query = true;
+        let colors = platform_colors();
+
+        let total = items.len();
+        let mut hovered: Option<String> = None;
+        for (index, item) in items.iter().enumerate() {
+            let item_response = ui.put(
+                item.layout_rect(),
+                rectangle(&item, active, colors.content_background_dark, index, total),
+            );
+            if item_response.clicked() && active {
+                *self.error = self.engine.push(item.clone()).err();
                 response.mark_changed();
             }
+            if item_response.hovered() {
+                hovered = Some(format!("#{}: {}", item.count, item.field.to_string()));
+            }
+        }
+
+        if let Some(h) = hovered {
+            // Calculate the size
+            let text = format!("{}", h);
+            let galley = ui.painter().layout_no_wrap(TextStyle::Body, text.clone());
+
+            // keep spacing in mind
+            let size: Pos2 = (
+                galley.size.x + ui.spacing().button_padding.x * 2.0,
+                galley.size.y + ui.spacing().button_padding.y * 2.0,
+            )
+                .into();
+
+            // we build a disabled for easy rounded corners
+            let label_button = egui::widgets::Button::new(text)
+                .enabled(false)
+                .text_color(Color32::WHITE);
+
+            // we want to be a wee bit in the rectangle system
+            let offset = -2.0;
+            ui.put(
+                Rect::from_min_size(
+                    (
+                        rect.left() - offset,
+                        (rect.bottom() + offset) - (size.y + 10.0),
+                    )
+                        .into(),
+                    (size.x + 10.0, size.y + 10.0).into(),
+                ),
+                label_button,
+            );
         }
 
         response
     }
 }
 
-fn rectangles_ui(ui: &mut egui::Ui, partitions: &mut Partitions) -> egui::Response {
+fn rectangle_ui(
+    ui: &mut egui::Ui,
+    segment: &Segment,
+    active: bool,
+    stroke_color: Color32,
+    position: usize,
+    total: usize,
+) -> egui::Response {
     let size = ui.available_size();
-    let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::hover());
+    let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
 
-    // let visuals = ui.style().interact_selectable(&response, true);
+    //let visuals = ui.style().interact_selectable(&response, true);
 
-    partitions.update_layout(rect);
+    let stroke = Stroke::new(1.0, stroke_color);
 
-    for item in &partitions.items {
-        let item_response = ui.put(item.layout_rect(), rectangle(&item));
-        if item_response.clicked() {
-            partitions.selected = Some(item.clone());
-            //*should_query = true;
-            response.mark_changed();
-        }
-    }
-
-    response
-}
-
-pub fn rectangles(partitions: &mut Partitions) -> impl egui::Widget + '_ {
-    move |ui: &mut egui::Ui| rectangles_ui(ui, partitions)
-}
-
-fn rectangle_ui(ui: &mut egui::Ui, partition: &Partition) -> egui::Response {
-    let size = ui.available_size();
-    let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::click());
-
-    let visuals = ui.style().interact_selectable(&response, true);
-
-    let stroke = if ui.ui_contains_pointer() {
-        Stroke::new(4.0, visuals.fg_stroke.color)
+    let color = segment_to_color(segment, total, position);
+    let color = if ui.ui_contains_pointer() && active {
+        Color32::from_rgb(
+            color.r().saturating_add(25),
+            color.g().saturating_add(25),
+            color.b().saturating_add(25),
+        )
     } else {
-        Stroke::default()
+        color
     };
-
-    let color = partition_to_color(&partition);
 
     let painter = ui.painter();
 
-    painter.rect(rect, 0.0, color, stroke);
-    let center = rect.center();
+    painter.rect(rect, 2.0, color, stroke);
+    let mut center = rect.center();
 
-    let label = format!("{}\n{}", &partition.field.value(), &partition.count);
+    let align_bottom = |galley: &std::sync::Arc<Galley>, center: &mut Pos2, spacing: f32| {
+        #[allow(clippy::clone_on_copy)]
+        let mut position = center.clone();
+        position.x -= galley.size.x / 2.0;
+        position.y -= galley.size.y / 2.0;
+        center.y += galley.size.y + spacing;
+        if galley.size.x < rect.width() && galley.size.y < rect.height() {
+            Some(position)
+        } else {
+            None
+        }
+    };
 
-    let style = TextStyle::Body;
-
-    let galley = painter.layout_multiline(style, label.clone(), 32.0);
-    if galley.size.x < rect.width() && galley.size.y < rect.height() {
-        // Can't just paint the galley as it has no `anchor` prop..
-        painter.text(
-            center,
-            Align2::CENTER_CENTER,
-            &label,
-            style,
-            Rgba::BLACK.into(),
-        );
+    // Write the label and the amount
+    {
+        // Take the max width - some spacing to fit into the rectangle
+        let width = rect.width() - ui.spacing().button_padding.x * 2.0;
+        let text = segment.field.to_string();
+        let galley = painter.layout_multiline(TextStyle::Body, text, width);
+        let previous_center = center;
+        if let Some(center) = align_bottom(&galley, &mut center, 2.0) {
+            painter.galley(center, galley, Rgba::BLACK.into());
+        } else {
+            // If the name doesn't fit, reverse the changes to center the count
+            center = previous_center;
+        }
     }
-
-    response.on_hover_text(&label)
+    {
+        let text = segment.count.to_formatted_string(&Locale::en);
+        let galley = painter.layout_no_wrap(TextStyle::Small, text);
+        if let Some(center) = align_bottom(&galley, &mut center, 5.0) {
+            painter.galley(center, galley, Rgba::BLACK.into());
+        }
+    }
+    response
 }
 
-fn rectangle(partition: &Partition) -> impl egui::Widget + '_ {
-    move |ui: &mut egui::Ui| rectangle_ui(ui, partition)
+fn rectangle(
+    segment: &Segment,
+    active: bool,
+    stroke_color: Color32,
+    position: usize,
+    total: usize,
+) -> impl egui::Widget + '_ {
+    move |ui: &mut egui::Ui| rectangle_ui(ui, segment, active, stroke_color, position, total)
 }

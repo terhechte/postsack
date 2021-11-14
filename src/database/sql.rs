@@ -19,12 +19,6 @@ CREATE TABLE IF NOT EXISTS emails (
   meta_is_seen BOOL NULL
 );"#;
 
-pub const TBL_ERRORS: &str = r#"
-CREATE TABLE IF NOT EXISTS errors (
-  message TEXT NOT NULL,
-  path TEXT NOT NULL
-);"#;
-
 pub const QUERY_EMAILS: &str = r#"
 INSERT INTO emails
     (
@@ -44,9 +38,30 @@ VALUES
     )
 "#;
 
+pub const TBL_ERRORS: &str = r#"
+CREATE TABLE IF NOT EXISTS errors (
+  message TEXT NOT NULL
+);"#;
+
 pub const QUERY_ERRORS: &str = r#"
 INSERT INTO errors
-    (message, path)
+    (message)
+VALUES
+    (?)
+"#;
+
+pub const TBL_META: &str = r#"
+CREATE TABLE IF NOT EXISTS meta (
+    key TEXT NOT NULL,
+    value TEXT NOT NULL
+);"#;
+
+pub const QUERY_INSERT_META: &str = r#"
+INSERT INTO meta
+    (key, value)
 VALUES
     (?, ?)
 "#;
+
+pub const QUERY_SELECT_META: &str = r#"
+SELECT key, value FROM meta"#;

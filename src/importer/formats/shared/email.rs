@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 /// This is based on additional information in some systems such as
 /// Gmail labels or Apple Mail tags or Apple XML
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EmailMeta {
     pub tags: Vec<String>,
     pub is_seen: bool,

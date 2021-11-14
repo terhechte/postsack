@@ -1,10 +1,16 @@
-use super::query::ValueField;
+use super::query::{Field, ValueField};
+use std::collections::HashMap;
+
+pub type QueryRow = HashMap<Field, ValueField>;
 
 #[derive(Debug)]
-pub struct QueryResult {
-    /// How many items did we find?
-    pub count: usize,
-    /// All the itmes that we grouped by including their values.
-    /// So that we can use each of them to limit the next query.
-    pub values: Vec<ValueField>,
+pub enum QueryResult {
+    Grouped {
+        /// How many items did we find?
+        count: usize,
+        /// All the itmes that we grouped by including their values.
+        /// So that we can use each of them to limit the next query.
+        value: ValueField,
+    },
+    Normal(QueryRow),
 }

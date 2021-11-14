@@ -6,59 +6,82 @@ use std::{
     time::Duration,
 };
 
-use gmaildb::*;
+use postsack::{
+    self,
+    importer::{Adapter, State},
+    types::FormatType,
+};
 
 fn main() -> Result<()> {
-    setup_tracing();
+    postsack::setup_tracing();
 
-    let config = make_config();
+    let config = postsack::make_config();
 
-    println!("Collecting Mails...");
-    let emails = filesystem::read_emails(&config)?;
+    let adapter = postsack::importer::Adapter::new();
 
-    println!("Begin Parsing Mails...");
-    let (receiver, handle) = crate::parse::emails::parse_emails(&config, emails)?;
+    // Could not figure out how to build this properly
+    // with dynamic dispatch. (to abstract away the match)
+    // Will try again when I'm online.
+    let handle = match config.format {
+        FormatType::AppleMail => {
+            let importer = postsack::importer::applemail_importer(config);
+            adapter.process(importer)?
+        }
+        FormatType::GmailVault => {
+            let importer = postsack::importer::gmail_importer(config);
+            adapter.process(importer)?
+        }
+        FormatType::Mbox => {
+            let importer = postsack::importer::mbox_importer(config);
+            adapter.process(importer)?
+        }
+    };
 
     let mut stdout = stdout();
 
-    let mut total: Option<usize> = None;
-    let mut counter = 0;
-    let mut done = false;
-
-    'outer: while done == false {
-        for entry in receiver.try_iter() {
-            let message = match entry {
-                Ok(n) => n,
-                Err(e) => {
-                    println!("Processing Error: {:?}", &e);
-                    break 'outer;
-                }
-            };
-            use parse::emails::ParseMessage;
-            match message {
-                ParseMessage::Done => done = true,
-                ParseMessage::Total(n) => total = Some(n),
-                ParseMessage::ParsedOne => counter += 1,
-            };
+    loop {
+        match handle_adapter(&adapter) {
+            Ok(true) => break,
+            Ok(false) => (),
+            Err(e) => {
+                println!("Execution Error:\n{:?}", &e);
+                panic!();
+            }
         }
-
-        if let Some(total) = total {
-            print!("\rProcessing {}/{}...", counter, total);
-        }
-
         stdout.flush().unwrap();
-        sleep(Duration::from_millis(20));
     }
-    let result = handle.join().map_err(|op| eyre::eyre!("{:?}", &op))??;
 
-    println!(
-        "Read: {}, Processed: {}, Inserted: {}",
-        total.unwrap_or_default(),
-        counter,
-        result
-    );
+    match handle.join() {
+        Err(e) => println!("Error: {:?}", e),
+        Ok(Err(e)) => println!("Error: {:?}", e),
+        _ => (),
+    }
+    println!("\rDone");
 
-    println!();
-    tracing::trace!("Exit Program");
     Ok(())
+}
+
+fn handle_adapter(adapter: &Adapter) -> Result<bool> {
+    let State {
+        done, finishing, ..
+    } = adapter.finished()?;
+    if done {
+        return Ok(true);
+    }
+    if finishing {
+        print!("\rFinishing up...");
+    } else {
+        let write = adapter.write_count()?;
+        if write.count > 0 {
+            print!("\rWriting emails to DB {}/{}...", write.count, write.total);
+        } else {
+            let read = adapter.read_count()?;
+            print!(
+                "\rReading Emails {}%...",
+                (read.count as f32 / read.total as f32) * 100.0
+            );
+        }
+    }
+    sleep(Duration::from_millis(50));
+    Ok(false)
 }

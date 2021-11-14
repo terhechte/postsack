@@ -1,11 +1,12 @@
-use eyre::{bail, eyre, Result};
+use eyre::{eyre, Result};
 use flate2::read::GzDecoder;
-use rayon::prelude::*;
 
+use std::borrow::Cow;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use crate::types::Config;
+use super::super::shared::email::EmailMeta;
+use super::super::shared::parse::ParseableEmail;
 
 /// Raw representation of an email.
 /// Contains the paths to the relevant files as well
@@ -41,6 +42,8 @@ impl RawEmailEntry {
     }
 
     pub fn read_gmail_meta(&self) -> Option<Result<Vec<u8>>> {
+        // Just using map here returns a `&Option` whereas we want `Option`
+        #[allow(clippy::manual_map)]
         match &self.gmail_meta_path {
             Some(p) => Some(std::fs::read(p).map_err(|e| eyre!("IO Error: {}", &e))),
             None => None,
@@ -49,7 +52,7 @@ impl RawEmailEntry {
 }
 
 impl RawEmailEntry {
-    fn new<P: AsRef<std::path::Path>>(path: P) -> Option<RawEmailEntry> {
+    pub(super) fn new<P: AsRef<std::path::Path>>(path: P) -> Option<RawEmailEntry> {
         let path = path.as_ref();
         let stem = path.file_stem()?.to_str()?;
         let name = path.file_name()?.to_str()?;
@@ -67,8 +70,7 @@ impl RawEmailEntry {
         // Build a meta path
         let meta_path = path
             .parent()?
-            .join(format!("{}.meta", stem.replace(".eml", "")))
-            .to_path_buf();
+            .join(format!("{}.meta", stem.replace(".eml", "")));
 
         // Only embed it, if it exists
         let gmail_meta_path = if meta_path.exists() {
@@ -92,44 +94,23 @@ impl RawEmailEntry {
     }
 }
 
-pub fn read_emails(config: &Config) -> Result<Vec<RawEmailEntry>> {
-    let folder = config.emails_folder_path.as_path();
-    if !folder.exists() {
-        bail!("Folder {} does not exist", &folder.display());
+impl ParseableEmail for RawEmailEntry {
+    fn prepare(&mut self) -> Result<()> {
+        Ok(())
     }
-    Ok(std::fs::read_dir(&folder)?
-        .into_iter()
-        .par_bridge()
-        .filter_map(|entry| {
-            let path = entry
-                .map_err(|e| tracing::error!("{} {:?}", &folder.display(), &e))
-                .ok()?
-                .path();
-            if !path.is_dir() {
-                return None;
-            }
-            read_folder(&path)
-                .map_err(|e| tracing::error!("{} {:?}", &path.display(), &e))
-                .ok()
-        })
-        .flatten()
-        .collect())
-}
+    fn message(&self) -> Result<Cow<'_, [u8]>> {
+        Ok(Cow::Owned(self.read()?))
+    }
 
-fn read_folder(path: &Path) -> Result<Vec<RawEmailEntry>> {
-    Ok(std::fs::read_dir(path)?
-        .into_iter()
-        .par_bridge()
-        .filter_map(|entry| {
-            let path = entry
-                .map_err(|e| tracing::error!("{} {:?}", &path.display(), &e))
-                .ok()?
-                .path();
-            if path.is_dir() {
-                return None;
-            }
-            RawEmailEntry::new(path)
-        })
-        //.take(50)
-        .collect())
+    fn path(&self) -> &Path {
+        self.eml_path.as_path()
+    }
+
+    fn meta(&self) -> Result<Option<EmailMeta>> {
+        if self.has_gmail_meta() {
+            Ok(Some(super::meta::parse_meta(self)?.into()))
+        } else {
+            Ok(None)
+        }
+    }
 }
