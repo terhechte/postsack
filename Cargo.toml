@@ -26,8 +26,8 @@ nisi ut aliquip ex ea commodo consequat.
 [dependencies]
 eyre = "0.6.5"
 thiserror = "1.0.29"
-tracing = "0.1.28"
-tracing-subscriber = "0.2.24"
+tracing = "0.1.29"
+tracing-subscriber = "0.3.0"
 rusqlite = {version = "0.25.3", features = ["chrono", "trace", "serde_json"]}
 regex = "1.5.3"
 flate2 = "1.0.22"
@@ -51,6 +51,7 @@ mbox-reader = "0.2.0"
 rfd = "0.5.1"
 rand = "0.8.4"
 shellexpand = "*"
+image = { version = "0.23", default-features = false, features = ["png"] }
 
 [features]
 default = ["gui"]

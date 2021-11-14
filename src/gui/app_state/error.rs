@@ -3,6 +3,7 @@ use eframe::{
     egui::{vec2, Response},
 };
 
+use super::Textures;
 use super::{StateUIAction, StateUIVariant};
 use crate::types::Config;
 
@@ -28,7 +29,7 @@ impl ErrorUI {
     }
 }
 impl StateUIVariant for ErrorUI {
-    fn update_panel(&mut self, ctx: &egui::CtxRef) -> StateUIAction {
+    fn update_panel(&mut self, ctx: &egui::CtxRef, _textures: &Option<Textures>) -> StateUIAction {
         egui::CentralPanel::default()
             .frame(egui::containers::Frame::group(&ctx.style()).margin(vec2(32.0, 32.0)))
             .show(ctx, |ui| {
@@ -46,8 +47,6 @@ impl StateUIVariant for ErrorUI {
 
 impl ErrorUI {
     fn ui(&mut self, ui: &mut egui::Ui) -> Response {
-        //let available = ui.available_size();
-
         let width = 250.0;
 
         ui.vertical_centered(|ui| {

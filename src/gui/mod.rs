@@ -4,6 +4,7 @@ mod mail_panel;
 mod navigation_bar;
 mod platform;
 mod segmentation_bar;
+mod textures;
 pub(crate) mod widgets;
 
 pub fn run_gui() {

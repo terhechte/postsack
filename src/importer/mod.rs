@@ -34,6 +34,10 @@ pub enum Message {
     Done,
     /// An error happened during processing
     Error(eyre::Report),
+    /// A special case for macOS, where a permission error means we have to grant this app
+    /// the right to see the mail folder
+    #[cfg(target_os = "macos")]
+    MissingPermissions,
 }
 
 pub type MessageSender = crossbeam_channel::Sender<Message>;

@@ -5,6 +5,7 @@ mod startup;
 
 use std::path::PathBuf;
 
+pub use super::textures::Textures;
 use eframe::egui::{self};
 pub use error::ErrorUI;
 use eyre::Report;
@@ -45,7 +46,7 @@ pub enum StateUI {
 }
 
 pub trait StateUIVariant {
-    fn update_panel(&mut self, ctx: &egui::CtxRef) -> StateUIAction;
+    fn update_panel(&mut self, ctx: &egui::CtxRef, textures: &Option<Textures>) -> StateUIAction;
 }
 
 impl StateUI {
@@ -56,12 +57,12 @@ impl StateUI {
 
     /// This proxies the `update` call to the individual calls in
     /// the `app_state` types
-    pub fn update(&mut self, ctx: &egui::CtxRef) {
+    pub fn update(&mut self, ctx: &egui::CtxRef, textures: &Option<Textures>) {
         let response = match self {
-            StateUI::Startup(panel) => panel.update_panel(ctx),
-            StateUI::Import(panel) => panel.update_panel(ctx),
-            StateUI::Main(panel) => panel.update_panel(ctx),
-            StateUI::Error(panel) => panel.update_panel(ctx),
+            StateUI::Startup(panel) => panel.update_panel(ctx, textures),
+            StateUI::Import(panel) => panel.update_panel(ctx, textures),
+            StateUI::Main(panel) => panel.update_panel(ctx, textures),
+            StateUI::Error(panel) => panel.update_panel(ctx, textures),
         };
         match response {
             StateUIAction::CreateDatabase {
@@ -112,6 +113,19 @@ impl StateUI {
             }
         };
 
+        self.importer_with_config(config)
+    }
+
+    pub fn open_database(&mut self, database_path: PathBuf) -> StateUI {
+        let config = match crate::database::Database::config(&database_path) {
+            Ok(config) => config,
+            Err(report) => return StateUI::Error(error::ErrorUI::new(report, None)),
+        };
+
+        self.importer_with_config(config)
+    }
+
+    fn importer_with_config(&self, config: Config) -> StateUI {
         let importer = match import::ImporterUI::new(config.clone()) {
             Ok(n) => n,
             Err(e) => {
@@ -120,11 +134,5 @@ impl StateUI {
         };
 
         return StateUI::Import(importer);
-    }
-
-    pub fn open_database(&mut self, database_path: PathBuf) -> StateUI {
-        // FIXME: the database needs to be opened in order to figure
-        // out whether it is a correct DB, before we can head on
-        todo!()
     }
 }

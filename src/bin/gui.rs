@@ -1,5 +1,6 @@
 #[cfg(feature = "gui")]
 fn main() {
+    gmaildb::setup_tracing();
     gmaildb::gui::run_gui();
 }
 

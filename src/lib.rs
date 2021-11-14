@@ -2,7 +2,8 @@
 #[macro_use]
 extern crate objc;
 
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::fmt;
+use tracing_subscriber::prelude::*;
 
 pub mod database;
 #[cfg(feature = "gui")]
@@ -15,9 +16,10 @@ pub fn setup_tracing() {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "error")
     }
-    tracing_subscriber::fmt::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
+
+    let collector = tracing_subscriber::registry().with(fmt::layer().with_writer(std::io::stdout));
+
+    tracing::subscriber::set_global_default(collector).expect("Unable to set a global collector");
 }
 
 /// Create a config for the `cli` and validate the input

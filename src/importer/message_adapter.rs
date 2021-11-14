@@ -16,6 +16,8 @@ struct Data {
     finishing: bool,
     done: bool,
     error: Option<Report>,
+    #[cfg(target_os = "macos")]
+    missing_permissions: bool,
 }
 
 #[derive(Clone, Debug, Copy)]
@@ -28,6 +30,8 @@ pub struct Progress {
 pub struct State {
     pub finishing: bool,
     pub done: bool,
+    #[cfg(target_os = "macos")]
+    pub missing_permissions: bool,
 }
 
 /// This can be initialized with a [`MessageSender`] and it will
@@ -89,6 +93,10 @@ impl Adapter {
                         Message::Error(e) => {
                             write_guard.error = Some(e);
                         }
+                        #[cfg(target_os = "macos")]
+                        Message::MissingPermissions => {
+                            write_guard.missing_permissions = true;
+                        }
                     };
                 }
             }
@@ -121,6 +129,8 @@ impl Adapter {
         Ok(State {
             finishing: item.finishing,
             done: item.done,
+            #[cfg(target_os = "macos")]
+            missing_permissions: item.missing_permissions,
         })
     }
 

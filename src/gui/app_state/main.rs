@@ -2,6 +2,7 @@ use eframe::egui::{self, Stroke};
 use eyre::{Report, Result};
 
 use super::super::widgets::{FilterState, Spinner};
+use super::Textures;
 use super::{StateUIAction, StateUIVariant};
 use crate::types::Config;
 
@@ -38,7 +39,11 @@ impl MainUI {
 }
 
 impl StateUIVariant for MainUI {
-    fn update_panel(&mut self, ctx: &egui::CtxRef) -> super::StateUIAction {
+    fn update_panel(
+        &mut self,
+        ctx: &egui::CtxRef,
+        _textures: &Option<Textures>,
+    ) -> super::StateUIAction {
         // Avoid any processing if there is an unhandled error.
         if self.error.is_none() {
             self.error = self.engine.process().err();

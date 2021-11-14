@@ -4,9 +4,10 @@ use eyre::{bail, Report, Result};
 use rusqlite::{self, params, Connection, Statement};
 
 use core::panic;
-use std::{path::Path, thread::JoinHandle};
+use std::{collections::HashMap, path::Path, thread::JoinHandle};
 
 use super::{query::Query, query_result::QueryResult, sql::*, DBMessage};
+use crate::types::Config;
 use crate::{database::RowConversion, importer::EmailEntry};
 
 #[derive(Debug)]
@@ -15,12 +16,15 @@ pub struct Database {
 }
 
 impl Database {
+    /// Open a database and try to retrieve a config from the information stored in there
+    pub fn config<P: AsRef<Path>>(path: P) -> Result<Config> {
+        let database = Self::new(path.as_ref())?;
+        let fields = database.select_config_fields()?;
+        Config::from_fields(path.as_ref(), fields)
+    }
+
     /// Open database at path `Path`.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
-        // FIXME: if the file exists, we're re-opening it.
-        // this means we need to query the `meta` table
-        // to retrieve the contents of the config...
-
         #[allow(unused_mut)]
         let mut connection = Connection::open(path.as_ref())?;
 
@@ -38,6 +42,13 @@ impl Database {
         Ok(Database {
             connection: Some(connection),
         })
+    }
+
+    pub fn save_config(&self, config: Config) -> Result<()> {
+        let fields = config
+            .into_fields()
+            .ok_or(eyre::eyre!("Could not create fields from config"))?;
+        self.insert_config_fields(fields)
     }
 
     pub fn query(&self, query: &super::query::Query) -> Result<Vec<QueryResult>> {
@@ -145,6 +156,42 @@ impl Database {
         connection.execute(TBL_EMAILS, params![])?;
         connection.execute(TBL_ERRORS, params![])?;
         connection.execute(TBL_META, params![])?;
+        Ok(())
+    }
+
+    fn select_config_fields(&self) -> Result<HashMap<String, serde_json::Value>> {
+        let connection = match &self.connection {
+            Some(n) => n,
+            None => bail!("No connection to database available in query"),
+        };
+        let mut stmt = connection.prepare(&QUERY_SELECT_META)?;
+        let mut query_results = HashMap::new();
+        let mut rows = stmt.query([])?;
+        while let Some(row) = rows.next()? {
+            let (k, v) = match (
+                row.get::<_, String>("key"),
+                row.get::<_, serde_json::Value>("value"),
+            ) {
+                (Ok(k), Ok(v)) => (k, v),
+                (a, b) => {
+                    tracing::error!("Invalid row data. Missing fields key and or value:\nkey: {:?}\nvalue: {:?}\n", a, b);
+                    continue;
+                }
+            };
+            query_results.insert(k, v);
+        }
+        Ok(query_results)
+    }
+
+    fn insert_config_fields(&self, fields: HashMap<String, serde_json::Value>) -> Result<()> {
+        let connection = match &self.connection {
+            Some(n) => n,
+            None => bail!("No connection to database available in query"),
+        };
+        let mut stmt = connection.prepare(&QUERY_INSERT_META)?;
+        for (key, value) in fields {
+            stmt.execute(params![key, value])?;
+        }
         Ok(())
     }
 }

@@ -7,6 +7,7 @@ use std::path::PathBuf;
 
 use super::super::platform::platform_colors;
 use super::super::widgets::background::{shadow_background, AnimatedBackground};
+use super::Textures;
 use super::{StateUIAction, StateUIVariant};
 use crate::types::{Config, FormatType};
 
@@ -59,7 +60,11 @@ impl StartupUI {
 }
 
 impl StateUIVariant for StartupUI {
-    fn update_panel(&mut self, ctx: &egui::CtxRef) -> super::StateUIAction {
+    fn update_panel(
+        &mut self,
+        ctx: &egui::CtxRef,
+        _textures: &Option<Textures>,
+    ) -> super::StateUIAction {
         egui::CentralPanel::default()
             .frame(egui::containers::Frame::none())
             .show(ctx, |ui| {
@@ -193,7 +198,7 @@ impl StartupUI {
                     if self.save_to_disk {
                         ui.horizontal(|ui| {
                             if ui.button("Output Location").clicked() {
-                                self.open_database_dialog()
+                                self.save_database_dialog()
                             }
                             if let Some(Some(Some(name))) = self.database_path.as_ref().map(|e| e.file_name().map(|e| e.to_str().map(|e| e.to_string()))) {
                                 let label = egui::widgets::Label::new(name)
@@ -253,7 +258,6 @@ impl StartupUI {
             .iter()
             .map(|e| e.split(",").map(|e| e.trim().to_string()).collect())
             .collect();
-        //.unwrap_or_default();
 
         if !email.exists() {
             self.error_message = Some(format!("Email folder doesn't exist"));
@@ -274,8 +278,13 @@ impl StartupUI {
     }
 
     fn action_open_database(&mut self) {
-        // somehow ask the database to open and return a config...
-        // this should rather lie in a in-between model-layer...
+        let path = match self.open_database_dialog() {
+            Some(n) => n,
+            None => return,
+        };
+        self.action = Some(StateUIAction::OpenDatabase {
+            database_path: path,
+        });
     }
 
     fn format_selection(&mut self, ui: &mut egui::Ui, width: f32) {
@@ -310,7 +319,7 @@ impl StartupUI {
         self.email_folder = Some(path);
     }
 
-    fn open_database_dialog(&mut self) {
+    fn save_database_dialog(&mut self) {
         let default_path = "~/Desktop/";
 
         // FIXME: Not sure if this works
@@ -326,14 +335,27 @@ impl StartupUI {
             Some(path) => path,
             None => return,
         };
-        self.database_path = Some(path);
+
+        self.database_path = Some(path)
     }
 
-    // fn set_default_folder(&self) -> PathBuf {
-    //     let path = self.format.default_path() {
-    //         Some(n) => n,
-    //     }
+    fn open_database_dialog(&mut self) -> Option<PathBuf> {
+        let default_path = "~/Desktop/";
 
-    //                             self.email_folder = self.format.default_path().map(|e| e.to_path_buf())
-    // }
+        // FIXME: Not sure if this works
+        #[cfg(target_os = "windows")]
+        let default_path = "C:\\Users";
+
+        let filename = rfd::FileDialog::new()
+            .add_filter("sqlite", &["sqlite"])
+            .set_directory(default_path)
+            .pick_file();
+
+        let path = match filename {
+            Some(path) => path,
+            None => return None,
+        };
+
+        Some(path)
+    }
 }

@@ -37,6 +37,7 @@ impl<Format: ImporterFormat + 'static> Importerlike for Importer<Format> {
                 Ok(processed)
             };
             let result = processed();
+
             // Send the error away and map it to a crossbeam channel error
             match result {
                 Ok(_) => Ok(()),

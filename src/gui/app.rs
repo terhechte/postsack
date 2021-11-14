@@ -4,10 +4,13 @@ use eframe::{
 };
 
 use super::app_state::StateUI;
+use super::textures::Textures;
 
 pub struct GmailDBApp {
     state: StateUI,
     platform_custom_setup: bool,
+
+    textures: Option<Textures>,
 }
 
 impl GmailDBApp {
@@ -16,6 +19,7 @@ impl GmailDBApp {
         GmailDBApp {
             state,
             platform_custom_setup: false,
+            textures: None,
         }
     }
 }
@@ -25,12 +29,7 @@ impl App for GmailDBApp {
         "Gmail DB"
     }
 
-    fn setup(
-        &mut self,
-        ctx: &egui::CtxRef,
-        _frame: &mut Frame<'_>,
-        _storage: Option<&dyn Storage>,
-    ) {
+    fn setup(&mut self, ctx: &egui::CtxRef, frame: &mut Frame<'_>, _storage: Option<&dyn Storage>) {
         super::platform::setup(ctx);
 
         // Adapt to the platform colors
@@ -38,6 +37,9 @@ impl App for GmailDBApp {
         let mut visuals = egui::Visuals::dark();
         visuals.widgets.noninteractive.bg_fill = platform_colors.window_background_dark;
         ctx.set_visuals(visuals);
+
+        // Load textures
+        self.textures = Some(Textures::populated(frame));
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
@@ -54,7 +56,7 @@ impl App for GmailDBApp {
             }
         }
 
-        self.state.update(ctx);
+        self.state.update(ctx, &self.textures);
 
         // Resize the native window to be just the size we need it to be:
         frame.set_window_size(ctx.used_size());

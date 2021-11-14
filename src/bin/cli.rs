@@ -62,7 +62,9 @@ fn main() -> Result<()> {
 }
 
 fn handle_adapter(adapter: &Adapter) -> Result<bool> {
-    let State { done, finishing } = adapter.finished()?;
+    let State {
+        done, finishing, ..
+    } = adapter.finished()?;
     if done {
         return Ok(true);
     }

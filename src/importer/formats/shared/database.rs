@@ -23,6 +23,11 @@ pub fn into_database<Mail: ParseableEmail + 'static>(
     // Create a new database connection, just for writing
     let database = Database::new(config.database_path.clone()).unwrap();
 
+    // Save the config into the database
+    if let Err(e) = database.save_config(config.clone()) {
+        bail!("Could not save config to database {:?}", &e);
+    }
+
     // Consume the connection to begin the import. It will return the `handle` to use for
     // waiting for the database to finish importing, and the `sender` to submit work.
     let (sender, handle) = database.import();
