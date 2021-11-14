@@ -9,5 +9,5 @@ pub(crate) mod widgets;
 
 pub fn run_gui() {
     let options = eframe::NativeOptions::default();
-    eframe::run_native(Box::new(app::GmailDBApp::new()), options);
+    eframe::run_native(Box::new(app::PostsackApp::new()), options);
 }

@@ -1,26 +1,23 @@
 [package]
-name = "gmaildb"
-version = "0.1.0"
+name = "postsack"
+version = "0.2.0"
 edition = "2018"
-description = "Bam"
+description = "Provides a high level visual overview of swaths of email"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 
 [package.metadata.bundle.bin.gui]
-name = "ExampleApplication"
-identifier = "com.doe.exampleapplication"
+name = "Postsack"
+identifier = "com.stylemac.Postsack"
 #icon = ["128x128@2x.png"]
 version = "1.0.0"
 #resources = ["assets", "images/**/*.png", "secrets/public_key.txt"]
-copyright = "Copyright (c) Jane Doe 2016. All rights reserved."
+copyright = "Copyright (c) Benedikt Terhechte (2021). All rights reserved."
 category = "Developer Tool"
-short_description = "An example application."
+short_description = "Provides a high level visual overview of swaths of email"
 long_description = """
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-eiusmod tempor incididunt ut labore et dolore magna aliqua.  Ut
-enim ad minim veniam, quis nostrud exercitation ullamco laboris
-nisi ut aliquip ex ea commodo consequat.
+Provides a high level visual overview of swaths of email
 """
 
 [dependencies]

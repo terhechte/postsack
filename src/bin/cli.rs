@@ -6,33 +6,33 @@ use std::{
     time::Duration,
 };
 
-use gmaildb::{
+use postsack::{
     self,
     importer::{Adapter, State},
     types::FormatType,
 };
 
 fn main() -> Result<()> {
-    gmaildb::setup_tracing();
+    postsack::setup_tracing();
 
-    let config = gmaildb::make_config();
+    let config = postsack::make_config();
 
-    let adapter = gmaildb::importer::Adapter::new();
+    let adapter = postsack::importer::Adapter::new();
 
     // Could not figure out how to build this properly
     // with dynamic dispatch. (to abstract away the match)
     // Will try again when I'm online.
     let handle = match config.format {
         FormatType::AppleMail => {
-            let importer = gmaildb::importer::applemail_importer(config);
+            let importer = postsack::importer::applemail_importer(config);
             adapter.process(importer)?
         }
         FormatType::GmailVault => {
-            let importer = gmaildb::importer::gmail_importer(config);
+            let importer = postsack::importer::gmail_importer(config);
             adapter.process(importer)?
         }
         FormatType::Mbox => {
-            let importer = gmaildb::importer::mbox_importer(config);
+            let importer = postsack::importer::mbox_importer(config);
             adapter.process(importer)?
         }
     };

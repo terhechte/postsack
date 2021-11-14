@@ -152,7 +152,7 @@ impl Config {
             Some(n) => n.as_ref().to_path_buf(),
             None => {
                 let number: u32 = rand::thread_rng().gen();
-                let folder = "gmaildb";
+                let folder = "postsack";
                 let filename = format!("{}.sqlite", number);
                 let mut temp_dir = std::env::temp_dir();
                 temp_dir.push(folder);

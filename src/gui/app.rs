@@ -6,17 +6,17 @@ use eframe::{
 use super::app_state::StateUI;
 use super::textures::Textures;
 
-pub struct GmailDBApp {
+pub struct PostsackApp {
     state: StateUI,
     platform_custom_setup: bool,
 
     textures: Option<Textures>,
 }
 
-impl GmailDBApp {
+impl PostsackApp {
     pub fn new() -> Self {
         let state = StateUI::new();
-        GmailDBApp {
+        PostsackApp {
             state,
             platform_custom_setup: false,
             textures: None,
@@ -24,9 +24,9 @@ impl GmailDBApp {
     }
 }
 
-impl App for GmailDBApp {
+impl App for PostsackApp {
     fn name(&self) -> &str {
-        "Gmail DB"
+        "Postsack"
     }
 
     fn setup(&mut self, ctx: &egui::CtxRef, frame: &mut Frame<'_>, _storage: Option<&dyn Storage>) {

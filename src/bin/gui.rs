@@ -1,7 +1,7 @@
 #[cfg(feature = "gui")]
 fn main() {
-    gmaildb::setup_tracing();
-    gmaildb::gui::run_gui();
+    postsack::setup_tracing();
+    postsack::gui::run_gui();
 }
 
 #[cfg(not(feature = "gui"))]

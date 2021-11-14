@@ -2,7 +2,7 @@
 //! use jetsci for efficient searching:
 //! https://github.com/shepmaster/jetscii
 //! (or aho corasick)
-//! Here's the ref: file:///Users/terhechte/Development/Rust/gmaildb/target/doc/src/mbox_reader/lib.rs.html#65-67
+//! Here's the ref: file:///Users/terhechte/Development/Rust/postsack/target/doc/src/mbox_reader/lib.rs.html#65-67
 //! Make it so that I can hold the mbox in the struct below
 
 use eyre::bail;
