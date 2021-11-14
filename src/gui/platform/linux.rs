@@ -1,6 +1,7 @@
 #![cfg(target_os = "linux")]
 
-use eframe::egui;
+use eyre::Result;
+use eframe::egui::{self, Color32};
 
 use super::PlatformColors;
 
@@ -18,7 +19,9 @@ pub fn platform_colors() -> PlatformColors {
 pub fn setup(ctx: &egui::CtxRef) {}
 
 /// This is called once from `App::update` on the first run.
-pub fn initial_update(ctx: &egui::CtxRef) -> Result<()> {}
+pub fn initial_update(ctx: &egui::CtxRef) -> Result<()> {
+    Ok(())
+}
 
 pub fn navigation_button(title: &str) -> egui::Button {
     egui::Button::new(title)

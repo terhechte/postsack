@@ -48,7 +48,7 @@ impl Default for FormatType {
         return FormatType::AppleMail;
 
         #[cfg(not(target_os = "macos"))]
-        return FormatType::MboxVault;
+        return FormatType::Mbox;
     }
 }
 
