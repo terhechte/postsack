@@ -13,7 +13,7 @@ use objc::runtime::{Object, YES};
 
 use super::{PlatformColors, Theme};
 
-pub fn platform_colors(theme: THeme) -> PlatformColors {
+pub fn platform_colors(theme: Theme) -> PlatformColors {
     match theme {
         Theme::Light => PlatformColors {
             is_light: true,

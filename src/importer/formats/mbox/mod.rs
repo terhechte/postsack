@@ -4,7 +4,7 @@
 //! (or aho corasick)
 //! MBox parsing is also not particularly fast as it currently doesn't use parallelism
 
-use eyre::{bail, eyre};
+use eyre::eyre;
 use mbox_reader;
 use rayon::prelude::*;
 use tracing;

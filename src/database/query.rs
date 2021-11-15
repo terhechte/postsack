@@ -32,6 +32,8 @@ pub enum Field {
     IsReply,
     IsSend,
     Subject,
+    MetaIsSeen,
+    MetaTags,
 }
 
 const INVALID_FIELDS: &[Field] = &[
@@ -40,6 +42,8 @@ const INVALID_FIELDS: &[Field] = &[
     Field::Timestamp,
     Field::IsReply,
     Field::IsSend,
+    Field::MetaIsSeen,
+    Field::MetaTags,
 ];
 
 impl Field {
@@ -106,6 +110,13 @@ impl ValueField {
         }
     }
 
+    pub fn array(field: &Field, value: Vec<Value>) -> ValueField {
+        ValueField {
+            field: *field,
+            value: Value::Array(value),
+        }
+    }
+
     pub fn field(&self) -> &Field {
         &self.field
     }
@@ -122,6 +133,12 @@ impl ValueField {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum OtherQuery {
+    /// Get all contents of a specific field
+    All(Field),
+}
+
 #[derive(Clone, Debug)]
 pub enum Query {
     Grouped {
@@ -133,6 +150,9 @@ pub enum Query {
         filters: Vec<Filter>,
         range: Range<usize>,
     },
+    Other {
+        query: OtherQuery,
+    },
 }
 
 impl Query {
@@ -140,6 +160,7 @@ impl Query {
         match self {
             Query::Grouped { ref filters, .. } => filters,
             Query::Normal { ref filters, .. } => filters,
+            Query::Other { .. } => &[],
         }
     }
 }
@@ -174,6 +195,12 @@ impl Query {
                     format!("LIMIT {}, {}", range.start, range.end - range.start),
                 )
             }
+            Query::Other {
+                query: OtherQuery::All(field),
+            } => (
+                format!("SELECT {} FROM emails", field.as_str()),
+                format!(""),
+            ),
         };
 
         let (sql, values) = rsql_builder::B::prepare(

@@ -13,4 +13,5 @@ pub enum QueryResult {
         value: ValueField,
     },
     Normal(QueryRow),
+    Other(ValueField),
 }

@@ -7,7 +7,7 @@
 use eyre::{bail, Result};
 use lru::LruCache;
 
-use crate::database::query::{Field, Query, ValueField};
+use crate::database::query::{Field, OtherQuery, Query, ValueField};
 use crate::model::link::Response;
 use crate::types::Config;
 
@@ -25,6 +25,8 @@ pub(super) enum Action {
     PushSegmentation,
     /// Load the mails for the current `Segmentation`
     LoadItems,
+    /// Load all tags
+    AllTags,
 }
 
 /// Interact with the `Database`, operate on `Segmentations`, `Segments`, and `Items`.
@@ -39,6 +41,7 @@ pub struct Engine {
     /// It doesn't account for overlapping ranges.
     /// There's a lot of room for improvement here.
     pub(super) item_cache: LruCache<usize, LoadingState>,
+    pub(super) known_tags: Vec<String>,
 }
 
 impl Engine {
@@ -50,6 +53,7 @@ impl Engine {
             group_by_stack: vec![default_group_by_stack(0).unwrap()],
             segmentations: Vec::new(),
             item_cache: LruCache::new(10000),
+            known_tags: Vec::new(),
         };
         Ok(engine)
     }
@@ -58,20 +62,32 @@ impl Engine {
     /// asynchronously communicate with the underlying backend
     /// in a non-blocking manner.
     pub fn start(&mut self) -> Result<()> {
+        // The initial segmentation
         self.link
-            .request(&segmentations::make_query(self)?, Action::PushSegmentation)
+            .request(&segmentations::make_query(self)?, Action::PushSegmentation)?;
+        // Get all tags
+        self.link.request(
+            &Query::Other {
+                query: OtherQuery::All(Field::MetaTags),
+            },
+            Action::AllTags,
+        )
     }
 
     /// Information on the underlying `Format`. Does it have tags
     pub fn format_has_tags(&self) -> bool {
-        // FIXME: Implement this
-        true
+        !self.known_tags.is_empty()
     }
 
     /// Information on the underlying `Format`. Does it have `seen` information
     pub fn format_has_seen(&self) -> bool {
-        // FIXME: Implement this
-        true
+        // FIXME: The current implementation just assumes that the existance of meta tags also implies is_seen
+        !self.known_tags.is_empty()
+    }
+
+    /// All the known tags in the current emails
+    pub fn known_tags(&self) -> &[String] {
+        &self.known_tags
     }
 
     /// Return the current stack of `Segmentations`
@@ -171,6 +187,9 @@ impl Engine {
                     let entry = LoadingState::Loaded(row.clone());
                     self.item_cache.put(index, entry);
                 }
+            }
+            Response::Other(Query::Other { .. }, Action::AllTags, r) => {
+                self.known_tags = r;
             }
             _ => bail!("Invalid Query / Response combination"),
         }

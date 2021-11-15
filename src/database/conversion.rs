@@ -60,29 +60,42 @@ fn values_from_fields<'stmt>(
 ) -> Result<HashMap<Field, ValueField>> {
     let mut values: HashMap<Field, ValueField> = HashMap::default();
     for field in fields {
-        use Field::*;
-        // Use type safety when unpacking
-        match field {
-            Path | SenderDomain | SenderLocalPart | SenderName | ToGroup | ToName | ToAddress
-            | Subject => {
-                let string: String = row.get::<&str, String>(field.as_str())?;
-                values.insert(*field, ValueField::string(field, &string));
-            }
-            Year | Month | Day | Timestamp => {
-                values.insert(
-                    *field,
-                    ValueField::usize(field, row.get::<&str, usize>(field.as_str())?),
-                );
-            }
-            IsReply | IsSend => {
-                values.insert(
-                    *field,
-                    ValueField::bool(field, row.get::<&str, bool>(field.as_str())?),
-                );
-            }
-        }
+        values.insert(*field, value_from_field(field, row)?);
     }
     Ok(values)
+}
+
+pub fn value_from_field<'stmt>(field: &Field, row: &Row<'stmt>) -> Result<ValueField> {
+    use Field::*;
+    // Use type safety when unpacking
+    match field {
+        Path | SenderDomain | SenderLocalPart | SenderName | ToGroup | ToName | ToAddress
+        | Subject => {
+            let string: String = row.get::<&str, String>(field.as_str())?;
+            return Ok(ValueField::string(field, &string));
+        }
+        Year | Month | Day | Timestamp => {
+            return Ok(ValueField::usize(
+                field,
+                row.get::<&str, usize>(field.as_str())?,
+            ));
+        }
+        MetaTags => {
+            let tag_string = row.get::<&str, String>(field.as_str())?;
+            let tags =
+                crate::importer::formats::shared::email::EmailMeta::tags_from_string(&tag_string);
+            return Ok(ValueField::array(
+                field,
+                tags.into_iter().map(|f| Value::String(f)).collect(),
+            ));
+        }
+        IsReply | IsSend | MetaIsSeen => {
+            return Ok(ValueField::bool(
+                field,
+                row.get::<&str, bool>(field.as_str())?,
+            ));
+        }
+    }
 }
 
 impl EmailEntry {

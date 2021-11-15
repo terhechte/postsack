@@ -5,10 +5,11 @@
 //! This allows sending operations into `Link` and retrieving the contents
 //! asynchronously without blocking the UI.
 
-use std::convert::TryInto;
+use std::{collections::HashSet, convert::TryInto};
 
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use eyre::Result;
+use serde_json::Value;
 
 use crate::database::{
     query::Query,
@@ -23,6 +24,8 @@ use super::types::Segmentation;
 pub enum Response<Context: Send + 'static> {
     Grouped(Query, Context, Segmentation),
     Normal(Query, Context, Vec<QueryRow>),
+    /// FIXME: OtherQuery results are currently limited to strings as that's enough right now.
+    Other(Query, Context, Vec<String>),
 }
 
 pub(super) type InputSender<Context> = Sender<(Query, Context)>;
@@ -36,7 +39,7 @@ pub(super) struct Link<Context: Send + 'static> {
     // the UI will not update again after the changes were applied because an empty
     // channel indicates completed processing.
     // There's also a delay between a request taken out of the input channel and being
-    // put into the output channel. In order to account for all of this, we emploty a
+    // put into the output channel. In order to account for all of this, we employ a
     // request counter to know how many requests are currently in the pipeline
     request_counter: usize,
 }
@@ -97,6 +100,27 @@ fn inner_loop<Context: Send + Sync + 'static>(
             Query::Normal { .. } => {
                 let converted = calculate_rows(&result)?;
                 Response::Normal(query, context, converted)
+            }
+            Query::Other { .. } => {
+                let mut results = HashSet::new();
+                for entry in result {
+                    match entry {
+                        QueryResult::Other(field) => match field.value() {
+                            Value::Array(s) => {
+                                for n in s {
+                                    if let Value::String(s) = n {
+                                        if !results.contains(s) {
+                                            results.insert(s.to_owned());
+                                        }
+                                    }
+                                }
+                            }
+                            _ => panic!("Should not end up here"),
+                        },
+                        _ => panic!("Should not end up here"),
+                    }
+                }
+                Response::Other(query, context, results.into_iter().collect())
             }
         };
         output_sender.send(Ok(response))?;

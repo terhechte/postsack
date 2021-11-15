@@ -7,8 +7,12 @@ use core::panic;
 use std::{collections::HashMap, path::Path, thread::JoinHandle};
 
 use super::{query::Query, query_result::QueryResult, sql::*, DBMessage};
+use crate::database::query::OtherQuery;
 use crate::types::Config;
-use crate::{database::RowConversion, importer::EmailEntry};
+use crate::{
+    database::{value_from_field, RowConversion},
+    importer::EmailEntry,
+};
 
 #[derive(Debug)]
 pub struct Database {
@@ -78,6 +82,9 @@ impl Database {
                     let result = QueryResult::from_row(fields, row)?;
                     query_results.push(result);
                 }
+                Query::Other {
+                    query: OtherQuery::All(field),
+                } => query_results.push(QueryResult::Other(value_from_field(field, row)?)),
             }
         }
         Ok(query_results)

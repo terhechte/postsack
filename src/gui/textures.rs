@@ -16,7 +16,8 @@ pub struct Textures {
 }
 
 impl Textures {
-    pub fn populated(_frame: &mut epi::Frame<'_>) -> Textures {
+    #[allow(unused)]
+    pub fn populated(frame: &mut epi::Frame<'_>) -> Textures {
         #[cfg(target_os = "macos")]
         {
             let missing_permissions_image = install_missing_permission_image(
