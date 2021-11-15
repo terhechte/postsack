@@ -16,12 +16,28 @@ use super::{PlatformColors, Theme};
 pub fn platform_colors(theme: THeme) -> PlatformColors {
     match theme {
         Theme::Light => PlatformColors {
+            is_light: true,
+            animation_background: Color32::from_rgb(248, 246, 249),
             window_background: Color32::from_rgb(238, 236, 242),
             content_background: Color32::from_rgb(236, 234, 238),
+            text_primary: Color32::from_gray(0),
+            text_secondary: Color32::from_gray(30),
+            line1: Color32::from_gray(0),
+            line2: Color32::from_gray(30),
+            line3: Color32::from_gray(60),
+            line4: Color32::from_gray(90),
         },
         Theme::Dark => PlatformColors {
+            is_light: false,
+            animation_background: Color32::from_rgb(0, 0, 0),
             window_background: Color32::from_rgb(36, 30, 42),
             content_background: Color32::from_rgb(20, 14, 26),
+            text_primary: Color32::from_gray(255),
+            text_secondary: Color32::from_gray(200),
+            line1: Color32::from_gray(255),
+            line2: Color32::from_gray(190),
+            line3: Color32::from_gray(150),
+            line4: Color32::from_gray(70),
         },
     }
 }

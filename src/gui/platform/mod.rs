@@ -24,8 +24,17 @@ pub use macos::{initial_update, navigation_button};
 /// Platform-Native Colors
 #[derive(Debug)]
 pub struct PlatformColors {
+    pub is_light: bool,
+    pub animation_background: Color32,
     pub window_background: Color32,
     pub content_background: Color32,
+    pub text_primary: Color32,
+    pub text_secondary: Color32,
+    /// Brightest lines to darkest lines
+    pub line1: Color32,
+    pub line2: Color32,
+    pub line3: Color32,
+    pub line4: Color32,
 }
 
 #[allow(unused)]

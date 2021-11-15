@@ -145,7 +145,7 @@ impl StartupUI {
 
                     ui.add(
                         egui::widgets::Label::new("Email Folder:")
-                            .text_color(Color32::WHITE)
+                            .text_color(platform_colors().text_primary)
                             .text_style(TextStyle::Body),
                     );
                     ui.end_row();
@@ -185,6 +185,7 @@ impl StartupUI {
 
                     ui.add(
                         egui::widgets::Label::new("Used to filter send mails")
+                            .text_color(platform_colors().text_secondary)
                             .text_style(TextStyle::Small),
                     );
                     ui.end_row();
