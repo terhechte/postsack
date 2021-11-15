@@ -94,7 +94,7 @@ impl StartupUI {
         // `ui.allocate_exact_size`
         // `ui.allocate_with_layout`
         // and variations. This, at least, worked.
-        let desired_size = egui::vec2(330.0, 370.0);
+        let desired_size = egui::vec2(450.0, 370.0);
 
         let paint_rect = Rect::from_min_size(
             Pos2 {
@@ -113,7 +113,7 @@ impl StartupUI {
         shadow_background(
             ui.painter(),
             paint_rect,
-            colors.window_background_dark,
+            colors.window_background,
             Stroke::new(1.0, Color32::from_gray(90)),
             12.0,
             Shadow::big_dark(),
@@ -135,7 +135,7 @@ impl StartupUI {
                 .show(ui, |ui| {
                     ui.add(
                         egui::widgets::Label::new("Choose Import Format:")
-                            .text_color(Color32::WHITE)
+                            .text_color(colors.text_primary)
                             .text_style(TextStyle::Body),
                     );
                     ui.end_row();
@@ -145,7 +145,7 @@ impl StartupUI {
 
                     ui.add(
                         egui::widgets::Label::new("Email Folder:")
-                            .text_color(Color32::WHITE)
+                            .text_color(platform_colors().text_primary)
                             .text_style(TextStyle::Body),
                     );
                     ui.end_row();
@@ -170,7 +170,7 @@ impl StartupUI {
                     ui.end_row();
 
                     ui.add(
-                        egui::widgets::Label::new("Your Email Address:").text_color(Color32::WHITE),
+                        egui::widgets::Label::new("Your Email Address:").text_color(colors.text_primary),
                     );
                     ui.end_row();
 
@@ -185,6 +185,7 @@ impl StartupUI {
 
                     ui.add(
                         egui::widgets::Label::new("Used to filter send mails")
+                            .text_color(platform_colors().text_secondary)
                             .text_style(TextStyle::Small),
                     );
                     ui.end_row();
@@ -223,7 +224,7 @@ impl StartupUI {
                                 self.email_folder.is_some() &&
                                 (self.save_to_disk == self.database_path.is_some())
                             )
-                            .text_color(Color32::WHITE),
+                            .text_color(colors.text_primary),
                         );
                         if response.clicked() {
                             self.action_start();
@@ -289,17 +290,15 @@ impl StartupUI {
 
     fn format_selection(&mut self, ui: &mut egui::Ui, width: f32) {
         let mut selected = self.format;
-        let response = egui::ComboBox::from_id_source("mailbox_type_comboox")
+        egui::ComboBox::from_id_source("mailbox_type_combobox")
             .width(width)
-            .selected_text(format!("{:?}", selected.name()))
+            .selected_text(format!("{}", selected.name()))
             .show_ui(ui, |ui| {
                 for format in FormatType::all_cases() {
                     ui.selectable_value(&mut selected, format, format.name());
                 }
             });
-        if response.response.changed() {
-            self.format = selected;
-        }
+        self.format = selected;
     }
 
     fn open_email_folder_dialog(&mut self) {

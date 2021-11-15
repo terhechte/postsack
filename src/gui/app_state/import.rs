@@ -2,7 +2,7 @@
 use std::thread::JoinHandle;
 
 use eframe::egui::epaint::Shadow;
-use eframe::egui::{self, Color32, Pos2, Rect, Response, Stroke, Vec2};
+use eframe::egui::{self, Color32, Pos2, Rect, Response, Stroke};
 use eyre::Result;
 use rand::seq::SliceRandom;
 
@@ -202,7 +202,7 @@ impl ImporterUI {
             shadow_background(
                 ui.painter(),
                 paint_rect,
-                colors.window_background_dark,
+                colors.window_background,
                 Stroke::new(1.0, Color32::from_gray(90)),
                 12.0,
                 Shadow::big_dark(),
@@ -254,7 +254,7 @@ impl ImporterUI {
             ui.add_space(25.0);
             if let Some(textures) = textures {
                 let s = textures.missing_permissions_image.0;
-                let s = Vec2::new(s.x / 4.5, s.y / 4.5);
+                let s = eframe::egui::Vec2::new(s.x / 4.5, s.y / 4.5);
                 ui.image(textures.missing_permissions_image.1, s);
             }
             ui.heading("Missing Mail Permissions");
@@ -268,6 +268,11 @@ impl ImporterUI {
                 std::process::exit(0);
             }
         }).response
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn permission_ui(&mut self, ui: &mut egui::Ui, _textures: &Option<Textures>) -> Response {
+        ui.label("")
     }
 }
 
@@ -301,7 +306,6 @@ impl ImporterUI {
             }
         };
 
-        #[cfg(target_os = "macos")]
         let State {
             done,
             finishing,

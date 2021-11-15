@@ -1,15 +1,16 @@
-//! FIXME: Implement our own Mailbox reader. This one is terrible!
+//! FIXME: Implement our own Mailbox reader that better implements the spec.
 //! use jetsci for efficient searching:
 //! https://github.com/shepmaster/jetscii
 //! (or aho corasick)
-//! Here's the ref: file:///Users/terhechte/Development/Rust/postsack/target/doc/src/mbox_reader/lib.rs.html#65-67
-//! Make it so that I can hold the mbox in the struct below
+//! MBox parsing is also not particularly fast as it currently doesn't use parallelism
 
-use eyre::bail;
+use eyre::{bail, eyre};
 use mbox_reader;
+use rayon::prelude::*;
 use tracing;
+use walkdir::WalkDir;
 
-use super::{Config, ImporterFormat, MessageSender, Result};
+use super::{Config, ImporterFormat, Message, MessageSender, Result};
 
 use super::shared::email::EmailMeta;
 use super::shared::parse::ParseableEmail;
@@ -31,35 +32,68 @@ pub struct Mail {
 pub struct Mbox;
 
 /// The inner parsing code
-fn inner_emails(config: &Config) -> Result<Vec<Mail>> {
-    if config
-        .emails_folder_path
-        .extension()
-        .and_then(std::ffi::OsStr::to_str)
-        != Some("mbox")
-    {
-        bail!("Path does not point to an .mbox file")
-    }
+fn inner_emails(config: &Config, sender: MessageSender) -> Result<Vec<Mail>> {
+    // find all files ending in .mbox
+    let mboxes: Vec<PathBuf> = WalkDir::new(&config.emails_folder_path)
+        .into_iter()
+        .filter_map(|e| match e {
+            Ok(n)
+                if n.path().is_file()
+                    && n.path()
+                        .to_str()
+                        .map(|e| e.contains(".mbox"))
+                        .unwrap_or(false) =>
+            {
+                tracing::trace!("Found mbox file {}", n.path().display());
+                Some(n.path().to_path_buf())
+            }
+            Err(e) => {
+                tracing::info!("Could not read folder: {}", e);
+                if let Err(e) = sender.send(Message::Error(eyre!("Could not read folder: {:?}", e)))
+                {
+                    tracing::error!("Error sending error {}", e);
+                }
+                None
+            }
+            _ => None,
+        })
+        .collect();
 
-    let mbox = mbox_reader::MboxFile::from_file(config.emails_folder_path.as_path())?;
-
-    let path = config.emails_folder_path.clone();
-    Ok(mbox
-        .iter()
-        .filter_map(|e| {
-            let content = match e.message() {
-                Some(n) => n,
-                None => {
-                    tracing::error!("Could not parse mail at offset {}", e.offset());
+    let mails: Vec<Mail> = mboxes
+        .into_par_iter()
+        .filter_map(|mbox_file| {
+            let mbox = match mbox_reader::MboxFile::from_file(&mbox_file) {
+                Ok(n) => n,
+                Err(e) => {
+                    tracing::error!(
+                        "Could not open mbox file at {}: {}",
+                        &mbox_file.display(),
+                        e
+                    );
                     return None;
                 }
             };
-            Some(Mail {
-                path: path.clone(),
-                content: content.to_owned(),
-            })
+            let inner_mails: Vec<Mail> = mbox
+                .iter()
+                .filter_map(|e| {
+                    let content = match e.message() {
+                        Some(n) => n,
+                        None => {
+                            tracing::error!("Could not parse mail at offset {}", e.offset());
+                            return None;
+                        }
+                    };
+                    Some(Mail {
+                        path: mbox_file.clone(),
+                        content: content.to_owned(),
+                    })
+                })
+                .collect();
+            Some(inner_mails)
         })
-        .collect())
+        .flatten()
+        .collect();
+    Ok(mails)
 }
 
 impl ImporterFormat for Mbox {
@@ -69,8 +103,8 @@ impl ImporterFormat for Mbox {
         None
     }
 
-    fn emails(&self, config: &Config, _sender: MessageSender) -> Result<Vec<Self::Item>> {
-        inner_emails(config)
+    fn emails(&self, config: &Config, sender: MessageSender) -> Result<Vec<Self::Item>> {
+        inner_emails(config, sender)
     }
 }
 
@@ -85,6 +119,15 @@ impl ParseableEmail for Mail {
         self.path.as_path()
     }
     fn meta(&self) -> Result<Option<EmailMeta>> {
+        // The filename is a tag, e.g. `INBOX.mbox`, `WORK.mbox`
+        if let Some(prefix) = self.path.file_stem() {
+            if let Some(s) = prefix.to_str().map(|s| s.to_owned()) {
+                return Ok(Some(EmailMeta {
+                    tags: vec![s],
+                    is_seen: false,
+                }));
+            }
+        }
         Ok(None)
     }
 }

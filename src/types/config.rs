@@ -48,7 +48,7 @@ impl Default for FormatType {
         return FormatType::AppleMail;
 
         #[cfg(not(target_os = "macos"))]
-        return FormatType::MboxVault;
+        return FormatType::Mbox;
     }
 }
 
@@ -181,6 +181,7 @@ impl Config {
             "emails_folder_path".to_owned(),
             self.emails_folder_path.to_str()?.into(),
         );
+        new.insert("persistent".to_owned(), self.persistent.into());
         new.insert(
             "sender_emails".to_owned(),
             self.sender_emails

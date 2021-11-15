@@ -5,6 +5,8 @@ use eframe::egui::{
 
 use std::ops::Rem;
 
+use crate::gui::platform::{platform_colors, PlatformColors};
+
 /// This will draw Ui with a background color and margins.
 /// This can be used for calls that don't provide a `Frame`,
 /// such as `horizontal` or `vertical`
@@ -81,6 +83,8 @@ impl<'a> AnimatedBackground<'a> {
         // paint stuff
         let rect_size = vec2(size.x / divisions, size.y / divisions);
 
+        let colors = platform_colors();
+
         // we only animate if there's no progress
         let (offset, add) = if self.animate_progress.is_none() {
             // Define the animation speed
@@ -142,9 +146,19 @@ impl<'a> AnimatedBackground<'a> {
                 let rect = Rect::from_min_size(pos, size);
                 // the fill color is based on the added block count
                 color_adder += *n;
-                let color = (color_adder % 50) as u8;
-                painter.rect_filled(rect, 0.0, Color32::from_gray(color));
-                painter.rect_stroke(rect, 0.0, Stroke::new(1.0, Color32::from_gray(110)));
+                let color_addition = if colors.is_light {
+                    -1 * (color_adder % 50) as i8
+                } else {
+                    (color_adder % 50) as i8
+                };
+                let color = Color32::from_rgb(
+                    (colors.animation_background.r() as i8 + color_addition) as u8,
+                    (colors.animation_background.g() as i8 + color_addition) as u8,
+                    (colors.animation_background.b() as i8 + color_addition) as u8,
+                );
+
+                painter.rect_filled(rect, 0.0, color);
+                painter.rect_stroke(rect, 0.0, Stroke::new(1.0, colors.line3));
             }
         }
 
@@ -162,6 +176,8 @@ impl<'a> AnimatedBackground<'a> {
         recurse: &[(i8, i8, i8)],
         total: usize,
     ) {
+        let colors = platform_colors();
+
         for y in 0..=(division + 2.0) as i8 {
             for x in 0..=(division + 2.0) as i8 {
                 let fx = ((x - 1) as f32 * size.x) + (offset as f32);
@@ -173,14 +189,14 @@ impl<'a> AnimatedBackground<'a> {
                     // on the x axis take the offset into account
                     let rx = (*rx).rem((total as i8) + 1);
                     if rx == x && ry == &y {
-                        Self::draw_segmentation(painter, rect, *rd);
+                        Self::draw_segmentation(painter, rect, *rd, colors);
                     }
                 }
             }
         }
     }
 
-    fn draw_segmentation(painter: &Painter, into: Rect, divisions: i8) {
+    fn draw_segmentation(painter: &Painter, into: Rect, divisions: i8, colors: &PlatformColors) {
         let mut rect = into;
         for d in 0..=divisions {
             // division back and forth in direction
@@ -207,7 +223,7 @@ impl<'a> AnimatedBackground<'a> {
                     },
                 )
             };
-            painter.rect_stroke(next, 0.0, Stroke::new(1.0, Color32::from_gray(70)));
+            painter.rect_stroke(next, 0.0, Stroke::new(1.0, colors.line4));
             rect = next;
         }
     }

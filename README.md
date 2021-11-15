@@ -22,6 +22,12 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
 - [ ] store last opened sqlite file
 - [ ] check if we get any values for the to_sender to_domain fields etc
 
+## Linux Issues
+
+- [ ] broken background color
+- [ ] can't switch import format
+- [ ] mbox support for selecting a folder of mbox files (inbox etc)
+
 ## Future Options
 
 - [ ] Add additional UI based on Druid, Iced or Native Cocoa
@@ -40,3 +46,24 @@ Generate a macOS bundle via [Cargo Bundle](https://github.com/burtonageo/cargo-b
 ``` sh
 cargo bundle --bin gui
 ```
+
+### Linux Dependencies
+
+In order to build (and or run) on Linux, the following dependencies are needed:
+
+#### Fedora
+
+``` sh
+# Development
+sudo dnf install @development-tools glib cairo-devel pango-devel gdk-pixbux2-devel atk-devel gtk3 gtk3-devel libsqlite3x-devel
+```
+
+#### Ubuntu (currently untested)
+
+
+``` sh
+# Development
+sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev libsqlite3-dev
+```
+
+

@@ -43,7 +43,7 @@ pub fn read_emails(config: &Config, sender: MessageSender) -> Result<Vec<Mail>> 
         .into_iter()
         .filter_map(|e| match e {
             Ok(n)
-                if dbg!(n.path()).is_dir()
+                if n.path().is_dir()
                     && n.path()
                         .to_str()
                         .map(|e| e.contains(".mbox"))
