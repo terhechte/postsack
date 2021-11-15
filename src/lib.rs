@@ -50,7 +50,7 @@ pub fn make_config() -> types::Config {
     }
     let emails_folder_path = Path::new(folder);
     // For non-mbox files, we make sure we have a directory
-    if format != FormatType::Mbox && !emails_folder_path.is_dir() {
+    if !emails_folder_path.is_dir() {
         panic!(
             "Emails Folder Path is not a directory: {}",
             &emails_folder_path.display()
