@@ -25,10 +25,11 @@ impl<'a> Widget for SegmentationBar<'a> {
             for (id_index, group) in groupings.iter().enumerate() {
                 let alternatives = segmentations::aggregation_fields(self.engine, group);
                 if let Some(value) = group.value() {
-                    let button = egui::Button::new(format!("{} {}", group.name(), value))
-                        .enabled(false)
-                        .text_color(egui::Color32::WHITE);
-                    ui.add(button);
+                    ui.add_enabled(
+                        false,
+                        egui::Button::new(format!("{} {}", group.name(), value))
+                            .text_color(egui::Color32::WHITE),
+                    );
                 } else if let Some(mut selected) = group.index(&alternatives) {
                     let p = egui::ComboBox::from_id_source(&id_index).show_index(
                         ui,

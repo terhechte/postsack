@@ -1,4 +1,6 @@
-use eframe::egui::{self, lerp, vec2, Color32, Pos2, Response, Shape, Stroke, Vec2, Widget};
+use eframe::egui::{
+    self, epaint::PathShape, lerp, vec2, Color32, Pos2, Response, Shape, Stroke, Vec2, Widget,
+};
 
 /// A simple spinner
 pub struct Spinner(Vec2);
@@ -31,12 +33,13 @@ impl Widget for Spinner {
                     + vec2(-corner_radius, 0.0)
             })
             .collect();
-        ui.painter().add(Shape::Path {
+        let shape = Shape::Path(PathShape {
             points,
             closed: false,
             fill: Color32::TRANSPARENT,
             stroke: Stroke::new(8.0, visuals.strong_text_color()),
         });
+        ui.painter().add(shape);
 
         ui.ctx().request_repaint();
 

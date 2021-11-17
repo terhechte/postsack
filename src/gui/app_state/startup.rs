@@ -214,21 +214,22 @@ impl StartupUI {
                     let button_size1: Vec2 = ((center.width() / 2.0) - 25.0, 25.0).into();
                     let button_size2: Vec2 = ((center.width() / 2.0) - 25.0, 25.0).into();
                     ui.horizontal(|ui| {
-                        let response = ui.add_sized(
-                            button_size1,
-                            egui::Button::new("Start")
-                            .enabled(
+                        let enabled = {
                                 // if we have an email folder,
                                 // and - if we want to save to disk -
                                 // if we have a database path
                                 self.email_folder.is_some() &&
                                 (self.save_to_disk == self.database_path.is_some())
-                            )
-                            .text_color(colors.text_primary),
-                        );
-                        if response.clicked() {
-                            self.action_start();
-                        }
+                        };
+                        ui.add_enabled_ui(enabled, |ui| {
+                            let response = ui.add_sized(
+                                button_size1,
+                                egui::Button::new("Start").text_color(colors.text_primary),
+                            );
+                            if response.clicked() {
+                                self.action_start();
+                            }
+                        });
                         let response = ui.add_sized(button_size2, egui::Button::new("Or Open Database"));
                         if response.clicked() {
                             self.action_open_database();

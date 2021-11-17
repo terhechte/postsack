@@ -14,7 +14,7 @@ pub struct FilterState {
     is_reply: Option<bool>,
     is_seen: Option<bool>,
     subject_contains: Option<String>,
-    tags_contains: Option<String>,
+    tags_contains: Option<Vec<String>>,
 }
 
 impl FilterState {
@@ -42,6 +42,21 @@ impl<'a> Widget for FilterPanel<'a> {
         egui::Frame::none()
             .margin(vec2(15.0, 10.5))
             .show(ui, |ui| {
+                FilterPanel::filter_panel_contents(ui, engine, state)
+            })
+            .response
+    }
+}
+
+impl FilterPanel<'_> {
+    fn filter_panel_contents(
+        ui: &mut egui::Ui,
+        engine: &mut Engine,
+        state: &mut FilterState,
+    ) -> Response {
+        egui::ScrollArea::vertical()
+            .max_height(330.0)
+            .show(ui, |ui| {
                 egui::Grid::new("filter_grid")
                     .spacing(vec2(15.0, 15.0))
                     .show(ui, |ui| {
@@ -67,7 +82,12 @@ impl<'a> Widget for FilterPanel<'a> {
                                 ui.end_row();
 
                                 if engine.format_has_tags() {
-                                    input_block(ui, "Tags", &mut state.tags_contains);
+                                    input_tags(
+                                        ui,
+                                        "Tags",
+                                        &mut state.tags_contains,
+                                        engine.known_tags(),
+                                    );
                                     ui.end_row();
                                 }
                             });
@@ -134,4 +154,20 @@ fn input_block(ui: &mut egui::Ui, title: &str, value: &mut Option<String>) {
         "" => *value = None,
         _ => *value = Some(text_value),
     }
+}
+
+fn input_tags(
+    ui: &mut egui::Ui,
+    title: &str,
+    selected: &mut Option<Vec<String>>,
+    available: &[String],
+) {
+    let mut selected: String = "".to_owned();
+    ui.horizontal_wrapped(|ui| {
+        for tag in available {
+            //ui.label(tag);
+            ui.selectable_value(&mut selected, tag.clone(), tag);
+        }
+    });
+    ui.button("Clear");
 }

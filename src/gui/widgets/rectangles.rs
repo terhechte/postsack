@@ -1,7 +1,10 @@
 use std::collections::hash_map::DefaultHasher;
 
 use crate::model::{segmentations, Engine, Segment};
-use eframe::egui::{self, epaint::Galley, Color32, Pos2, Rect, Rgba, Stroke, TextStyle, Widget};
+use eframe::{
+    egui::{self, epaint::Galley, Color32, Pos2, Rect, Rgba, Stroke, TextStyle, Widget},
+    epi::Frame,
+};
 use eyre::Report;
 use num_format::{Locale, ToFormattedString};
 
@@ -53,26 +56,30 @@ impl<'a> Widget for Rectangles<'a> {
                 response.mark_changed();
             }
             if item_response.hovered() {
-                hovered = Some(format!("#{}: {}", item.count, item.field.to_string()));
+                hovered = Some(format!("{}: #{}", item.field.to_string(), item.count));
             }
         }
 
         if let Some(h) = hovered {
             // Calculate the size
             let text = format!("{}", h);
-            let galley = ui.painter().layout_no_wrap(TextStyle::Body, text.clone());
+            let galley = ui
+                .painter()
+                .layout_no_wrap(text.clone(), TextStyle::Body, Color32::WHITE);
 
             // keep spacing in mind
+            let size = galley.size();
             let size: Pos2 = (
-                galley.size.x + ui.spacing().button_padding.x * 2.0,
-                galley.size.y + ui.spacing().button_padding.y * 2.0,
+                size.x + ui.spacing().button_padding.x * 2.0,
+                size.y + ui.spacing().button_padding.y * 2.0,
             )
                 .into();
 
             // we build a disabled for easy rounded corners
-            let label_button = egui::widgets::Button::new(text)
-                .enabled(false)
-                .text_color(Color32::WHITE);
+
+            let label = egui::widgets::Label::new(text)
+                .background_color(colors.window_background)
+                .text_color(colors.text_primary);
 
             // we want to be a wee bit in the rectangle system
             let offset = -2.0;
@@ -85,7 +92,7 @@ impl<'a> Widget for Rectangles<'a> {
                         .into(),
                     (size.x + 10.0, size.y + 10.0).into(),
                 ),
-                label_button,
+                label,
             );
         }
 
@@ -127,10 +134,11 @@ fn rectangle_ui(
     let align_bottom = |galley: &std::sync::Arc<Galley>, center: &mut Pos2, spacing: f32| {
         #[allow(clippy::clone_on_copy)]
         let mut position = center.clone();
-        position.x -= galley.size.x / 2.0;
-        position.y -= galley.size.y / 2.0;
-        center.y += galley.size.y + spacing;
-        if galley.size.x < rect.width() && galley.size.y < rect.height() {
+        let size = galley.size();
+        position.x -= size.x / 2.0;
+        position.y -= size.y / 2.0;
+        center.y += size.y + spacing;
+        if size.x < rect.width() && size.y < rect.height() {
             Some(position)
         } else {
             None
@@ -142,10 +150,10 @@ fn rectangle_ui(
         // Take the max width - some spacing to fit into the rectangle
         let width = rect.width() - ui.spacing().button_padding.x * 2.0;
         let text = segment.field.to_string();
-        let galley = painter.layout_multiline(TextStyle::Body, text, width);
+        let galley = painter.layout(text, TextStyle::Body, Rgba::BLACK.into(), width);
         let previous_center = center;
         if let Some(center) = align_bottom(&galley, &mut center, 2.0) {
-            painter.galley(center, galley, Rgba::BLACK.into());
+            painter.galley(center, galley);
         } else {
             // If the name doesn't fit, reverse the changes to center the count
             center = previous_center;
@@ -153,9 +161,9 @@ fn rectangle_ui(
     }
     {
         let text = segment.count.to_formatted_string(&Locale::en);
-        let galley = painter.layout_no_wrap(TextStyle::Small, text);
+        let galley = painter.layout_no_wrap(text, TextStyle::Small, Rgba::BLACK.into());
         if let Some(center) = align_bottom(&galley, &mut center, 5.0) {
-            painter.galley(center, galley, Rgba::BLACK.into());
+            painter.galley(center, galley);
         }
     }
     response

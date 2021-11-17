@@ -1,6 +1,8 @@
 //! Various background utilities
 use eframe::egui::{
-    self, epaint::Shadow, vec2, Color32, Painter, Pos2, Rect, Response, Shape, Stroke, Ui, Vec2,
+    self,
+    epaint::{RectShape, Shadow},
+    vec2, Color32, Painter, Pos2, Rect, Response, Shape, Stroke, Ui, Vec2,
 };
 
 use std::ops::Rem;
@@ -29,12 +31,12 @@ pub fn color_background(
 
     ui.painter().set(
         where_to_put_background,
-        egui::epaint::Shape::Rect {
+        egui::epaint::Shape::Rect(RectShape {
             corner_radius: 0.0,
             fill,
             stroke,
             rect,
-        },
+        }),
     );
     ret
 }
@@ -48,12 +50,12 @@ pub fn shadow_background(
     corner_radius: f32,
     shadow: Shadow,
 ) {
-    let frame_shape = Shape::Rect {
+    let frame_shape = Shape::Rect(RectShape {
         rect: paint_rect,
         corner_radius,
         fill,
         stroke,
-    };
+    });
 
     let shadow = shadow.tessellate(paint_rect, corner_radius);
     let shadow = Shape::Mesh(shadow);

@@ -1,5 +1,5 @@
 use crate::model::Engine;
-use eframe::egui::{self, Widget};
+use eframe::egui::{self, Color32, Widget};
 use eyre::Report;
 
 use super::app_state::UIState;
@@ -64,17 +64,21 @@ impl<'a> Widget for NavigationBar<'a> {
                 let mut w = ui.available_width();
 
                 let mail_text = "\u{1F4E7} Mails";
-                let mail_galley = ui
-                    .painter()
-                    .layout_no_wrap(egui::TextStyle::Button, mail_text.to_owned());
+                let mail_galley = ui.painter().layout_no_wrap(
+                    mail_text.to_owned(),
+                    egui::TextStyle::Button,
+                    Color32::WHITE,
+                );
 
                 let filter_text = "\u{1F5B9} Export";
-                let filter_galley = ui
-                    .painter()
-                    .layout_no_wrap(egui::TextStyle::Button, filter_text.to_owned());
+                let filter_galley = ui.painter().layout_no_wrap(
+                    filter_text.to_owned(),
+                    egui::TextStyle::Button,
+                    Color32::WHITE,
+                );
 
-                w -= mail_galley.size.x + ui.spacing().button_padding.x * 4.0;
-                w -= filter_galley.size.x + ui.spacing().button_padding.x * 4.0;
+                w -= mail_galley.size().x + ui.spacing().button_padding.x * 4.0;
+                w -= filter_galley.size().x + ui.spacing().button_padding.x * 4.0;
                 ui.add_space(w);
 
                 ui.add(navigation_button(filter_text));

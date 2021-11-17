@@ -75,7 +75,7 @@ impl ErrorUI {
             }
             ui.add_space(30.0);
             if self.show_details {
-                egui::containers::ScrollArea::auto_sized().show(ui, |ui| {
+                egui::containers::ScrollArea::vertical().show(ui, |ui| {
                     ui.add(
                         egui::widgets::Label::new("Error Chain")
                             .text_style(egui::TextStyle::Heading),

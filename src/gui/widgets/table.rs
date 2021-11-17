@@ -129,9 +129,6 @@ impl<
             let column_id = self.id_source.with("_column_").with(i);
 
             let desired_column_width = state.column_width(i);
-            let galley = ui
-                .fonts()
-                .layout_single_line(header_text_style, column.name.clone());
 
             let mut column_rect = rect;
             column_rect.min.x += column_offset;
@@ -143,6 +140,16 @@ impl<
 
             let response = ui.interact(column_rect, column_id, Sense::hover());
 
+            let color = if response.hovered() {
+                ui.style().visuals.widgets.hovered.fg_stroke.color
+            } else {
+                ui.style().visuals.widgets.inactive.fg_stroke.color
+            };
+
+            let galley = ui
+                .fonts()
+                .layout_no_wrap(column.name.clone(), header_text_style, color);
+
             if response.hovered() {
                 ui.painter().rect_stroke(
                     column_rect,
@@ -153,16 +160,8 @@ impl<
 
             let mut text_pos = column_rect.left_center();
             text_pos.x += self.cell_padding.x;
-            text_pos.y -= galley.size.y / 2.0;
-            ui.painter_at(column_rect).galley(
-                text_pos,
-                galley,
-                if response.hovered() {
-                    ui.style().visuals.widgets.hovered.fg_stroke.color
-                } else {
-                    ui.style().visuals.widgets.inactive.fg_stroke.color
-                },
-            );
+            text_pos.y -= galley.size().y / 2.0;
+            ui.painter_at(column_rect).galley(text_pos, galley);
 
             column_offset += column_rect.width();
         }
@@ -198,14 +197,14 @@ impl<
         // First step: compute some sizes used during rendering. Since this is a
         // homogenous table, we can figure out its exact sizes based on the
         // number of rows and columns.
-        let table_rect = ui.available_rect_before_wrap_finite();
+        let table_rect = ui.available_rect_before_wrap();
         let response = ui.interact(table_rect, self.id_source, Sense::hover());
 
         self.header_ui(ui, &mut state);
 
         // Now render the table body, which is inside an independently
         // scrollable area.
-        ScrollArea::auto_sized().show_rows(ui, self.row_height, self.num_rows, |ui, row_range| {
+        ScrollArea::vertical().show_rows(ui, self.row_height, self.num_rows, |ui, row_range| {
             ui.scope(|ui| {
                 let maker = &mut self.row_maker;
                 let rows = maker(row_range);
@@ -272,12 +271,14 @@ impl<
 
                         let painter = ui.painter_at(column_rect);
 
-                        let galley = ui.fonts().layout_single_line(cell_text_style, cell_text);
+                        let galley =
+                            ui.fonts()
+                                .layout_no_wrap(cell_text, cell_text_style, cell_text_color);
 
                         let mut text_pos = column_rect.left_center();
                         text_pos.x += self.cell_padding.x;
-                        text_pos.y -= galley.size.y / 2.0;
-                        painter.galley(text_pos, galley, cell_text_color);
+                        text_pos.y -= galley.size().y / 2.0;
+                        painter.galley(text_pos, galley);
 
                         column_offset += column_rect.width();
                     }
