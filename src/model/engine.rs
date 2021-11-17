@@ -7,7 +7,7 @@
 use eyre::{bail, Result};
 use lru::LruCache;
 
-use crate::database::query::{Field, OtherQuery, Query, ValueField};
+use crate::database::query::{Field, Filter, OtherQuery, Query, ValueField};
 use crate::model::link::Response;
 use crate::types::Config;
 
@@ -37,6 +37,8 @@ pub struct Engine {
     pub(super) group_by_stack: Vec<Field>,
     pub(super) link: Link<Action>,
     pub(super) segmentations: Vec<Segmentation>,
+    /// Additional filters. See [`segmentations::set_filters`]
+    pub(super) filters: Vec<Filter>,
     /// This is a very simple cache from ranges to rows.
     /// It doesn't account for overlapping ranges.
     /// There's a lot of room for improvement here.
@@ -52,6 +54,7 @@ impl Engine {
             search_stack: Vec::new(),
             group_by_stack: vec![default_group_by_stack(0).unwrap()],
             segmentations: Vec::new(),
+            filters: Vec::new(),
             item_cache: LruCache::new(10000),
             known_tags: Vec::new(),
         };

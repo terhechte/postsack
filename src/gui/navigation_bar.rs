@@ -55,7 +55,7 @@ impl<'a> Widget for NavigationBar<'a> {
                 let popup_id = ui.make_persistent_id("filter_panel_id");
 
                 super::widgets::popover(ui, popup_id, &filter_response, |ui| {
-                    ui.add(FilterPanel::new(self.engine, self.filter_state));
+                    ui.add(FilterPanel::new(self.engine, self.filter_state, self.error));
                 });
 
                 // This is a hack to get right-alignment.

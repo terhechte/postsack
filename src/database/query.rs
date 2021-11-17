@@ -10,8 +10,14 @@ pub const AMOUNT_FIELD_NAME: &str = "amount";
 
 #[derive(Clone, Debug)]
 pub enum Filter {
+    /// A database Like Operation
     Like(ValueField),
     NotLike(ValueField),
+    /// A extended like that implies:
+    /// - wildcards on both sides (like '%test%')
+    /// - case in-sensitive comparison
+    /// - Trying to handle values as strings
+    Contains(ValueField),
     Is(ValueField),
 }
 
@@ -173,6 +179,10 @@ impl Query {
                 match filter {
                     Filter::Like(f) => whr.like(f.field.into(), f.value()),
                     Filter::NotLike(f) => whr.not_like(f.field.into(), f.value()),
+                    Filter::Contains(f) => whr.like(
+                        f.field.into(),
+                        &format!("%{}%", f.to_string().to_lowercase()),
+                    ),
                     Filter::Is(f) => whr.eq(f.field.into(), f.value()),
                 };
             }

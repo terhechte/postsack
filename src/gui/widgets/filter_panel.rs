@@ -1,7 +1,11 @@
 //! A panel to edit filters
-use eframe::egui::{self, vec2, Response, Widget};
+use eframe::egui::{self, vec2, Color32, Response, Widget};
+use eyre::Report;
 
-use crate::model::{segmentations, Engine};
+use crate::{
+    database::query::{Field, Filter, ValueField},
+    model::{segmentations, Engine},
+};
 
 /// Filter values for the UI.
 /// All values are mapped as `Option<bool>`
@@ -14,7 +18,7 @@ pub struct FilterState {
     is_reply: Option<bool>,
     is_seen: Option<bool>,
     subject_contains: Option<String>,
-    tags_contains: Option<Vec<String>>,
+    tags_contains: Option<String>,
 }
 
 impl FilterState {
@@ -23,26 +27,88 @@ impl FilterState {
         basic.is_send = Some(false);
         basic
     }
+
+    fn apply(&self, engine: &mut Engine, error: &mut Option<Report>) {
+        // FIXME: In principle this could rather be logic for the `engine`, but I'd like to have a generic engine at some point.
+        let mut filters = Vec::new();
+        if let Some(val) = self.is_send {
+            filters.push(Filter::Is(ValueField::bool(&Field::IsSend, val)));
+        }
+        if let Some(val) = self.is_seen {
+            filters.push(Filter::Is(ValueField::bool(&Field::MetaIsSeen, val)));
+        }
+        if let Some(val) = self.is_reply {
+            filters.push(Filter::Is(ValueField::bool(&Field::IsReply, val)));
+        }
+        // FIXME: The system currently doesn't allow searching for multiple tags
+        // (e.g. (x like tag1 or x like tag2))
+        // this would require a `Filter::Expression` that is just added verbatim
+        if let Some(n) = &self.tags_contains {
+            filters.push(Filter::Like(ValueField::string(
+                &Field::MetaTags,
+                n.clone(),
+            )));
+        }
+        if let Some(n) = &self.subject_contains {
+            filters.push(Filter::Contains(ValueField::string(
+                &Field::Subject,
+                n.clone(),
+            )));
+        }
+        *error = crate::model::segmentations::set_filters(engine, &filters).err();
+    }
+
+    fn clear(&mut self) {
+        self.is_send = None;
+        self.is_reply = None;
+        self.is_seen = None;
+        self.subject_contains = None;
+        self.tags_contains = None;
+    }
 }
 
 pub struct FilterPanel<'a> {
     engine: &'a mut Engine,
     state: &'a mut FilterState,
+    error: &'a mut Option<Report>,
 }
 
 impl<'a> FilterPanel<'a> {
-    pub fn new(engine: &'a mut Engine, state: &'a mut FilterState) -> Self {
-        Self { engine, state }
+    pub fn new(
+        engine: &'a mut Engine,
+        state: &'a mut FilterState,
+        error: &'a mut Option<Report>,
+    ) -> Self {
+        Self {
+            engine,
+            state,
+            error,
+        }
     }
 }
 
 impl<'a> Widget for FilterPanel<'a> {
     fn ui(self, ui: &mut egui::Ui) -> Response {
-        let Self { engine, state } = self;
+        let Self {
+            engine,
+            state,
+            error,
+        } = self;
         egui::Frame::none()
             .margin(vec2(15.0, 10.5))
             .show(ui, |ui| {
-                FilterPanel::filter_panel_contents(ui, engine, state)
+                FilterPanel::filter_panel_contents(ui, engine, state);
+                ui.add_space(5.0);
+                ui.horizontal(|ui| {
+                    if ui.button("Apply").clicked() {
+                        state.apply(engine, error);
+                    }
+                    ui.add_space(10.0);
+                    if ui.button("Clear").clicked() {
+                        state.clear();
+                        state.apply(engine, error);
+                    }
+                });
             })
             .response
     }
@@ -80,23 +146,23 @@ impl FilterPanel<'_> {
 
                                 input_block(ui, "Subject", &mut state.subject_contains);
                                 ui.end_row();
-
-                                if engine.format_has_tags() {
-                                    input_tags(
-                                        ui,
-                                        "Tags",
-                                        &mut state.tags_contains,
-                                        engine.known_tags(),
-                                    );
-                                    ui.end_row();
-                                }
                             });
                         ui.end_row();
 
+                        if engine.format_has_tags() {
+                            input_tags(
+                                ui,
+                                "Labels / Tags",
+                                &mut state.tags_contains,
+                                engine.known_tags(),
+                            );
+                            ui.end_row();
+                        }
+
                         radio_group(
                             ui,
-                            "Send by me",
-                            &["Only Send", "Only Received", "All"],
+                            "Inbox",
+                            &["Only Send Mails", "Only Received Mails", "All"],
                             &mut state.is_send,
                         );
                         ui.end_row();
@@ -159,15 +225,37 @@ fn input_block(ui: &mut egui::Ui, title: &str, value: &mut Option<String>) {
 fn input_tags(
     ui: &mut egui::Ui,
     title: &str,
-    selected: &mut Option<Vec<String>>,
+    selection: &mut Option<String>,
     available: &[String],
 ) {
-    let mut selected: String = "".to_owned();
-    ui.horizontal_wrapped(|ui| {
-        for tag in available {
-            //ui.label(tag);
-            ui.selectable_value(&mut selected, tag.clone(), tag);
-        }
+    ui.vertical(|ui| {
+        ui.add(egui::Label::new(title));
+        egui::Frame::none()
+            .margin((5.0, 5.0))
+            .corner_radius(8.0)
+            .fill(Color32::BLACK)
+            .show(ui, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    // Overly complicated, but can later on easily be extended for multi selection
+                    for (index, tag) in available.iter().enumerate() {
+                        let was_selected = if let Some(n) = selection {
+                            n == tag
+                        } else {
+                            false
+                        };
+                        let mut selected = if was_selected { index } else { 9999 };
+                        if ui.selectable_value(&mut selected, index, tag).clicked() {
+                            if was_selected {
+                                *selection = None;
+                            } else {
+                                *selection = Some(tag.clone());
+                            }
+                        }
+                    }
+                });
+            });
+        // if ui.button("Clear").clicked() {
+        //     selection.clear();
+        // }
     });
-    ui.button("Clear");
 }

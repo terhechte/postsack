@@ -1,10 +1,7 @@
 use std::collections::hash_map::DefaultHasher;
 
 use crate::model::{segmentations, Engine, Segment};
-use eframe::{
-    egui::{self, epaint::Galley, Color32, Pos2, Rect, Rgba, Stroke, TextStyle, Widget},
-    epi::Frame,
-};
+use eframe::egui::{self, epaint::Galley, Color32, Pos2, Rect, Rgba, Stroke, TextStyle, Widget};
 use eyre::Report;
 use num_format::{Locale, ToFormattedString};
 

@@ -64,6 +64,21 @@ pub fn set_segments_range(engine: &mut Engine, range: Option<RangeInclusive<usiz
     }
 }
 
+/// Additional filters to use in the query
+///
+/// These filters will be evaluated in addition to the `segmentation` conditions
+/// in the query.
+/// Setting this value will recalculate the current segmentations.
+pub fn set_filters(engine: &mut Engine, filters: &[Filter]) -> Result<()> {
+    engine.filters = filters.to_vec();
+
+    // Remove any rows that were cached for this Segmentation
+    engine.item_cache.clear();
+    engine
+        .link
+        .request(&make_query(engine)?, Action::RecalculateSegmentation)
+}
+
 /// The fields available for the given aggregation
 ///
 /// As the user `pushes` Segmentations and dives into the data,
@@ -175,6 +190,9 @@ pub(super) fn make_query(engine: &Engine) -> Result<Query> {
     let mut filters = Vec::new();
     for entry in &engine.search_stack {
         filters.push(Filter::Like(entry.clone()));
+    }
+    for entry in &engine.filters {
+        filters.push(entry.clone());
     }
     let last = engine
         .group_by_stack
