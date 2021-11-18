@@ -9,7 +9,7 @@ pub mod database;
 #[cfg(feature = "gui")]
 pub mod gui;
 pub mod importer;
-mod model;
+pub mod model;
 pub mod types;
 
 pub fn setup_tracing() {

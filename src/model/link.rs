@@ -5,6 +5,10 @@
 //! This allows sending operations into `Link` and retrieving the contents
 //! asynchronously without blocking the UI.
 
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 use std::{collections::HashSet, convert::TryInto};
 
 use crossbeam_channel::{unbounded, Receiver, Sender};
@@ -41,12 +45,12 @@ pub(super) struct Link<Context: Send + 'static> {
     // There's also a delay between a request taken out of the input channel and being
     // put into the output channel. In order to account for all of this, we employ a
     // request counter to know how many requests are currently in the pipeline
-    request_counter: usize,
+    request_counter: Arc<AtomicUsize>,
 }
 
 impl<Context: Send + Sync + 'static> Link<Context> {
     pub fn request(&mut self, query: &Query, context: Context) -> Result<()> {
-        self.request_counter += 1;
+        self.request_counter.fetch_add(1, Ordering::Relaxed);
         self.input_sender.send((query.clone(), context))?;
         Ok(())
     }
@@ -56,7 +60,7 @@ impl<Context: Send + Sync + 'static> Link<Context> {
             // We received something
             Ok(Ok(response)) => {
                 // Only subtract if we successfuly received a value
-                self.request_counter -= 1;
+                self.request_counter.fetch_sub(1, Ordering::Relaxed);
                 Ok(Some(response))
             }
             // We received nothing
@@ -67,7 +71,11 @@ impl<Context: Send + Sync + 'static> Link<Context> {
     }
 
     pub fn is_processing(&self) -> bool {
-        self.request_counter > 0
+        self.request_counter.load(Ordering::Relaxed) > 0
+    }
+
+    pub fn request_counter(&self) -> Arc<AtomicUsize> {
+        self.request_counter.clone()
     }
 }
 
@@ -80,7 +88,7 @@ pub(super) fn run<Context: Send + Sync + 'static>(config: &Config) -> Result<Lin
     Ok(Link {
         input_sender,
         output_receiver,
-        request_counter: 0,
+        request_counter: Arc::new(AtomicUsize::new(0)),
     })
 }
 

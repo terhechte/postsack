@@ -6,6 +6,7 @@ mod message_adapter;
 
 use crate::types::Config;
 pub use formats::shared::email::{EmailEntry, EmailMeta};
+pub use importer::Importerlike;
 pub use message_adapter::*;
 
 use formats::ImporterFormat;

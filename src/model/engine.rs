@@ -215,6 +215,19 @@ impl Engine {
     pub fn is_busy(&self) -> bool {
         self.link.is_processing() || self.segmentations.is_empty()
     }
+
+    /// Blocking waiting until the current operation is done
+    /// This is useful for usage on a commandline or in unit tests
+    #[allow(unused)]
+    pub fn wait(&mut self) -> Result<()> {
+        loop {
+            self.process()?;
+            if !self.link.is_processing() {
+                break;
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Return the default aggregation fields for each segmentation stack level

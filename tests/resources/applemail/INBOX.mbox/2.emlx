@@ -1,0 +1,34 @@
+497      
+Subject: Re: Emlx library
+Mime-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+From: Michael <michael@example.com>
+In-Reply-To: <6FA2F219-2B7C-4962-9724-E9399409CCBE@example.com>
+Date: Thu, 6 Feb 2020 15:39:55 +0200
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <7A129E26-2C1F-4517-B6B5-39460ED50E12@example.com>
+References: <6FA2F219-2B7C-4962-9724-E9399409CCBE@example.com>
+To: Python <python@example.com>
+
+You're welcome. :)
+
+> Python <python@example.com> wrote:
+>
+> Thank you!
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>conversation-id</key>
+    <integer>123456</integer>
+    <key>date-last-viewed</key>
+    <integer>1581111111</integer>
+    <key>date-received</key>
+    <integer>1581000000</integer>
+    <key>flags</key>
+    <integer>8623489089</integer>
+    <key>remote-id</key>
+    <string>789</string>
+</dict>
+</plist>
