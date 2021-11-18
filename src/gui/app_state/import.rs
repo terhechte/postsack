@@ -103,7 +103,7 @@ impl ImporterUI {
 impl StateUIVariant for ImporterUI {
     fn update_panel(&mut self, ctx: &egui::CtxRef, textures: &Option<Textures>) -> StateUIAction {
         egui::CentralPanel::default()
-            .frame(egui::containers::Frame::none())
+            .frame(egui::containers::Frame::none().fill(Color32::BLACK))
             .show(ctx, |ui| {
                 ui.add(|ui: &mut egui::Ui| self.ui(ui, textures));
             });
