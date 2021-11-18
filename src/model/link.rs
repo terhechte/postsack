@@ -74,6 +74,8 @@ impl<Context: Send + Sync + 'static> Link<Context> {
         self.request_counter.load(Ordering::Relaxed) > 0
     }
 
+    /// This can be used to track the `link` from a different thread.
+    #[allow(unused)]
     pub fn request_counter(&self) -> Arc<AtomicUsize> {
         self.request_counter.clone()
     }
