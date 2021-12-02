@@ -1,10 +1,11 @@
 #![cfg(target_os = "windows")]
 
 use eframe::egui::{self, Color32};
+use eyre::Result;
 
 use super::{PlatformColors, Theme};
 
-pub fn platform_colors() -> PlatformColors {
+pub fn platform_colors(theme: Theme) -> PlatformColors {
     // From Google images, Windows 11
     match theme {
         Theme::Light => PlatformColors {
@@ -38,7 +39,9 @@ pub fn platform_colors() -> PlatformColors {
 pub fn setup(ctx: &egui::CtxRef) {}
 
 /// This is called once from `App::update` on the first run.
-pub fn initial_update(ctx: &egui::CtxRef) -> Result<()> {}
+pub fn initial_update(ctx: &egui::CtxRef) -> Result<()> {
+    Ok(())
+}
 
 pub fn navigation_button(title: &str) -> egui::Button {
     egui::Button::new(title)
