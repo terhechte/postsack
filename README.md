@@ -23,6 +23,8 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
 - [ ] add more tests
 - [ ] build static linux binary via docker
 - [ ] try to build a static windows binary
+- [ ] update metadata in Cargo.toml
+- [ ] add app platform icons
 
 ## Linux Issues
 

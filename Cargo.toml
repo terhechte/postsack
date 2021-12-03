@@ -9,7 +9,7 @@ description = "Provides a high level visual overview of swaths of email"
 
 [package.metadata.bundle.bin.gui]
 name = "Postsack"
-identifier = "com.stylemac.Postsack"
+identifier = "com.stylemac.postsack"
 #icon = ["128x128@2x.png"]
 version = "1.0.0"
 #resources = ["assets", "images/**/*.png", "secrets/public_key.txt"]
