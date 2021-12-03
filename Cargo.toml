@@ -45,7 +45,7 @@ lru = { version = "0.7.0", optional = true }
 emlx = { git = "https://github.com/terhechte/emlx", features = []}
 walkdir = "2.3.2"
 mbox-reader = "0.2.0"
-rfd = "0.6.1"
+tinyfiledialogs = "3.0"
 rand = "0.8.4"
 shellexpand = "2.1.0"
 image = { version = "0.23", default-features = false, features = ["png"] }

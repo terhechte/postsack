@@ -1,9 +1,9 @@
 //! The startup form to configure what and how to import
 use eframe::egui::epaint::Shadow;
 use eframe::egui::{self, vec2, Color32, Pos2, Rect, Response, Stroke, TextStyle, Vec2};
-use rfd;
 
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use super::super::platform::platform_colors;
 use super::super::widgets::background::{shadow_background, AnimatedBackground};
@@ -303,14 +303,19 @@ impl StartupUI {
     }
 
     fn open_email_folder_dialog(&mut self) {
+        let fallback = shellexpand::tilde("~/");
         let default_path = self
             .format
             .default_path()
-            .unwrap_or(std::path::Path::new("~/").to_path_buf());
+            .unwrap_or(std::path::Path::new(&fallback.to_string()).to_path_buf());
 
-        let folder = rfd::FileDialog::new()
-            .set_directory(default_path)
-            .pick_folder();
+        let folder = match tinyfiledialogs::select_folder_dialog(
+            "Select folder",
+            default_path.to_str().unwrap_or(""),
+        ) {
+            Some(result) => PathBuf::from_str(&result).ok(),
+            None => return,
+        };
 
         let path = match folder {
             Some(path) => path,
@@ -326,10 +331,12 @@ impl StartupUI {
         #[cfg(target_os = "windows")]
         let default_path = "C:\\Users";
 
-        let filename = rfd::FileDialog::new()
-            .add_filter("sqlite", &["sqlite"])
-            .set_directory(default_path)
-            .save_file();
+        let fallback = shellexpand::tilde(default_path).to_string();
+
+        let filename = match tinyfiledialogs::save_file_dialog("Select output file", &fallback) {
+            Some(result) => PathBuf::from_str(&result).ok(),
+            None => return,
+        };
 
         let path = match filename {
             Some(path) => path,
@@ -346,10 +353,16 @@ impl StartupUI {
         #[cfg(target_os = "windows")]
         let default_path = "C:\\Users";
 
-        let filename = rfd::FileDialog::new()
-            .add_filter("sqlite", &["sqlite"])
-            .set_directory(default_path)
-            .pick_file();
+        let fallback = shellexpand::tilde(default_path).to_string();
+
+        let filename = match tinyfiledialogs::open_file_dialog(
+            "SQlite Database",
+            &fallback,
+            Some((&["*.sqlite"], "SQLite")),
+        ) {
+            Some(n) => PathBuf::from_str(&n).ok(),
+            None => return None,
+        };
 
         let path = match filename {
             Some(path) => path,
