@@ -122,7 +122,10 @@ impl StateUI {
             Err(report) => return StateUI::Error(error::ErrorUI::new(report, None)),
         };
 
-        self.importer_with_config(config)
+        match main::MainUI::new(config.clone()) {
+            Ok(n) => StateUI::Main(n),
+            Err(e) => StateUI::Error(ErrorUI::new(e, Some(config.clone()))),
+        }
     }
 
     fn importer_with_config(&self, config: Config) -> StateUI {
@@ -133,6 +136,6 @@ impl StateUI {
             }
         };
 
-        return StateUI::Import(importer);
+        StateUI::Import(importer)
     }
 }
