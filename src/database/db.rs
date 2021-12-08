@@ -48,6 +48,16 @@ impl Database {
         })
     }
 
+    pub fn total_mails(&self) -> Result<usize> {
+        let connection = match &self.connection {
+            Some(n) => n,
+            None => bail!("No connection to database available in query"),
+        };
+        let mut stmt = connection.prepare(&QUERY_COUNT_MAILS)?;
+        let count: usize = stmt.query_row([], |q| q.get(0))?;
+        Ok(count)
+    }
+
     pub fn save_config(&self, config: Config) -> Result<()> {
         let fields = config
             .into_fields()

@@ -65,3 +65,7 @@ VALUES
 
 pub const QUERY_SELECT_META: &str = r#"
 SELECT key, value FROM meta"#;
+
+pub const QUERY_COUNT_MAILS: &str = r#"
+SELECT count(path) FROM emails
+"#;

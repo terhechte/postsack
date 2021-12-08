@@ -1,12 +1,16 @@
 use postsack::{
     self,
-    database::{query, query_result, Database},
+    database::{query, Database},
     importer::Importerlike,
     types::FormatType,
 };
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
+    use postsack::database::{query::Field, query_result::QueryResult};
+
     use super::*;
 
     #[test]
@@ -19,15 +23,30 @@ mod tests {
         let importer = postsack::importer::mbox_importer(config.clone());
         let (_receiver, handle) = importer.import().unwrap();
         handle.join().expect("").expect("");
+
         // The temporary database path
         let db = Database::new(&config.database_path).unwrap();
+
+        let total_mails = db.total_mails().expect("Expected total mails");
+        assert_eq!(total_mails, 141);
+
         let mails = db.query(&query::Query::Normal {
             fields: vec![query::Field::Subject],
             filters: Vec::new(),
-            range: 0..10,
+            range: 0..141,
         });
         let mails = mails.expect("Expected Mails");
-        assert_eq!(mails.len(), 10);
+
+        let subjects: HashSet<String> = HashSet::from(
+            mails
+                .into_iter()
+                .map(|s| match s {
+                    QueryResult::Normal(row) => row[&Field::Subject].to_string(),
+                    _ => panic!(),
+                })
+                .collect(),
+        );
+        assert!(subjects.contains(" check bogus body header (from)"));
     }
 
     /// Test that the AppleMail importer works

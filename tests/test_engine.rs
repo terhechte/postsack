@@ -36,7 +36,7 @@ mod tests {
             model::segmentations::layouted_segments(&mut engine, default_rect()).unwrap();
         assert_eq!(segments.len(), 2);
 
-        // Limit to only one egment
+        // Limit to only one segment
         model::segmentations::set_segments_range(&mut engine, Some(0..=1));
         // Validate
         let segments =
