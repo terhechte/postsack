@@ -18,13 +18,14 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
 - [x] try re-opening a database...
 - [x] save config into sqlite
 - [x] store last opened sqlite file
-- [ ] check if we get any values for the to_sender to_domain fields etc
+- [x] check if we get any values for the to_sender to_domain fields etc (only to_group seemingly has no data for my mails)
 - [x] update to egui 15
-- [ ] add more tests
+- [x] add more tests
 - [ ] build static linux binary via docker
 - [ ] try to build a static windows binary
 - [ ] update metadata in Cargo.toml
 - [ ] add app platform icons
+- [ ] for many mails, the segmentations don't work correctly due to async issues
 
 ## Linux Issues
 

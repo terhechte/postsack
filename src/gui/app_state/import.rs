@@ -40,6 +40,8 @@ pub struct ImporterUI {
     progress_divisions: usize,
     /// we're done importing
     pub done_importing: bool,
+    /// Total amount of mails we imported
+    pub total_mails: usize,
     /// Any errors during importing
     pub importer_error: Option<eyre::Report>,
     /// On macOS, we lack the permission to the mail folder. This can be
@@ -95,6 +97,7 @@ impl ImporterUI {
             progress_blocks,
             progress_divisions,
             done_importing: false,
+            total_mails: 0,
             importer_error: None,
             missing_permissions: false,
         })
@@ -115,6 +118,7 @@ impl StateUIVariant for ImporterUI {
             },
             (_, true) => StateUIAction::ImportDone {
                 config: self.config.clone(),
+                total: 0,
             },
             (_, false) => StateUIAction::Nothing,
         }
@@ -129,7 +133,7 @@ impl ImporterUI {
 
         let available = ui.available_size();
 
-        let (label, progress, writing, done) = match self.handle_adapter() {
+        let (label, progress, writing, done, written) = match self.handle_adapter() {
             Ok(state) => {
                 #[cfg(target_os = "macos")]
                 if state.missing_permissions {
@@ -140,14 +144,15 @@ impl ImporterUI {
                     label,
                     progress,
                     writing,
+                    written,
                     done,
                     ..
                 } = state;
-                (label, progress, writing, done)
+                (label, progress, writing, done, written)
             }
             Err(e) => {
                 // Generate a response signifying we're done - as there was an error
-                let response = (format!("Error {}", &e), 1.0, false, true);
+                let response = (format!("Error {}", &e), 1.0, false, true, 0);
                 self.importer_error = Some(e);
                 response
             }
@@ -163,6 +168,7 @@ impl ImporterUI {
                 self.importer_error = handle.join().ok().map(|e| e.err()).flatten();
             }
             self.done_importing = true;
+            self.total_mails = written;
         }
 
         let n = (self.progress_blocks.len() as f32 * progress) as usize;
@@ -280,6 +286,7 @@ struct InternalAdapterState {
     label: String,
     progress: f32,
     writing: bool,
+    written: usize,
     done: bool,
     #[cfg(target_os = "macos")]
     missing_permissions: bool,
@@ -309,6 +316,7 @@ impl ImporterUI {
         let State {
             done,
             finishing,
+            written,
             #[cfg(target_os = "macos")]
             missing_permissions,
         } = self.adapter.finished()?;
@@ -320,6 +328,7 @@ impl ImporterUI {
             label,
             progress,
             writing,
+            written,
             done,
             #[cfg(target_os = "macos")]
             missing_permissions,

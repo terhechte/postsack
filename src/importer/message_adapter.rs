@@ -30,6 +30,7 @@ pub struct Progress {
 pub struct State {
     pub finishing: bool,
     pub done: bool,
+    pub written: usize,
     #[cfg(target_os = "macos")]
     pub missing_permissions: bool,
 }
@@ -129,6 +130,7 @@ impl Adapter {
         Ok(State {
             finishing: item.finishing,
             done: item.done,
+            written: item.total_write,
             #[cfg(target_os = "macos")]
             missing_permissions: item.missing_permissions,
         })

@@ -27,6 +27,7 @@ pub enum StateUIAction {
     },
     ImportDone {
         config: Config,
+        total: usize,
     },
     Close {
         config: Config,
@@ -77,8 +78,8 @@ impl StateUI {
             StateUIAction::OpenDatabase { database_path } => {
                 *self = self.open_database(database_path)
             }
-            StateUIAction::ImportDone { config } => {
-                *self = match main::MainUI::new(config.clone()) {
+            StateUIAction::ImportDone { config, total } => {
+                *self = match main::MainUI::new(config.clone(), total) {
                     Ok(n) => StateUI::Main(n),
                     Err(e) => StateUI::Error(ErrorUI::new(e, Some(config.clone()))),
                 };
@@ -122,7 +123,13 @@ impl StateUI {
             Err(report) => return StateUI::Error(error::ErrorUI::new(report, None)),
         };
 
-        match main::MainUI::new(config.clone()) {
+        let total =
+            match crate::database::Database::new(&database_path).and_then(|db| db.total_mails()) {
+                Ok(config) => config,
+                Err(report) => return StateUI::Error(error::ErrorUI::new(report, None)),
+            };
+
+        match main::MainUI::new(config.clone(), total) {
             Ok(n) => StateUI::Main(n),
             Err(e) => StateUI::Error(ErrorUI::new(e, Some(config.clone()))),
         }

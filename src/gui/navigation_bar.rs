@@ -1,6 +1,7 @@
 use crate::model::Engine;
-use eframe::egui::{self, Color32, Widget};
+use eframe::egui::{self, Color32, Label, Widget};
 use eyre::Report;
+use num_format::{Locale, ToFormattedString};
 
 use super::app_state::UIState;
 use super::platform::navigation_button;
@@ -12,6 +13,7 @@ pub struct NavigationBar<'a> {
     error: &'a mut Option<Report>,
     state: &'a mut UIState,
     filter_state: &'a mut FilterState,
+    total_mails: usize,
 }
 
 impl<'a> NavigationBar<'a> {
@@ -20,12 +22,14 @@ impl<'a> NavigationBar<'a> {
         error: &'a mut Option<Report>,
         state: &'a mut UIState,
         filter_state: &'a mut FilterState,
+        total_mails: usize,
     ) -> Self {
         NavigationBar {
             engine,
             error,
             state,
             filter_state,
+            total_mails,
         }
     }
 }
@@ -57,6 +61,11 @@ impl<'a> Widget for NavigationBar<'a> {
                 super::widgets::popover(ui, popup_id, &filter_response, |ui| {
                     ui.add(FilterPanel::new(self.engine, self.filter_state, self.error));
                 });
+
+                ui.add(Label::new(format!(
+                    "{} Mails",
+                    self.total_mails.to_formatted_string(&Locale::en)
+                )));
 
                 // This is a hack to get right-alignment.
                 // we can't size the button, we can only size text. We will size text

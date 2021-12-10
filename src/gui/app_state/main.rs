@@ -22,10 +22,11 @@ pub struct MainUI {
     error: Option<Report>,
     state: UIState,
     filter_state: FilterState,
+    total: usize,
 }
 
 impl MainUI {
-    pub fn new(config: Config) -> Result<Self> {
+    pub fn new(config: Config, total: usize) -> Result<Self> {
         let mut engine = Engine::new(&config)?;
         engine.start()?;
         Ok(Self {
@@ -34,6 +35,7 @@ impl MainUI {
             error: None,
             state: UIState::default(),
             filter_state: FilterState::new(),
+            total,
         })
     }
 }
@@ -55,7 +57,7 @@ impl StateUIVariant for MainUI {
             .fill(platform_colors.window_background)
             .stroke(Stroke::none());
 
-        egui::TopBottomPanel::top("my_panel")
+        egui::TopBottomPanel::top("panel")
             .frame(frame)
             .show(ctx, |ui| {
                 ui.add(super::super::navigation_bar::NavigationBar::new(
@@ -63,11 +65,12 @@ impl StateUIVariant for MainUI {
                     &mut self.error,
                     &mut self.state,
                     &mut self.filter_state,
+                    self.total,
                 ));
             });
 
         if self.state.show_emails {
-            egui::SidePanel::right("my_left_panel")
+            egui::SidePanel::right("left_panel")
                 .default_width(500.0)
                 .show(ctx, |ui| {
                     ui.add(super::super::mail_panel::MailPanel::new(
