@@ -52,6 +52,24 @@ mod tests {
         let segments =
             model::segmentations::layouted_segments(&mut engine, default_rect()).unwrap();
         assert_eq!(segments.len(), 0);
+
+        // Remove filter
+        model::segmentations::set_filters(&mut engine, &[]).expect("");
+        engine.wait().expect("");
+
+        let segments =
+            model::segmentations::layouted_segments(&mut engine, default_rect()).unwrap();
+        assert_eq!(segments.len(), 2);
+
+        // Push a new segment
+        let segment = segments[0].clone();
+        engine.push(segment).unwrap();
+        engine.wait().expect("");
+
+        // Check the new segments
+        let segments =
+            model::segmentations::layouted_segments(&mut engine, default_rect()).unwrap();
+        assert_eq!(segments.len(), 1);
     }
 }
 
