@@ -109,7 +109,7 @@ impl Database {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ``` ignore
     /// let db = Database::new("db.sqlite").unwrap();
     /// let (sender, handle) = db.import();
     /// sender.send(DBMessage::Mail(m1)).unwrap();

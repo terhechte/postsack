@@ -203,7 +203,7 @@ impl Engine {
     /// Returns true if there're currently calculations open and `process`
     /// needs to be called. This can be used in `Eventloop` based frameworks
     /// such as `egui` to know when to continue calling `process` in the `loop`
-    /// ```
+    /// ```ignore
     /// loop {
     ///  self.engine.process().unwrap();
     ///  if self.engine.is_busy() {
