@@ -7,8 +7,6 @@ use postsack::{
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use postsack::database::{query::Field, query_result::QueryResult};
 
     use super::*;
@@ -37,16 +35,14 @@ mod tests {
         });
         let mails = mails.expect("Expected Mails");
 
-        let subjects: HashSet<String> = HashSet::from(
-            mails
-                .into_iter()
-                .map(|s| match s {
-                    QueryResult::Normal(row) => row[&Field::Subject].to_string(),
-                    _ => panic!(),
-                })
-                .collect(),
-        );
-        assert!(subjects.contains(" check bogus body header (from)"));
+        let subjects: Vec<String> = mails
+            .into_iter()
+            .map(|s| match s {
+                QueryResult::Normal(row) => row[&Field::Subject].to_string(),
+                _ => panic!(),
+            })
+            .collect();
+        assert!(subjects.contains(&" check bogus body header (from)".into()));
     }
 
     /// Test that the AppleMail importer works

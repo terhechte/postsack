@@ -13,10 +13,12 @@ use super::super::shared::parse::ParseableEmail;
 /// as the name of the folder the email was in.
 #[derive(Debug)]
 pub struct RawEmailEntry {
+    #[allow(unused)]
     folder_name: String,
     eml_path: PathBuf,
     gmail_meta_path: Option<PathBuf>,
     is_compressed: bool,
+    #[allow(unused)]
     size: u64,
 }
 
