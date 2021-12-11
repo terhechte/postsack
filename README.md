@@ -10,6 +10,7 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
 ## Open Issues
 
 - [ ] Edition 2021
+- [ ] clippy
 - [ ] set up CI
 - [ ] rename repository to postsack
 - [x] add support for message filters (read etc), the UI is already there, the filters are not applied yet
