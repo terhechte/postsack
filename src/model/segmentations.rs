@@ -91,6 +91,7 @@ pub fn set_filters(engine: &mut Engine, filters: &[Filter]) -> Result<()> {
 /// * `engine` - The engine to use for retrieving data
 /// * `aggregation` - The aggregation to return the fields for. Required to also return the current aggregation field.
 pub fn aggregation_fields(engine: &Engine, aggregation: &Aggregation) -> Vec<Field> {
+    #[allow(clippy::unnecessary_filter_map)]
     Field::all_cases()
         .filter_map(|f| {
             if f == aggregation.field {

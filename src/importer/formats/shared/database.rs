@@ -42,7 +42,7 @@ pub fn into_database<Mail: ParseableEmail + 'static>(
         .for_each(|entry| {
             // Try to write the message into the database
             if let Err(e) = match entry {
-                Ok(mail) => sender.send(DBMessage::Mail(mail)),
+                Ok(mail) => sender.send(DBMessage::Mail(Box::new(mail))),
                 Err(e) => sender.send(DBMessage::Error(e)),
             } {
                 tracing::error!("Error Inserting into Database: {:?}", &e);

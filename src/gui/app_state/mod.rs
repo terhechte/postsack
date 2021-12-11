@@ -81,7 +81,7 @@ impl StateUI {
             StateUIAction::ImportDone { config, total } => {
                 *self = match main::MainUI::new(config.clone(), total) {
                     Ok(n) => StateUI::Main(n),
-                    Err(e) => StateUI::Error(ErrorUI::new(e, Some(config.clone()))),
+                    Err(e) => StateUI::Error(ErrorUI::new(e, Some(config))),
                 };
             }
             StateUIAction::Close { config } => {
@@ -131,7 +131,7 @@ impl StateUI {
 
         match main::MainUI::new(config.clone(), total) {
             Ok(n) => StateUI::Main(n),
-            Err(e) => StateUI::Error(ErrorUI::new(e, Some(config.clone()))),
+            Err(e) => StateUI::Error(ErrorUI::new(e, Some(config))),
         }
     }
 
@@ -139,7 +139,7 @@ impl StateUI {
         let importer = match import::ImporterUI::new(config.clone()) {
             Ok(n) => n,
             Err(e) => {
-                return StateUI::Error(error::ErrorUI::new(e, Some(config.clone())));
+                return StateUI::Error(error::ErrorUI::new(e, Some(config)));
             }
         };
 

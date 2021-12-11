@@ -43,61 +43,59 @@ impl<'a> Widget for NavigationBar<'a> {
         ui.visuals_mut().widgets.active.corner_radius = 5.0;
         ui.visuals_mut().widgets.hovered.corner_radius = 5.0;
 
-        let response = ui
-            .horizontal(|ui| {
-                ui.set_height(40.0);
+        ui.horizontal(|ui| {
+            ui.set_height(40.0);
 
-                ui.add_space(15.0);
+            ui.add_space(15.0);
 
-                let close_text = "Close";
-                if ui.add(navigation_button(close_text)).clicked() {
-                    self.state.action_close = true;
-                }
+            let close_text = "Close";
+            if ui.add(navigation_button(close_text)).clicked() {
+                self.state.action_close = true;
+            }
 
-                let filter_text = "\u{1f50D} Filters";
-                let filter_response = ui.add(navigation_button(filter_text));
-                let popup_id = ui.make_persistent_id("filter_panel_id");
+            let filter_text = "\u{1f50D} Filters";
+            let filter_response = ui.add(navigation_button(filter_text));
+            let popup_id = ui.make_persistent_id("filter_panel_id");
 
-                super::widgets::popover(ui, popup_id, &filter_response, |ui| {
-                    ui.add(FilterPanel::new(self.engine, self.filter_state, self.error));
-                });
+            super::widgets::popover(ui, popup_id, &filter_response, |ui| {
+                ui.add(FilterPanel::new(self.engine, self.filter_state, self.error));
+            });
 
-                ui.add(Label::new(format!(
-                    "{} Mails",
-                    self.total_mails.to_formatted_string(&Locale::en)
-                )));
+            ui.add(Label::new(format!(
+                "{} Mails",
+                self.total_mails.to_formatted_string(&Locale::en)
+            )));
 
-                // This is a hack to get right-alignment.
-                // we can't size the button, we can only size text. We will size text
-                // and then use ~that for these buttons
-                let mut w = ui.available_width();
+            // This is a hack to get right-alignment.
+            // we can't size the button, we can only size text. We will size text
+            // and then use ~that for these buttons
+            let mut w = ui.available_width();
 
-                let mail_text = "\u{1F4E7} Mails";
-                let mail_galley = ui.painter().layout_no_wrap(
-                    mail_text.to_owned(),
-                    egui::TextStyle::Button,
-                    Color32::WHITE,
-                );
+            let mail_text = "\u{1F4E7} Mails";
+            let mail_galley = ui.painter().layout_no_wrap(
+                mail_text.to_owned(),
+                egui::TextStyle::Button,
+                Color32::WHITE,
+            );
 
-                // FIXME: Add support for exporting the selected mails as deletion rules
-                // let filter_text = "\u{1F5B9} Export";
-                // let filter_galley = ui.painter().layout_no_wrap(
-                //     filter_text.to_owned(),
-                //     egui::TextStyle::Button,
-                //     Color32::WHITE,
-                // );
+            // FIXME: Add support for exporting the selected mails as deletion rules
+            // let filter_text = "\u{1F5B9} Export";
+            // let filter_galley = ui.painter().layout_no_wrap(
+            //     filter_text.to_owned(),
+            //     egui::TextStyle::Button,
+            //     Color32::WHITE,
+            // );
 
-                w -= mail_galley.size().x + ui.spacing().button_padding.x * 4.0;
-                //w -= filter_galley.size().x + ui.spacing().button_padding.x * 4.0;
-                ui.add_space(w);
+            w -= mail_galley.size().x + ui.spacing().button_padding.x * 4.0;
+            //w -= filter_galley.size().x + ui.spacing().button_padding.x * 4.0;
+            ui.add_space(w);
 
-                //ui.add(navigation_button(filter_text));
+            //ui.add(navigation_button(filter_text));
 
-                if ui.add(navigation_button(mail_text)).clicked() {
-                    self.state.show_emails = !self.state.show_emails;
-                }
-            })
-            .response;
-        response
+            if ui.add(navigation_button(mail_text)).clicked() {
+                self.state.show_emails = !self.state.show_emails;
+            }
+        })
+        .response
     }
 }

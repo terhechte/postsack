@@ -102,9 +102,9 @@ impl Config {
         // The following fields are of version 1.0, so they should aways exist
         let emails_folder_path_str = fields
             .get("emails_folder_path")
-            .ok_or(eyre!("Missing config field emails_folder_path"))?
+            .ok_or_else(|| eyre!("Missing config field emails_folder_path"))?
             .as_str()
-            .ok_or(eyre!("Invalid field type for emails_folder_path"))?;
+            .ok_or_else(|| eyre!("Invalid field type for emails_folder_path"))?;
         let emails_folder_path = PathBuf::from_str(emails_folder_path_str).map_err(|e| {
             eyre!(
                 "Invalid emails_folder_path: {}: {}",
@@ -112,25 +112,26 @@ impl Config {
                 e
             )
         })?;
+        #[allow(clippy::needless_collect)]
         let sender_emails: Vec<String> = fields
             .get("sender_emails")
             .map(|v| v.as_str().map(|e| e.to_string()))
             .flatten()
-            .ok_or(eyre!("Missing config field sender_emails"))?
-            .split(",")
+            .ok_or_else(|| eyre!("Missing config field sender_emails"))?
+            .split(',')
             .map(|e| e.trim().to_owned())
             .collect();
         let format = fields
             .get("format")
             .map(|e| e.as_str())
             .flatten()
-            .map(|e| FormatType::from(e))
-            .ok_or(eyre!("Missing config field format_type"))?;
+            .map(FormatType::from)
+            .ok_or_else(|| eyre!("Missing config field format_type"))?;
         let persistent = fields
             .get("persistent")
             .map(|e| e.as_bool())
             .flatten()
-            .ok_or(eyre!("Missing config field persistent"))?;
+            .ok_or_else(|| eyre!("Missing config field persistent"))?;
         Ok(Config {
             database_path: path.as_ref().to_path_buf(),
             emails_folder_path,
@@ -186,7 +187,7 @@ impl Config {
             "sender_emails".to_owned(),
             self.sender_emails
                 .iter()
-                .map(|e| e.clone())
+                .cloned()
                 .collect::<Vec<String>>()
                 .join(",")
                 .into(),

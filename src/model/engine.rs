@@ -123,7 +123,7 @@ impl Engine {
         // Add the next group by
         let index = self.group_by_stack.len();
         let next = default_group_by_stack(index)
-            .ok_or(eyre::eyre!("default group by stack out of bounds"))?;
+            .ok_or_else(|| eyre::eyre!("default group by stack out of bounds"))?;
         self.group_by_stack.push(next);
 
         // Block UI & Wait for updates

@@ -9,7 +9,7 @@ pub fn popover(
     ui: &Ui,
     popup_id: Id,
     widget_response: &Response,
-    add_contents: impl FnOnce(&mut Ui) -> (),
+    add_contents: impl FnOnce(&mut Ui),
 ) {
     if widget_response.clicked() {
         ui.memory().toggle_popup(popup_id);

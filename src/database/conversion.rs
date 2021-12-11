@@ -72,7 +72,7 @@ pub fn value_from_field<'stmt>(field: &Field, row: &Row<'stmt>) -> Result<ValueF
         Path | SenderDomain | SenderLocalPart | SenderName | ToGroup | ToName | ToAddress
         | Subject => {
             let string: String = row.get::<&str, String>(field.as_str())?;
-            return Ok(ValueField::string(field, &string));
+            Ok(ValueField::string(field, &string))
         }
         Year | Month | Day | Timestamp => {
             return Ok(ValueField::usize(
@@ -84,10 +84,10 @@ pub fn value_from_field<'stmt>(field: &Field, row: &Row<'stmt>) -> Result<ValueF
             let tag_string = row.get::<&str, String>(field.as_str())?;
             let tags =
                 crate::importer::formats::shared::email::EmailMeta::tags_from_string(&tag_string);
-            return Ok(ValueField::array(
+            Ok(ValueField::array(
                 field,
-                tags.into_iter().map(|f| Value::String(f)).collect(),
-            ));
+                tags.into_iter().map(Value::String).collect(),
+            ))
         }
         IsReply | IsSend | MetaIsSeen => {
             return Ok(ValueField::bool(

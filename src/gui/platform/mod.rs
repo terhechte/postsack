@@ -45,7 +45,7 @@ pub enum Theme {
 }
 
 impl Theme {
-    pub fn to_visuals(&self) -> Visuals {
+    pub fn visuals(&self) -> Visuals {
         match self {
             Theme::Light => egui::Visuals::light(),
             Theme::Dark => egui::Visuals::dark(),
@@ -67,7 +67,7 @@ pub fn setup(ctx: &egui::CtxRef, theme: Theme) {
         .set(module::platform_colors(theme))
         .expect("Could not setup colors");
     let colors = module::platform_colors(theme);
-    let mut visuals = theme.to_visuals();
+    let mut visuals = theme.visuals();
     visuals.widgets.noninteractive.bg_fill = colors.window_background;
     ctx.set_visuals(visuals);
     module::setup(ctx)

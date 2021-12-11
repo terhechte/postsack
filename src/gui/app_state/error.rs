@@ -59,10 +59,8 @@ impl ErrorUI {
             ui.label(format!("{}", &self.report));
             ui.add_space(20.0);
             ui.horizontal(|ui| {
-                if self.config.is_some() {
-                    if ui.button("Try Again").clicked() {
-                        self.action_back = true;
-                    }
+                if self.config.is_some() && ui.button("Try Again").clicked() {
+                    self.action_back = true;
                 }
                 ui.add_space(125.0);
                 if ui.button("Quit").clicked() {

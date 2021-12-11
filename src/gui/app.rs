@@ -46,7 +46,7 @@ impl App for PostsackApp {
             ctx.set_pixels_per_point(pixels * 1.2);
 
             // If there is a platform error, display it
-            if let Some(e) = super::platform::initial_update(&ctx).err() {
+            if let Some(e) = super::platform::initial_update(ctx).err() {
                 self.state = StateUI::error(e);
             }
         }

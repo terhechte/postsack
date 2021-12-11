@@ -83,7 +83,7 @@ fn install_fonts(egui_ctx: &egui::CtxRef) {
     ] {
         fonts
             .font_data
-            .insert(key.to_owned(), std::borrow::Cow::Borrowed(&data));
+            .insert(key.to_owned(), std::borrow::Cow::Borrowed(data));
         fonts
             .fonts_for_family
             .get_mut(&family)

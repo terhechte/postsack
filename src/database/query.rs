@@ -131,6 +131,7 @@ impl ValueField {
         &self.value
     }
 
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
         match &self.value {
             Value::String(s) => s.clone(),
