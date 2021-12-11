@@ -149,7 +149,7 @@ impl<'a> AnimatedBackground<'a> {
                 // the fill color is based on the added block count
                 color_adder += *n;
                 let color_addition = if colors.is_light {
-                    -1 * (color_adder % 50) as i8
+                    -((color_adder % 50) as i8)
                 } else {
                     (color_adder % 50) as i8
                 };

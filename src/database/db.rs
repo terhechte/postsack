@@ -53,7 +53,7 @@ impl Database {
             Some(n) => n,
             None => bail!("No connection to database available in query"),
         };
-        let mut stmt = connection.prepare(&QUERY_COUNT_MAILS)?;
+        let mut stmt = connection.prepare(QUERY_COUNT_MAILS)?;
         let count: usize = stmt.query_row([], |q| q.get(0))?;
         Ok(count)
     }
@@ -61,7 +61,7 @@ impl Database {
     pub fn save_config(&self, config: Config) -> Result<()> {
         let fields = config
             .into_fields()
-            .ok_or(eyre::eyre!("Could not create fields from config"))?;
+            .ok_or_else(|| eyre::eyre!("Could not create fields from config"))?;
         self.insert_config_fields(fields)
     }
 
@@ -181,7 +181,7 @@ impl Database {
             Some(n) => n,
             None => bail!("No connection to database available in query"),
         };
-        let mut stmt = connection.prepare(&QUERY_SELECT_META)?;
+        let mut stmt = connection.prepare(QUERY_SELECT_META)?;
         let mut query_results = HashMap::new();
         let mut rows = stmt.query([])?;
         while let Some(row) = rows.next()? {
@@ -205,7 +205,7 @@ impl Database {
             Some(n) => n,
             None => bail!("No connection to database available in query"),
         };
-        let mut stmt = connection.prepare(&QUERY_INSERT_META)?;
+        let mut stmt = connection.prepare(QUERY_INSERT_META)?;
         for (key, value) in fields {
             stmt.execute(params![key, value])?;
         }

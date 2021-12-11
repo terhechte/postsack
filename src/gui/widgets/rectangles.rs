@@ -46,7 +46,7 @@ impl<'a> Widget for Rectangles<'a> {
         for (index, item) in items.iter().enumerate() {
             let item_response = ui.put(
                 item.layout_rect(),
-                rectangle(&item, active, colors.content_background, index, total),
+                rectangle(item, active, colors.content_background, index, total),
             );
             if item_response.clicked() && active {
                 *self.error = self.engine.push(item.clone()).err();
@@ -57,9 +57,8 @@ impl<'a> Widget for Rectangles<'a> {
             }
         }
 
-        if let Some(h) = hovered {
+        if let Some(text) = hovered {
             // Calculate the size
-            let text = format!("{}", h);
             let galley = ui
                 .painter()
                 .layout_no_wrap(text.clone(), TextStyle::Body, Color32::WHITE);

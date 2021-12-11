@@ -23,9 +23,10 @@ pub struct FilterState {
 
 impl FilterState {
     pub fn new() -> Self {
-        let mut basic = Self::default();
-        basic.is_send = Some(false);
-        basic
+        FilterState {
+            is_send: Some(false),
+            ..Default::default()
+        }
     }
 
     fn apply(&self, engine: &mut Engine, error: &mut Option<Report>) {
@@ -213,7 +214,7 @@ fn radio_group(ui: &mut egui::Ui, title: &str, names: &[&str; 3], value: &mut Op
 }
 
 fn input_block(ui: &mut egui::Ui, title: &str, value: &mut Option<String>) {
-    let mut text_value = value.clone().unwrap_or("".to_string());
+    let mut text_value = value.clone().unwrap_or_else(|| "".to_string());
     ui.label(title);
     ui.text_edit_singleline(&mut text_value);
     match text_value.as_str() {

@@ -35,6 +35,7 @@ mod tests {
         });
         let mails = mails.expect("Expected Mails");
 
+        #[allow(clippy::needless_collect)]
         let subjects: Vec<String> = mails
             .into_iter()
             .map(|s| match s {

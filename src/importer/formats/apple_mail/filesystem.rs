@@ -73,7 +73,7 @@ pub fn read_emails(config: &Config, sender: MessageSender) -> Result<Vec<Mail>> 
                     tracing::error!("{} {:?}", path.display(), &e);
                     if let Err(e) = sender.send(Message::Error(eyre!(
                         "Could read mails in {}: {:?}",
-                        path.clone().display(),
+                        path.display(),
                         e
                     ))) {
                         tracing::error!("Error sending error {}", e);

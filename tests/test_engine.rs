@@ -45,8 +45,7 @@ mod tests {
 
         // Add a filter
         let filter = Filter::Is(ValueField::bool(&Field::IsSend, true));
-        model::segmentations::set_filters(&mut engine, &vec![filter])
-            .expect("Expect setting filters");
+        model::segmentations::set_filters(&mut engine, &[filter]).expect("Expect setting filters");
         engine.wait().expect("");
 
         let segments =

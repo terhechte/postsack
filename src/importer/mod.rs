@@ -1,6 +1,7 @@
 use crossbeam_channel;
 
 pub(crate) mod formats;
+#[allow(clippy::module_inception)]
 mod importer;
 mod message_adapter;
 

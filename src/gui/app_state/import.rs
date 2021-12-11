@@ -322,7 +322,7 @@ impl ImporterUI {
         } = self.adapter.finished()?;
 
         if finishing {
-            label = format!("Finishing Up");
+            label = "Finishing Up".into();
         }
         Ok(InternalAdapterState {
             label,

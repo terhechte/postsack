@@ -35,7 +35,7 @@ impl Segmentation {
             rect.width() as f64,
             rect.height() as f64,
         );
-        layout.layout_items(&mut self.items(), bounds);
+        layout.layout_items(self.items(), bounds);
     }
 
     /// The total amount of items in all the `Segments`.

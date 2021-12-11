@@ -126,7 +126,7 @@ impl StartupUI {
         let mut txt = self
             .email_address
             .clone()
-            .unwrap_or("john@example.org".to_string());
+            .unwrap_or_else(|| "john@example.org".to_string());
 
         let response = ui.allocate_ui_at_rect(center, |ui| {
             // We use a grid as that gives us more spacing opportunities
@@ -154,10 +154,8 @@ impl StartupUI {
                         if ui.button("Browse...").clicked() {
                             self.open_email_folder_dialog()
                         }
-                        if self.format == FormatType::AppleMail {
-                            if ui.button("or Mail.app default folder").clicked() {
-                                self.email_folder = self.format.default_path();
-                            }
+                        if self.format == FormatType::AppleMail && ui.button("or Mail.app default folder").clicked(){
+                            self.email_folder = self.format.default_path();
                         }
                     });
                     ui.end_row();
@@ -258,16 +256,16 @@ impl StartupUI {
         let emails: Vec<String> = self
             .email_address
             .iter()
-            .map(|e| e.split(",").map(|e| e.trim().to_string()).collect())
+            .map(|e| e.split(',').map(|e| e.trim().to_string()).collect())
             .collect();
 
         if !email.exists() {
-            self.error_message = Some(format!("Email folder doesn't exist"));
+            self.error_message = Some("Email folder doesn't exist".into());
             return;
         }
 
-        if self.save_to_disk && !self.database_path.is_some() {
-            self.error_message = Some(format!("Please select a database folder"));
+        if self.save_to_disk && self.database_path.is_none() {
+            self.error_message = Some("Please select a database folder".into());
             return;
         }
 
@@ -293,7 +291,7 @@ impl StartupUI {
         let mut selected = self.format;
         egui::ComboBox::from_id_source("mailbox_type_combobox")
             .width(width)
-            .selected_text(format!("{}", selected.name()))
+            .selected_text(selected.name())
             .show_ui(ui, |ui| {
                 for format in FormatType::all_cases() {
                     ui.selectable_value(&mut selected, format, format.name());
@@ -307,7 +305,7 @@ impl StartupUI {
         let default_path = self
             .format
             .default_path()
-            .unwrap_or(std::path::Path::new(&fallback.to_string()).to_path_buf());
+            .unwrap_or_else(|| std::path::Path::new(&fallback.to_string()).to_path_buf());
 
         let folder = match tinyfiledialogs::select_folder_dialog(
             "Select folder",
