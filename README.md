@@ -5,12 +5,14 @@
 ### Performance
 
 It currently parses 632383 emails in ~160 seconds, so roughly `4.000` emails per second. This excludes (for now) attachments.
-Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` emails per second. This excludes (for now) attachments.
+Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` emails per second. This excludes (for now) attachments. (on M1)
+
 
 ## Open Issues
 
-- [ ] Edition 2021
-- [ ] clippy
+- [x] Total Mail Count doesn't work when doing new import
+- [x] Edition 2021
+- [x] clippy
 - [ ] set up CI
 - [ ] rename repository to postsack
 - [x] add support for message filters (read etc), the UI is already there, the filters are not applied yet
@@ -26,9 +28,8 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
 - [x] add more tests
 - [ ] build static linux binary via docker
 - [ ] try to build a static windows binary
-- [ ] update metadata in Cargo.toml
-- [ ] add app platform icons
-- [ ] for many mails, the segmentations don't work correctly due to async issues
+- [x] update metadata in Cargo.toml
+- [x] add app platform icons
 
 ## Linux Issues
 

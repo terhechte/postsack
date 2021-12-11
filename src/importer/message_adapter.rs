@@ -130,7 +130,7 @@ impl Adapter {
         Ok(State {
             finishing: item.finishing,
             done: item.done,
-            written: item.total_write,
+            written: item.write,
             #[cfg(target_os = "macos")]
             missing_permissions: item.missing_permissions,
         })

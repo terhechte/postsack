@@ -118,7 +118,7 @@ impl StateUIVariant for ImporterUI {
             },
             (_, true) => StateUIAction::ImportDone {
                 config: self.config.clone(),
-                total: 0,
+                total: self.total_mails,
             },
             (_, false) => StateUIAction::Nothing,
         }
