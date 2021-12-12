@@ -7,38 +7,17 @@
 It currently parses 632383 emails in ~160 seconds, so roughly `4.000` emails per second. This excludes (for now) attachments.
 Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` emails per second. This excludes (for now) attachments. (on M1)
 
-
 ## Open Issues
 
-- [x] Total Mail Count doesn't work when doing new import
-- [x] Edition 2021
-- [x] clippy
-- [ ] set up CI
-- [ ] rename repository to postsack
-- [x] add support for message filters (read etc), the UI is already there, the filters are not applied yet
-  - [x] the filters for tags should allow selecting from the existing tags?
-- [x] mbox is multiple files, e.g. inbox.mbox, sent.mbox. support this
-- [x] support mbox
-- [x] support apple mail
-- [x] try re-opening a database...
-- [x] save config into sqlite
-- [x] store last opened sqlite file
-- [x] check if we get any values for the to_sender to_domain fields etc (only to_group seemingly has no data for my mails)
-- [x] update to egui 15
-- [x] add more tests
-- [ ] build static linux binary via docker
-- [ ] try to build a static windows binary
-- [x] update metadata in Cargo.toml
-- [x] add app platform icons
+- [ ] build static linux binary via docker: Via Github Actions?
+- [ ] try to build a static windows binary: Via Github Actions?
+- [ ] try to build a macos binary: Via Github Actions?
 
-## Linux Issues
+## Windows Issues
 
-- [x] broken background color
-- [x] can't switch import format
-- [x] mbox support for selecting a folder of mbox files (inbox etc)
-- [ ] weird sizing behaviour on startup
-- [x] background color in startup screen is transparent
-- [ ] current tests fail under linux
+- [ ] No Outlook support
+- [ ] The `apple importer` fails
+- [ ] Very much untested (it does run though)
 
 ## Future Options
 
@@ -59,10 +38,10 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
 
 ## Development
 
-Generate a macOS bundle via [Cargo Bundle](https://github.com/burtonageo/cargo-bundle):
+Generate a macOS bundle (requires [Cargo Bundle](https://github.com/burtonageo/cargo-bundle))
 
 ``` sh
-cargo bundle --bin gui
+./build_mac.sh
 ```
 
 ### Linux Dependencies
@@ -76,8 +55,7 @@ In order to build (and or run) on Linux, the following dependencies are needed:
 sudo dnf install @development-tools glib cairo-devel pango-devel gdk-pixbux2-devel atk-devel gtk3 gtk3-devel libsqlite3x-devel
 ```
 
-#### Ubuntu (currently untested)
-
+#### Ubuntu
 
 ``` sh
 # Development
