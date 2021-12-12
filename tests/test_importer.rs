@@ -5,15 +5,29 @@ use postsack::{
     types::FormatType,
 };
 
+
 #[cfg(test)]
 mod tests {
     use postsack::database::{query::Field, query_result::QueryResult};
+    use std::sync::Once;
 
     use super::*;
+
+    static INIT: Once = Once::new();
+
+    pub fn initialize() {
+        INIT.call_once(|| {
+            if std::env::var("RUST_LOG").is_err() {
+                std::env::set_var("RUST_LOG", "trace");
+            }
+            postsack::setup_tracing();
+        });
+    }
 
     #[test]
     /// Test that the mbox importer works
     fn test_mbox_import() {
+        initialize();
         let path = "tests/resources/mbox";
         let config =
             postsack::types::Config::new(None, path, vec!["".to_string()], FormatType::Mbox)
@@ -49,6 +63,7 @@ mod tests {
     /// Test that the AppleMail importer works
     #[test]
     fn test_applemail_importer() {
+        initialize();
         let path = "tests/resources/applemail";
         let config =
             postsack::types::Config::new(None, path, vec!["".to_string()], FormatType::AppleMail)

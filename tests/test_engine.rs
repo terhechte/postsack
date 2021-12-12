@@ -11,9 +11,22 @@ use postsack::{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Once;
+
+    static INIT: Once = Once::new();
+
+    pub fn initialize() {
+        INIT.call_once(|| {
+            if std::env::var("RUST_LOG").is_err() {
+                std::env::set_var("RUST_LOG", "trace");
+            }
+            postsack::setup_tracing();
+        });
+    }
 
     #[test]
     fn test_engine_all() {
+        initialize();
         let config = create_database();
         let mut engine = Engine::new(&config).expect("Expected Engine");
         engine.start().expect("Expect to start engine");
