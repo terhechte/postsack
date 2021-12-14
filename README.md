@@ -12,6 +12,10 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
 - [ ] build static linux binary via docker: Via Github Actions?
 - [ ] try to build a static windows binary: Via Github Actions?
 - [ ] try to build a macos binary: Via Github Actions?
+- [ ] Demo Video
+- [ ] Documentation
+- [ ] wasm build?
+
 
 ## Windows Issues
 
