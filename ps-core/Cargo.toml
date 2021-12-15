@@ -1,5 +1,5 @@
 [package]
-name = "postsack-core"
+name = "ps-core"
 version = "0.2.0"
 edition = "2021"
 description = "Provides a high level visual overview of swaths of email"
