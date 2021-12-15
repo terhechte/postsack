@@ -2,8 +2,13 @@ use crossbeam_channel;
 use eyre::{Report, Result};
 use std::thread::JoinHandle;
 
+use crate::DatabaseLike;
+
 pub trait Importerlike {
-    fn import(self) -> Result<(MessageReceiver, JoinHandle<Result<()>>)>;
+    fn import<Database: DatabaseLike + 'static>(
+        self,
+        database: Database,
+    ) -> Result<(MessageReceiver, JoinHandle<Result<()>>)>;
 }
 
 /// The message that informs of the importers progress

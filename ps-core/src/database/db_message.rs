@@ -1,6 +1,6 @@
 use eyre::Report;
 
-use ps_core::EmailEntry;
+use crate::EmailEntry;
 
 /// Parameter for sending work to the database during `import`.
 pub enum DBMessage {
