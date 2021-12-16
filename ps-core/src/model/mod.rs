@@ -5,4 +5,4 @@ pub mod segmentations;
 mod types;
 
 pub use engine::Engine;
-pub use types::Segment;
+pub use types::{Rect, Segment};

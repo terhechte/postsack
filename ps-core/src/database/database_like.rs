@@ -8,7 +8,7 @@ use crate::Config;
 
 use super::{db_message::DBMessage, query::Query, query_result::QueryResult};
 
-pub trait DatabaseLike: Send + Sync {
+pub trait DatabaseLike: Clone + Send {
     fn new(path: impl AsRef<Path>) -> Result<Self>
     where
         Self: Sized;

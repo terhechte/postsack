@@ -2,30 +2,32 @@ use chrono::Datelike;
 use eyre::{bail, Report, Result};
 use rusqlite::{self, params, Connection, Statement};
 
+use std::path::PathBuf;
 use std::{collections::HashMap, path::Path, thread::JoinHandle};
 
-use super::{sql::*, DBMessage};
+use super::sql::*;
 use super::{value_from_field, RowConversion};
 use ps_core::{
     crossbeam_channel::{unbounded, Sender},
-    Config, EmailEntry, OtherQuery, Query, QueryResult,
+    Config, DBMessage, DatabaseLike, EmailEntry, OtherQuery, Query, QueryResult,
 };
 
 #[derive(Debug)]
 pub struct Database {
     connection: Option<Connection>,
+    path: PathBuf,
 }
 
-impl Database {
-    /// Open a database and try to retrieve a config from the information stored in there
-    pub fn config<P: AsRef<Path>>(path: P) -> Result<Config> {
-        let database = Self::new(path.as_ref())?;
-        let fields = database.select_config_fields()?;
-        Config::from_fields(path.as_ref(), fields)
+impl Clone for Database {
+    fn clone(&self) -> Self {
+        // If we could open one before, we hopefully can open one again
+        Database::new(&self.path).unwrap()
     }
+}
 
+impl DatabaseLike for Database {
     /// Open database at path `Path`.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
+    fn new(path: impl AsRef<Path>) -> Result<Self> {
         #[allow(unused_mut)]
         let mut connection = Connection::open(path.as_ref())?;
 
@@ -42,10 +44,11 @@ impl Database {
 
         Ok(Database {
             connection: Some(connection),
+            path: path.as_ref().into(),
         })
     }
 
-    pub fn total_mails(&self) -> Result<usize> {
+    fn total_mails(&self) -> Result<usize> {
         let connection = match &self.connection {
             Some(n) => n,
             None => bail!("No connection to database available in query"),
@@ -55,14 +58,14 @@ impl Database {
         Ok(count)
     }
 
-    pub fn save_config(&self, config: Config) -> Result<()> {
+    fn save_config(&self, config: Config) -> Result<()> {
         let fields = config
             .into_fields()
             .ok_or_else(|| eyre::eyre!("Could not create fields from config"))?;
         self.insert_config_fields(fields)
     }
 
-    pub fn query(&self, query: &Query) -> Result<Vec<QueryResult>> {
+    fn query(&self, query: &Query) -> Result<Vec<QueryResult>> {
         use rusqlite::params_from_iter;
         let c = match &self.connection {
             Some(n) => n,
@@ -113,7 +116,7 @@ impl Database {
     /// sender.send(DBMessage::Mail(m2)).unwrap();
     /// handle.join().unwrap();
     /// ```
-    pub fn import(mut self) -> (Sender<DBMessage>, JoinHandle<Result<usize>>) {
+    fn import(mut self) -> (Sender<DBMessage>, JoinHandle<Result<usize>>) {
         let (sender, receiver) = unbounded();
 
         // Import can only be called *once* on a database created with `new`.
@@ -164,6 +167,15 @@ impl Database {
             Ok(counter)
         });
         (sender, handle)
+    }
+}
+
+impl Database {
+    /// Open a database and try to retrieve a config from the information stored in there
+    pub fn config<P: AsRef<Path>>(path: P) -> Result<Config> {
+        let database = Self::new(path.as_ref())?;
+        let fields = database.select_config_fields()?;
+        Config::from_fields(path.as_ref(), fields)
     }
 
     fn create_tables(connection: &Connection) -> Result<()> {

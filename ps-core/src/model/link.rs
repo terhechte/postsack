@@ -83,10 +83,9 @@ impl<Context: Send + Sync + 'static> Link<Context> {
 
 pub(super) fn run<Context: Send + Sync + 'static, Database: DatabaseLike + 'static>(
     config: &Config,
-    database: Database,
 ) -> Result<Link<Context>> {
     // Create a new database connection, just for reading
-    //let database = Database::new(&config.database_path)?;
+    let database = Database::new(&config.database_path.clone())?;
     let (input_sender, input_receiver) = unbounded();
     let (output_sender, output_receiver) = unbounded();
     let _ = std::thread::spawn(move || inner_loop(database, input_receiver, output_sender));

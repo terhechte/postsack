@@ -1,5 +1,4 @@
 use eyre::{eyre, Result};
-use rand::Rng;
 use serde_json::Value;
 use strum::{self, IntoEnumIterator};
 use strum_macros::{EnumIter, IntoStaticStr};
@@ -155,7 +154,7 @@ impl Config {
         let database_path = match db {
             Some(n) => n.as_ref().to_path_buf(),
             None => {
-                let number: u32 = rand::thread_rng().gen();
+                let number = timestamp();
                 let folder = "postsack";
                 let filename = format!("{}.sqlite", number);
                 let mut temp_dir = std::env::temp_dir();
@@ -200,4 +199,13 @@ impl Config {
 
         Some(new)
     }
+}
+
+fn timestamp() -> u32 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let start = SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    since_the_epoch.as_millis() as u32
 }

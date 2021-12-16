@@ -1,5 +1,10 @@
 # Postsack
 
+# What can go into core (web compatible!)?
+- database only as trait
+- importer only as trait
+
+
 ## Provides a high level visual overview of swaths of email
 
 ### Performance
@@ -9,6 +14,7 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
 
 ## Open Issues
 
+- [ ] check the feature.lru to see if it compiles without LRU
 - [ ] build static linux binary via docker: Via Github Actions?
 - [ ] try to build a static windows binary: Via Github Actions?
 - [ ] try to build a macos binary: Via Github Actions?

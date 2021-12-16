@@ -48,11 +48,8 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new<Database: DatabaseLike + 'static>(
-        config: &Config,
-        database: Database,
-    ) -> Result<Self> {
-        let link = super::link::run(config, database)?;
+    pub fn new<Database: DatabaseLike + 'static>(config: &Config) -> Result<Self> {
+        let link = super::link::run::<_, Database>(config)?;
         let engine = Engine {
             link,
             search_stack: Vec::new(),
