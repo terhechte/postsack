@@ -14,11 +14,9 @@ once_cell = "1.8.0"
 crossbeam-channel = "0.5.1"
 eframe = "0.15.0"
 num-format = "0.4.0"
-tinyfiledialogs = "3.0"
 rand = "0.8.4"
 image = { version = "0.23", default-features = false, features = ["png"] }
 chrono = "0.4.19"
-shellexpand = "2.1.0"
 ps-core = { path = "../ps-core" }
 
 [target."cfg(target_os = \"macos\")".dependencies.cocoa]
@@ -28,5 +26,10 @@ version = "0.2.7"
 
 [target."cfg(not(target_arch = \"wasm32\"))".dependencies]
 ps-importer = { path = "../ps-importer" }
-# Do I need this?
 ps-database = { path = "../ps-database" }
+shellexpand = "2.1.0"
+tinyfiledialogs = "3.0"
+
+[target."cfg(target_arch = \"wasm32\")".dependencies]
+# https://docs.rs/getrandom/latest/getrandom/#webassembly-support
+getrandom = { version = "0.2", features = ["js"] }
