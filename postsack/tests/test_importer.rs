@@ -1,14 +1,10 @@
-use postsack::{
-    self,
-    database::{query, Database},
-    importer::Importerlike,
-    types::FormatType,
-};
-
+use ps_core::{self, DatabaseLike, FormatType, Importerlike};
+use ps_database::Database;
+use ps_importer;
 
 #[cfg(test)]
 mod tests {
-    use postsack::database::{query::Field, query_result::QueryResult};
+    use ps_core::{Config, Field, Query, QueryResult};
     use std::sync::Once;
 
     use super::*;
@@ -20,7 +16,7 @@ mod tests {
             if std::env::var("RUST_LOG").is_err() {
                 std::env::set_var("RUST_LOG", "trace");
             }
-            postsack::setup_tracing();
+            ps_core::setup_tracing();
         });
     }
 
@@ -30,20 +26,19 @@ mod tests {
         initialize();
         let path = "tests/resources/mbox";
         let config =
-            postsack::types::Config::new(None, path, vec!["".to_string()], FormatType::Mbox)
-                .expect("Config");
-        let importer = postsack::importer::mbox_importer(config.clone());
-        let (_receiver, handle) = importer.import().unwrap();
+            Config::new(None, path, vec!["".to_string()], FormatType::Mbox).expect("Config");
+        let importer = ps_importer::mbox_importer(config.clone());
+        let database = Database::new(&config.database_path).unwrap();
+        let (_receiver, handle) = importer.import(database).unwrap();
         handle.join().expect("").expect("");
 
-        // The temporary database path
         let db = Database::new(&config.database_path).unwrap();
 
         let total_mails = db.total_mails().expect("Expected total mails");
         assert_eq!(total_mails, 141);
 
-        let mails = db.query(&query::Query::Normal {
-            fields: vec![query::Field::Subject],
+        let mails = db.query(&Query::Normal {
+            fields: vec![Field::Subject],
             filters: Vec::new(),
             range: 0..141,
         });
@@ -69,15 +64,17 @@ mod tests {
         initialize();
         let path = "tests/resources/applemail";
         let config =
-            postsack::types::Config::new(None, path, vec!["".to_string()], FormatType::AppleMail)
-                .expect("Config");
-        let importer = postsack::importer::applemail_importer(config.clone());
-        let (_receiver, handle) = importer.import().unwrap();
+            Config::new(None, path, vec!["".to_string()], FormatType::AppleMail).expect("Config");
+        let importer = ps_importer::applemail_importer(config.clone());
+
+        let (_receiver, handle) = importer
+            .import(Database::new(&config.database_path).unwrap())
+            .unwrap();
         handle.join().expect("").expect("");
         // The temporary database path
         let db = Database::new(&config.database_path).unwrap();
-        let mails = db.query(&query::Query::Normal {
-            fields: vec![query::Field::Subject],
+        let mails = db.query(&Query::Normal {
+            fields: vec![Field::Subject],
             filters: Vec::new(),
             range: 0..10,
         });

@@ -4,10 +4,11 @@ pub(crate) mod formats;
 
 use formats::{shared, ImporterFormat};
 
-use std::thread::JoinHandle;
+use std::{path::PathBuf, thread::JoinHandle};
 
 use ps_core::{
-    crossbeam_channel::unbounded, Config, DatabaseLike, Importerlike, Message, MessageReceiver,
+    crossbeam_channel::unbounded, Config, DatabaseLike, FormatType, Importerlike, Message,
+    MessageReceiver,
 };
 
 pub struct Importer<Format: ImporterFormat> {
@@ -64,4 +65,12 @@ pub fn applemail_importer(config: Config) -> Importer<formats::AppleMail> {
 
 pub fn mbox_importer(config: Config) -> Importer<formats::Mbox> {
     Importer::new(config, formats::Mbox::default())
+}
+
+pub fn default_path(format: &FormatType) -> Option<PathBuf> {
+    match format {
+        FormatType::AppleMail => formats::AppleMail::default_path(),
+        FormatType::GmailVault => formats::Gmail::default_path(),
+        FormatType::Mbox => formats::Mbox::default_path(),
+    }
 }

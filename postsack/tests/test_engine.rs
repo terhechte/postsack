@@ -1,12 +1,10 @@
-use eframe::egui;
-use postsack::{
+use ps_core::{
     self,
-    database::query::{Field, Filter, ValueField},
-    importer::Importerlike,
-    model::{self, Engine},
-    types::Config,
-    types::FormatType,
+    model::{self, Engine, Rect},
+    Config, DatabaseLike, Field, Filter, FormatType, Importerlike, ValueField,
 };
+use ps_database::Database;
+use ps_importer::mbox_importer;
 
 #[cfg(test)]
 mod tests {
@@ -20,7 +18,7 @@ mod tests {
             if std::env::var("RUST_LOG").is_err() {
                 std::env::set_var("RUST_LOG", "trace");
             }
-            postsack::setup_tracing();
+            ps_core::setup_tracing();
         });
     }
 
@@ -28,7 +26,7 @@ mod tests {
     fn test_engine_all() {
         initialize();
         let config = create_database();
-        let mut engine = Engine::new(&config).expect("Expected Engine");
+        let mut engine = Engine::new::<Database>(&config).expect("Expected Engine");
         engine.start().expect("Expect to start engine");
         engine.wait().expect("Expected working wait");
         let segment = {
@@ -85,19 +83,21 @@ mod tests {
     }
 }
 
-fn default_rect() -> egui::Rect {
-    egui::Rect::from_min_size(
-        egui::Pos2 { x: 50.0, y: 50.0 },
-        egui::Vec2 { x: 500.0, y: 500.0 },
-    )
+fn default_rect() -> Rect {
+    Rect {
+        left: 50.0,
+        top: 50.0,
+        width: 500.0,
+        height: 500.0,
+    }
 }
 
 fn create_database() -> Config {
     let path = "tests/resources/mbox";
-    let config = postsack::types::Config::new(None, path, vec!["".to_string()], FormatType::Mbox)
-        .expect("Config");
-    let importer = postsack::importer::mbox_importer(config.clone());
-    let (_receiver, handle) = importer.import().unwrap();
+    let config = Config::new(None, path, vec!["".to_string()], FormatType::Mbox).expect("Config");
+    let importer = mbox_importer(config.clone());
+    let database = Database::new(&config.database_path).unwrap();
+    let (_receiver, handle) = importer.import(database).unwrap();
     handle.join().expect("").expect("");
     config
 }

@@ -8,7 +8,8 @@ use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-// use super::ImporterFormatType;
+// FIXME: This abstraction should be in the `ps-importer` crate with only
+// a protocol here.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, IntoStaticStr, EnumIter)]
 pub enum FormatType {
@@ -28,17 +29,6 @@ impl FormatType {
             FormatType::GmailVault => "Gmail Vault Download",
             FormatType::Mbox => "Mbox",
         }
-    }
-
-    /// Forward the importer format location
-    pub fn default_path(&self) -> Option<PathBuf> {
-        todo!()
-        // use crate::importer::formats::{self, ImporterFormat};
-        // match self {
-        //     FormatType::AppleMail => formats::AppleMail::default_path(),
-        //     FormatType::GmailVault => formats::Gmail::default_path(),
-        //     FormatType::Mbox => formats::Mbox::default_path(),
-        // }
     }
 }
 
@@ -154,7 +144,7 @@ impl Config {
         let database_path = match db {
             Some(n) => n.as_ref().to_path_buf(),
             None => {
-                let number = timestamp();
+                let number = random_filename();
                 let folder = "postsack";
                 let filename = format!("{}.sqlite", number);
                 let mut temp_dir = std::env::temp_dir();
@@ -201,11 +191,10 @@ impl Config {
     }
 }
 
-fn timestamp() -> u32 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let start = SystemTime::now();
-    let since_the_epoch = start
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
-    since_the_epoch.as_millis() as u32
+fn random_filename() -> String {
+    use rand::Rng;
+    let number: u32 = rand::thread_rng().gen();
+    let folder = "postsack";
+    let filename = format!("{}.sqlite", number);
+    return filename;
 }

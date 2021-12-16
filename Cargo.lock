@@ -1557,7 +1557,9 @@ name = "postsack"
 version = "0.2.0"
 dependencies = [
  "ps-core",
+ "ps-database",
  "ps-gui",
+ "ps-importer",
 ]
 
 [[package]]
@@ -1608,8 +1610,10 @@ dependencies = [
  "crossbeam-channel",
  "eyre",
  "flate2",
+ "getrandom",
  "lru",
  "once_cell",
+ "rand",
  "regex",
  "rsql_builder",
  "serde",

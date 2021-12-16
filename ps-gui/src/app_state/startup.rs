@@ -155,7 +155,7 @@ impl StartupUI {
                             self.open_email_folder_dialog()
                         }
                         if self.format == FormatType::AppleMail && ui.button("or Mail.app default folder").clicked(){
-                            self.email_folder = self.format.default_path();
+                            self.email_folder = ps_importer::default_path(&self.format);
                         }
                     });
                     ui.end_row();
@@ -302,9 +302,7 @@ impl StartupUI {
 
     fn open_email_folder_dialog(&mut self) {
         let fallback = shellexpand::tilde("~/");
-        let default_path = self
-            .format
-            .default_path()
+        let default_path = ps_importer::default_path(&self.format)
             .unwrap_or_else(|| std::path::Path::new(&fallback.to_string()).to_path_buf());
 
         let folder = match tinyfiledialogs::select_folder_dialog(

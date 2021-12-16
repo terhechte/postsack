@@ -19,9 +19,8 @@ osx_minimum_system_version = "10.14"
 [dependencies]
 ps-gui = { path = "../ps-gui" }
 ps-core = { path = "../ps-core" }
-
-[profile.dev]
-split-debuginfo = "unpacked"
+ps-importer = { path = "../ps-importer" }
+ps-database = { path = "../ps-database" }
 
 #[profile.release]
 #lto = "fat"
