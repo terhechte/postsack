@@ -149,9 +149,9 @@ checksum = "8f1e260c3a9040a7c19a12468758f4c16f31a81a1fe087482be9570ec864bb6c"
 
 [[package]]
 name = "bytemuck"
-version = "1.7.3"
+version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "439989e6b8c38d1b6570a384ef1e49c8848128f5a97f3914baef02920842712f"
+checksum = "72957246c41db82b8ef88a5486143830adeb8227ef9837740bdec67724cf2c5b"
 
 [[package]]
 name = "byteorder"
@@ -740,10 +740,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcd999463524c52659517fe2cea98493cfe485d10565e7b0fb07dbba7ad2753"
 dependencies = [
  "cfg-if 1.0.0",
- "js-sys",
  "libc",
  "wasi",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -1553,16 +1551,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "postsack"
-version = "0.2.0"
-dependencies = [
- "ps-core",
- "ps-database",
- "ps-gui",
- "ps-importer",
-]
-
-[[package]]
 name = "ppv-lite86"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1610,10 +1598,8 @@ dependencies = [
  "crossbeam-channel",
  "eyre",
  "flate2",
- "getrandom",
  "lru",
  "once_cell",
- "rand",
  "regex",
  "rsql_builder",
  "serde",
@@ -1652,7 +1638,6 @@ dependencies = [
  "crossbeam-channel",
  "eframe",
  "eyre",
- "getrandom",
  "image",
  "num-format",
  "objc",

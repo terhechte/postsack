@@ -740,10 +740,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcd999463524c52659517fe2cea98493cfe485d10565e7b0fb07dbba7ad2753"
 dependencies = [
  "cfg-if 1.0.0",
- "js-sys",
  "libc",
  "wasi",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -1557,9 +1555,7 @@ name = "postsack"
 version = "0.2.0"
 dependencies = [
  "ps-core",
- "ps-database",
  "ps-gui",
- "ps-importer",
 ]
 
 [[package]]
@@ -1610,10 +1606,8 @@ dependencies = [
  "crossbeam-channel",
  "eyre",
  "flate2",
- "getrandom",
  "lru",
  "once_cell",
- "rand",
  "regex",
  "rsql_builder",
  "serde",
@@ -1652,7 +1646,6 @@ dependencies = [
  "crossbeam-channel",
  "eframe",
  "eyre",
- "getrandom",
  "image",
  "num-format",
  "objc",

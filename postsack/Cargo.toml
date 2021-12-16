@@ -1,0 +1,28 @@
+[package]
+name = "postsack"
+version = "0.2.0"
+edition = "2021"
+description = "Provides a high level visual overview of swaths of email"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package.metadata.bundle]
+name = "Postsack"
+identifier = "com.stylemac.postsack"
+icon = ["icons/Icon.icns", "icons/icon-win-256.png", "icons/icon-win-32.png", "icons/icon-win-16.png"]
+version = "1.0.0"
+copyright = "Copyright (c) Benedikt Terhechte (2021). All rights reserved."
+category = "Developer Tool"
+short_description = "Provides a high level visual overview of swaths of email"
+osx_minimum_system_version = "10.14"
+
+[dependencies]
+ps-gui = { path = "../ps-gui" }
+ps-core = { path = "../ps-core" }
+ps-importer = { path = "../ps-importer" }
+ps-database = { path = "../ps-database" }
+
+#[profile.release]
+#lto = "fat"
+#codegen-units = 1
+#panic = "abort"
