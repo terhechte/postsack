@@ -7,9 +7,7 @@ use formats::{shared, ImporterFormat};
 use std::thread::JoinHandle;
 
 use ps_core::{
-    crossbeam_channel::{self, unbounded},
-    Config, DatabaseLike, EmailEntry, EmailMeta, FormatType, Importerlike, Message,
-    MessageReceiver,
+    crossbeam_channel::unbounded, Config, DatabaseLike, Importerlike, Message, MessageReceiver,
 };
 
 pub struct Importer<Format: ImporterFormat> {
@@ -55,21 +53,6 @@ impl<Format: ImporterFormat + 'static> Importerlike for Importer<Format> {
         Ok((receiver, handle))
     }
 }
-
-// FIXME:
-// impl<T: Importerlike + Sized> Importerlike for Box<T> {
-//     fn import(self) -> Result<(MessageReceiver, JoinHandle<Result<()>>)> {
-//         (*self).import()
-//     }
-// }
-
-// pub fn importer(config: &Config) -> Box<dyn Importerlike> {
-//     match config.format {
-//         AppleMail => Box::new(applemail_importer(config.clone())),
-//         GmailVault => Box::new(gmail_importer(config.clone())),
-//         Mbox => Box::new(gmail_importer(config.clone())),
-//     }
-// }
 
 pub fn gmail_importer(config: Config) -> Importer<formats::Gmail> {
     Importer::new(config, formats::Gmail::default())

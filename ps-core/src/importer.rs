@@ -1,5 +1,5 @@
 use crossbeam_channel;
-use eyre::{Report, Result};
+use eyre::Result;
 use std::thread::JoinHandle;
 
 use crate::DatabaseLike;
