@@ -5,6 +5,7 @@
 //! - [`segmentations::`]
 //! - [`items::`]
 use eyre::{bail, Result};
+
 use lru::LruCache;
 
 use crate::database::query::{Field, Filter, OtherQuery, Query, ValueField};
@@ -49,7 +50,12 @@ pub struct Engine {
 
 impl Engine {
     pub fn new<Database: DatabaseLike + 'static>(config: &Config) -> Result<Self> {
+        #[cfg(not(target_arch = "wasm32"))]
         let link = super::link::run::<_, Database>(config)?;
+
+        #[cfg(target_arch = "wasm32")]
+        let link = super::link::run::<_, Database>(config, Database::new(&config.database_path)?)?;
+
         let engine = Engine {
             link,
             search_stack: Vec::new(),

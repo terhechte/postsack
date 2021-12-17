@@ -8,7 +8,11 @@ use crate::Config;
 
 use super::{db_message::DBMessage, query::Query, query_result::QueryResult};
 
-pub trait DatabaseLike: Clone + Send + 'static {
+pub trait DatabaseQuery: Send + 'static {
+    fn query(&self, query: &Query) -> Result<Vec<QueryResult>>;
+}
+
+pub trait DatabaseLike: DatabaseQuery + Clone {
     fn new(path: impl AsRef<Path>) -> Result<Self>
     where
         Self: Sized;
@@ -16,7 +20,6 @@ pub trait DatabaseLike: Clone + Send + 'static {
     where
         Self: Sized;
     fn total_mails(&self) -> Result<usize>;
-    fn query(&self, query: &Query) -> Result<Vec<QueryResult>>;
     fn import(self) -> (Sender<DBMessage>, JoinHandle<Result<usize>>);
     fn save_config(&self, config: Config) -> Result<()>;
 }
