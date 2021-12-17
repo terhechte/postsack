@@ -16,12 +16,16 @@ export RUSTFLAGS=--cfg=web_sys_unstable_apis
 rm -f web_demo/${CRATE_NAME_SNAKE_CASE}_bg.wasm
 
 echo "Building rust…"
-BUILD=release
-cargo build --release -p ${CRATE_NAME} --lib --target wasm32-unknown-unknown
+BUILD=debug
+if [[ "$BUILD" == "debug" ]]; then
+  cargo build -p ${CRATE_NAME} --lib --target wasm32-unknown-unknown
+else
+  cargo build --${BUILD} -p ${CRATE_NAME} --lib --target wasm32-unknown-unknown
+fi
 
 echo "Generating JS bindings for wasm…"
 TARGET_NAME="${CRATE_NAME_SNAKE_CASE}.wasm"
-wasm-bindgen "target/wasm32-unknown-unknown/${BUILD}/${TARGET_NAME}" \
+wasm-bindgen "../target/wasm32-unknown-unknown/${BUILD}/${TARGET_NAME}" \
   --out-dir web_demo --no-modules --no-typescript
 
 # to get wasm-opt:  apt/brew/dnf install binaryen

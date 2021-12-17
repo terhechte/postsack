@@ -7,9 +7,5 @@ mod segmentation_bar;
 mod textures;
 pub(crate) mod widgets;
 
-use ps_core::DatabaseLike;
-
-pub fn run_ui<Database: DatabaseLike>() {
-    let options = eframe::NativeOptions::default();
-    eframe::run_native(Box::new(app::PostsackApp::<Database>::new()), options);
-}
+pub use app::PostsackApp;
+pub use eframe;
