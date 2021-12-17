@@ -48,6 +48,13 @@ impl DatabaseLike for Database {
         })
     }
 
+    /// Open a database and try to retrieve a config from the information stored in there
+    fn config(path: impl AsRef<Path>) -> Result<Config> {
+        let database = Self::new(path.as_ref())?;
+        let fields = database.select_config_fields()?;
+        Config::from_fields(path.as_ref(), fields)
+    }
+
     fn total_mails(&self) -> Result<usize> {
         let connection = match &self.connection {
             Some(n) => n,
@@ -171,13 +178,6 @@ impl DatabaseLike for Database {
 }
 
 impl Database {
-    /// Open a database and try to retrieve a config from the information stored in there
-    pub fn config<P: AsRef<Path>>(path: P) -> Result<Config> {
-        let database = Self::new(path.as_ref())?;
-        let fields = database.select_config_fields()?;
-        Config::from_fields(path.as_ref(), fields)
-    }
-
     fn create_tables(connection: &Connection) -> Result<()> {
         connection.execute(TBL_EMAILS, params![])?;
         connection.execute(TBL_ERRORS, params![])?;

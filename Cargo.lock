@@ -1658,7 +1658,6 @@ dependencies = [
  "objc",
  "once_cell",
  "ps-core",
- "ps-database",
  "ps-importer",
  "rand",
  "shellexpand",

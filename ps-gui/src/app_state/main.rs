@@ -4,8 +4,7 @@ use eyre::{Report, Result};
 use super::super::widgets::{FilterState, Spinner};
 use super::Textures;
 use super::{StateUIAction, StateUIVariant};
-use ps_core::{model::Engine, Config};
-use ps_database::Database;
+use ps_core::{model::Engine, Config, DatabaseLike};
 
 #[derive(Default)]
 pub struct UIState {
@@ -25,7 +24,7 @@ pub struct MainUI {
 }
 
 impl MainUI {
-    pub fn new(config: Config, total: usize) -> Result<Self> {
+    pub fn new<Database: DatabaseLike>(config: Config, total: usize) -> Result<Self> {
         let mut engine = Engine::new::<Database>(&config)?;
         engine.start()?;
         Ok(Self {

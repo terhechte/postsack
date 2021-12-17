@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use eframe::{
     egui::{self},
     epi::{self, App, Frame, Storage},
@@ -7,25 +9,28 @@ use super::app_state::StateUI;
 use super::platform::Theme;
 use super::textures::Textures;
 
-pub struct PostsackApp {
+use ps_core::DatabaseLike;
+
+pub struct PostsackApp<Database: DatabaseLike> {
     state: StateUI,
     platform_custom_setup: bool,
-
     textures: Option<Textures>,
+    _database: PhantomData<Database>,
 }
 
-impl PostsackApp {
+impl<Database: DatabaseLike> PostsackApp<Database> {
     pub fn new() -> Self {
         let state = StateUI::new();
         PostsackApp {
             state,
             platform_custom_setup: false,
             textures: None,
+            _database: PhantomData,
         }
     }
 }
 
-impl App for PostsackApp {
+impl<Database: DatabaseLike> App for PostsackApp<Database> {
     fn name(&self) -> &str {
         "Postsack"
     }
@@ -51,7 +56,7 @@ impl App for PostsackApp {
             }
         }
 
-        self.state.update(ctx, &self.textures);
+        self.state.update::<Database>(ctx, &self.textures);
 
         // Resize the native window to be just the size we need it to be:
         frame.set_window_size(ctx.used_size());

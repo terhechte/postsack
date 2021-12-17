@@ -8,8 +8,11 @@ use crate::Config;
 
 use super::{db_message::DBMessage, query::Query, query_result::QueryResult};
 
-pub trait DatabaseLike: Clone + Send {
+pub trait DatabaseLike: Clone + Send + 'static {
     fn new(path: impl AsRef<Path>) -> Result<Self>
+    where
+        Self: Sized;
+    fn config(path: impl AsRef<Path>) -> Result<Config>
     where
         Self: Sized;
     fn total_mails(&self) -> Result<usize>;

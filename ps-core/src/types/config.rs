@@ -194,7 +194,6 @@ impl Config {
 fn random_filename() -> String {
     use rand::Rng;
     let number: u32 = rand::thread_rng().gen();
-    let folder = "postsack";
     let filename = format!("{}.sqlite", number);
     return filename;
 }

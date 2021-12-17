@@ -26,7 +26,6 @@ version = "0.2.7"
 
 [target."cfg(not(target_arch = \"wasm32\"))".dependencies]
 ps-importer = { path = "../ps-importer" }
-ps-database = { path = "../ps-database" }
 shellexpand = "2.1.0"
 tinyfiledialogs = "3.0"
 
