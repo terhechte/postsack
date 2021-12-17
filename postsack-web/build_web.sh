@@ -16,7 +16,7 @@ export RUSTFLAGS=--cfg=web_sys_unstable_apis
 rm -f web_demo/${CRATE_NAME_SNAKE_CASE}_bg.wasm
 
 echo "Building rust…"
-BUILD=debug
+BUILD=release
 if [[ "$BUILD" == "debug" ]]; then
   cargo build -p ${CRATE_NAME} --lib --target wasm32-unknown-unknown
 else

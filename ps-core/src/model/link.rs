@@ -17,7 +17,7 @@ use eyre::Result;
 use serde_json::Value;
 
 use crate::database::{
-    database_like::DatabaseQuery,
+    database_like::{DatabaseLike, DatabaseQuery},
     query::Query,
     query_result::{QueryResult, QueryRow},
 };
@@ -38,6 +38,7 @@ pub(super) type OutputReciever<Context> = Receiver<Result<Response<Context>>>;
 
 // FIXME: Instead of this wasm mess, two different link types?
 pub(super) struct Link<Context: Send + 'static> {
+    #[cfg(target_arch = "wasm32")]
     database: Box<dyn DatabaseQuery>,
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -128,7 +129,7 @@ impl<Context: Send + Sync + 'static> Link<Context> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn run<Context: Send + Sync + 'static, Database: DatabaseQuery>(
+pub(super) fn run<Context: Send + Sync + 'static, Database: DatabaseLike + DatabaseQuery>(
     config: &Config,
 ) -> Result<Link<Context>> {
     // Create a new database connection, just for reading

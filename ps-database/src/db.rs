@@ -9,7 +9,7 @@ use super::sql::*;
 use super::{value_from_field, RowConversion};
 use ps_core::{
     crossbeam_channel::{unbounded, Sender},
-    Config, DBMessage, DatabaseLike, EmailEntry, OtherQuery, Query, QueryResult,
+    Config, DBMessage, DatabaseLike, DatabaseQuery, EmailEntry, OtherQuery, Query, QueryResult,
 };
 
 #[derive(Debug)]
@@ -22,6 +22,43 @@ impl Clone for Database {
     fn clone(&self) -> Self {
         // If we could open one before, we hopefully can open one again
         Database::new(&self.path).unwrap()
+    }
+}
+
+impl DatabaseQuery for Database {
+    fn query(&self, query: &Query) -> Result<Vec<QueryResult>> {
+        use rusqlite::params_from_iter;
+        let c = match &self.connection {
+            Some(n) => n,
+            None => bail!("No connection to database available in query"),
+        };
+        let (sql, values) = query.to_sql();
+        let mut stmt = c.prepare(&sql)?;
+        let mut query_results = Vec::new();
+        let mut converted = Vec::new();
+        for value in values {
+            converted.push(super::conversion::json_to_value(&value)?);
+        }
+
+        let p = params_from_iter(converted.iter());
+
+        let mut rows = stmt.query(p)?;
+        while let Some(row) = rows.next()? {
+            match query {
+                Query::Grouped { group_by, .. } => {
+                    let result = QueryResult::grouped_from_row(group_by, row)?;
+                    query_results.push(result);
+                }
+                Query::Normal { fields, .. } => {
+                    let result = QueryResult::from_row(fields, row)?;
+                    query_results.push(result);
+                }
+                Query::Other {
+                    query: OtherQuery::All(field),
+                } => query_results.push(QueryResult::Other(value_from_field(field, row)?)),
+            }
+        }
+        Ok(query_results)
     }
 }
 
@@ -70,41 +107,6 @@ impl DatabaseLike for Database {
             .into_fields()
             .ok_or_else(|| eyre::eyre!("Could not create fields from config"))?;
         self.insert_config_fields(fields)
-    }
-
-    fn query(&self, query: &Query) -> Result<Vec<QueryResult>> {
-        use rusqlite::params_from_iter;
-        let c = match &self.connection {
-            Some(n) => n,
-            None => bail!("No connection to database available in query"),
-        };
-        let (sql, values) = query.to_sql();
-        let mut stmt = c.prepare(&sql)?;
-        let mut query_results = Vec::new();
-        let mut converted = Vec::new();
-        for value in values {
-            converted.push(super::conversion::json_to_value(&value)?);
-        }
-
-        let p = params_from_iter(converted.iter());
-
-        let mut rows = stmt.query(p)?;
-        while let Some(row) = rows.next()? {
-            match query {
-                Query::Grouped { group_by, .. } => {
-                    let result = QueryResult::grouped_from_row(group_by, row)?;
-                    query_results.push(result);
-                }
-                Query::Normal { fields, .. } => {
-                    let result = QueryResult::from_row(fields, row)?;
-                    query_results.push(result);
-                }
-                Query::Other {
-                    query: OtherQuery::All(field),
-                } => query_results.push(QueryResult::Other(value_from_field(field, row)?)),
-            }
-        }
-        Ok(query_results)
     }
 
     /// Begin the data import.
