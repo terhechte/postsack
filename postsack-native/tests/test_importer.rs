@@ -1,4 +1,4 @@
-use ps_core::{self, DatabaseLike, FormatType, Importerlike};
+use ps_core::{self, DatabaseLike, DatabaseQuery, FormatType, Importerlike};
 use ps_database::Database;
 use ps_importer;
 
