@@ -19,8 +19,20 @@ pub struct PostsackApp<Database: DatabaseLike> {
 }
 
 impl<Database: DatabaseLike> PostsackApp<Database> {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new() -> Self {
         let state = StateUI::new();
+        PostsackApp {
+            state,
+            platform_custom_setup: false,
+            textures: None,
+            _database: PhantomData,
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn new(config: ps_core::Config, total: usize) -> Self {
+        let state = StateUI::new::<Database>(config, total);
         PostsackApp {
             state,
             platform_custom_setup: false,

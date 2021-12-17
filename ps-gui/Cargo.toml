@@ -15,8 +15,7 @@ crossbeam-channel = "0.5.1"
 eframe = "0.15.0"
 num-format = "0.4.0"
 rand = "0.8.4"
-image = { version = "0.23", default-features = false, features = ["png"] }
-chrono = "0.4.19"
+chrono = {version = "0.4.19", features = ["wasmbind"]}
 ps-core = { path = "../ps-core" }
 
 [target."cfg(target_os = \"macos\")".dependencies.cocoa]
@@ -28,6 +27,7 @@ version = "0.2.7"
 ps-importer = { path = "../ps-importer" }
 shellexpand = "2.1.0"
 tinyfiledialogs = "3.0"
+image = { version = "0.23", default-features = false, features = ["png"] }
 
 [target."cfg(target_arch = \"wasm32\")".dependencies]
 # https://docs.rs/getrandom/latest/getrandom/#webassembly-support

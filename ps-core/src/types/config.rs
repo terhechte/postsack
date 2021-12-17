@@ -141,6 +141,11 @@ impl Config {
     ) -> eyre::Result<Self> {
         // If we don't have a database path, we use a temporary folder.
         let persistent = db.is_some();
+
+        #[cfg(target_arch = "wasm32")]
+        let database_path = PathBuf::new();
+
+        #[cfg(not(target_arch = "wasm32"))]
         let database_path = match db {
             Some(n) => n.as_ref().to_path_buf(),
             None => {

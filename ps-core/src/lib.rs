@@ -11,6 +11,7 @@ pub use database::query_result::{QueryResult, QueryRow};
 pub use types::{Config, EmailEntry, EmailMeta, FormatType};
 
 pub use crossbeam_channel;
+pub use eyre;
 pub use importer::{Importerlike, Message, MessageReceiver, MessageSender};
 
 // Tracing

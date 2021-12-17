@@ -104,8 +104,14 @@ impl StateUI {
 }
 
 impl StateUI {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new() -> StateUI {
         StateUI::Startup(startup::StartupUI::default())
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn new<Database: DatabaseLike>(config: Config, total: usize) -> StateUI {
+        StateUI::Main(main::MainUI::new::<Database>(config, total).unwrap())
     }
 
     pub fn create_database<Database: DatabaseLike>(
