@@ -73,3 +73,10 @@ sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev lib
 ```
 
 
+#### Windows
+
+Windows supor is a bit shaky.
+
+- [cargo bundle](https://github.com/burtonageo/cargo-bundle/issues/77) doesn't currently work on Windows
+- [cargo wix should work](https://github.com/volks73/cargo-wix), but I could not get it to work
+- `cargo build --release` works, but then the binary has no icon.
