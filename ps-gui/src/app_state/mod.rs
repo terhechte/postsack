@@ -8,9 +8,9 @@ use std::path::PathBuf;
 pub use super::textures::Textures;
 use eframe::egui::{self};
 pub use error::ErrorUI;
-use eyre::Report;
 pub use import::ImporterUI;
 pub use main::{MainUI, UIState};
+use ps_core::eyre::Report;
 pub use startup::StartupUI;
 
 use ps_core::{Config, DatabaseLike, FormatType};

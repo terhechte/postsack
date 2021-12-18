@@ -1,6 +1,8 @@
-use chrono::prelude::*;
 use email_parser::address::{Address, EmailAddress, Mailbox};
-use eyre::{eyre, Result};
+use ps_core::chrono;
+use ps_core::chrono::prelude::*;
+use ps_core::eyre::{eyre, Result};
+use ps_core::tracing;
 
 use std::borrow::Cow;
 use std::collections::HashSet;

@@ -1,6 +1,6 @@
 use eframe::egui::{self, Color32, Label, Widget};
-use eyre::Report;
 use num_format::{Locale, ToFormattedString};
+use ps_core::eyre::Report;
 use ps_core::model::Engine;
 
 use super::app_state::UIState;

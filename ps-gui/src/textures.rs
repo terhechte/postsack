@@ -6,6 +6,10 @@
 //! This is complicated by the fact that the image in question is only
 //! necessary on macOS and I'd rather not load it on Windows or Linux systems.
 
+#[cfg(not(target_os = "macos"))]
+use eframe::{self, epi};
+
+#[cfg(target_os = "macos")]
 use eframe::{self, egui, epi};
 
 #[cfg(target_os = "macos")]

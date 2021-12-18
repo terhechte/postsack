@@ -1,4 +1,4 @@
-use eyre::Result;
+use ps_core::eyre::Result;
 
 pub(crate) mod formats;
 
@@ -47,7 +47,7 @@ impl<Format: ImporterFormat + 'static> Importerlike for Importer<Format> {
                 Ok(_) => Ok(()),
                 Err(e) => match outer_sender.send(Message::Error(e)) {
                     Ok(_) => Ok(()),
-                    Err(e) => Err(eyre::Report::new(e)),
+                    Err(e) => Err(ps_core::eyre::Report::new(e)),
                 },
             }
         });

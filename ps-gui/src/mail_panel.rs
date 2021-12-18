@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use eframe::egui::{self, Widget};
-use eyre::Report;
+use ps_core::eyre::Report;
 use ps_core::{model::items, model::Engine, Field, QueryRow};
 
 use super::widgets::Table;

@@ -1,6 +1,6 @@
 //! A panel to edit filters
 use eframe::egui::{self, vec2, Color32, Response, Widget};
-use eyre::Report;
+use ps_core::eyre::Report;
 
 use ps_core::{
     model::{segmentations, Engine},

@@ -1,8 +1,8 @@
 use std::collections::hash_map::DefaultHasher;
 
 use eframe::egui::{self, epaint::Galley, Color32, Pos2, Rect, Rgba, Stroke, TextStyle, Widget};
-use eyre::Report;
 use num_format::{Locale, ToFormattedString};
+use ps_core::eyre::Report;
 use ps_core::model::{self, segmentations, Engine, Segment};
 
 use super::super::platform::platform_colors;

@@ -8,7 +8,7 @@ const SYSTEM_MONO_FONT: &[u8] = include_bytes!("../fonts/mac_mono.ttc");
 
 use cocoa;
 use eframe::egui::{self, Color32, FontDefinitions, FontFamily, Stroke};
-use eyre::{bail, Result};
+use ps_core::eyre::{bail, Result};
 
 use objc::runtime::{Object, YES};
 use objc::*;

@@ -1,7 +1,8 @@
 use super::parse::{parse_email, ParseableEmail};
 use ps_core::{Config, DBMessage, DatabaseLike, Message, MessageSender};
 
-use eyre::{bail, Result};
+use ps_core::eyre::{self, bail, Result};
+use ps_core::tracing;
 use rayon::prelude::*;
 
 pub fn into_database<Mail: ParseableEmail + 'static, Database: DatabaseLike + 'static>(

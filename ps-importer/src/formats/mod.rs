@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-pub use eyre::Result;
+pub use ps_core::eyre::Result;
 
 mod apple_mail;
 mod gmailbackup;

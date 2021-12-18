@@ -5,7 +5,7 @@ use eframe::{
 
 use super::Textures;
 use super::{StateUIAction, StateUIVariant};
-use ps_core::Config;
+use ps_core::{eyre, Config};
 
 pub struct ErrorUI {
     /// The error to display
