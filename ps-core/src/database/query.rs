@@ -95,6 +95,13 @@ pub struct ValueField {
 }
 
 impl ValueField {
+    pub fn new(field: &Field, value: Value) -> ValueField {
+        ValueField {
+            field: *field,
+            value,
+        }
+    }
+
     pub fn string<S: AsRef<str>>(field: &Field, value: S) -> ValueField {
         ValueField {
             field: *field,
@@ -209,7 +216,11 @@ impl Query {
             Query::Other {
                 query: OtherQuery::All(field),
             } => (
-                format!("SELECT {} FROM emails", field.as_str()),
+                format!(
+                    "SELECT {} FROM emails GROUP BY {}",
+                    field.as_str(),
+                    field.as_str()
+                ),
                 format!(""),
             ),
         };
