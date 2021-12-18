@@ -1581,6 +1581,7 @@ dependencies = [
  "console_error_panic_hook",
  "ps-core",
  "ps-gui",
+ "serde",
  "wasm-bindgen",
 ]
 
