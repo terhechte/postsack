@@ -76,6 +76,10 @@ impl ImporterUI {
         // Could not figure out how to build this properly
         // with dynamic dispatch. (to abstract away the match)
         // Will try again when I'm online.
+        // On Wasm, we just do nothing. Wasm is just a demo and
+        // the importer will never be run.
+
+        #[cfg(not(target_arch = "wasm32"))]
         let handle = match config.format {
             FormatType::AppleMail => {
                 let importer = ps_importer::applemail_importer(config);
@@ -90,6 +94,9 @@ impl ImporterUI {
                 adapter.process(database, importer)?
             }
         };
+
+        #[cfg(target_arch = "wasm32")]
+        let handle = std::thread::spawn(|| Ok(()));
 
         Ok(Self {
             config: cloned_config,

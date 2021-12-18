@@ -7,9 +7,5 @@ mod segmentation_bar;
 mod textures;
 pub(crate) mod widgets;
 
-
-pub fn run_ui() {
-    let options = eframe::NativeOptions::default();
-    eframe::run_native(Box::new(app::PostsackApp::new()), options);
-}
-
+pub use app::PostsackApp;
+pub use eframe;

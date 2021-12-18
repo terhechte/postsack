@@ -7,6 +7,8 @@
 //! necessary on macOS and I'd rather not load it on Windows or Linux systems.
 
 use eframe::{self, egui, epi};
+
+#[cfg(target_os = "macos")]
 use image;
 
 /// Pre-loaded textures
@@ -37,6 +39,7 @@ impl Textures {
 /// Load the permission image
 // via: https://github.com/emilk/egui/blob/master/eframe/examples/image.rs
 #[allow(unused)]
+#[cfg(target_os = "macos")]
 fn install_missing_permission_image(
     image_data: &[u8],
     frame: &mut epi::Frame<'_>,

@@ -155,7 +155,8 @@ impl StartupUI {
                             self.open_email_folder_dialog()
                         }
                         if self.format == FormatType::AppleMail && ui.button("or Mail.app default folder").clicked(){
-                            self.email_folder = ps_importer::default_path(&self.format);
+
+                            self.set_default_path();
                         }
                     });
                     ui.end_row();
@@ -243,6 +244,14 @@ impl StartupUI {
 
         response.response
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn set_default_path(&mut self) {
+        self.email_folder = ps_importer::default_path(&self.format);
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn set_default_path(&mut self) {}
 }
 
 impl StartupUI {
@@ -300,6 +309,10 @@ impl StartupUI {
         self.format = selected;
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn open_email_folder_dialog(&mut self) {}
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn open_email_folder_dialog(&mut self) {
         let fallback = shellexpand::tilde("~/");
         let default_path = ps_importer::default_path(&self.format)
@@ -320,6 +333,10 @@ impl StartupUI {
         self.email_folder = Some(path);
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn save_database_dialog(&mut self) {}
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn save_database_dialog(&mut self) {
         let default_path = "~/Desktop/";
 
@@ -342,6 +359,12 @@ impl StartupUI {
         self.database_path = Some(path)
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn open_database_dialog(&mut self) -> Option<PathBuf> {
+        None
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn open_database_dialog(&mut self) -> Option<PathBuf> {
         let default_path = "~/Desktop/";
 

@@ -4,7 +4,8 @@ members = [
     "ps-database",
     "ps-importer",
     "ps-gui",
-    "postsack",
+    "postsack-native",
+    "postsack-web",
 ]
 
 [profile.dev]

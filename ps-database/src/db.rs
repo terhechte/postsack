@@ -9,7 +9,7 @@ use super::sql::*;
 use super::{value_from_field, RowConversion};
 use ps_core::{
     crossbeam_channel::{unbounded, Sender},
-    Config, DBMessage, DatabaseLike, EmailEntry, OtherQuery, Query, QueryResult,
+    Config, DBMessage, DatabaseLike, DatabaseQuery, EmailEntry, OtherQuery, Query, QueryResult,
 };
 
 #[derive(Debug)]
@@ -25,46 +25,7 @@ impl Clone for Database {
     }
 }
 
-impl DatabaseLike for Database {
-    /// Open database at path `Path`.
-    fn new(path: impl AsRef<Path>) -> Result<Self> {
-        #[allow(unused_mut)]
-        let mut connection = Connection::open(path.as_ref())?;
-
-        // Improve the insertion performance.
-        connection.pragma_update(None, "journal_mode", &"memory")?;
-        connection.pragma_update(None, "synchronous", &"OFF")?;
-
-        Self::create_tables(&connection)?;
-
-        #[cfg(feature = "trace-sql")]
-        connection.trace(Some(|query| {
-            tracing::trace!("SQL: {}", &query);
-        }));
-
-        Ok(Database {
-            connection: Some(connection),
-            path: path.as_ref().into(),
-        })
-    }
-
-    fn total_mails(&self) -> Result<usize> {
-        let connection = match &self.connection {
-            Some(n) => n,
-            None => bail!("No connection to database available in query"),
-        };
-        let mut stmt = connection.prepare(QUERY_COUNT_MAILS)?;
-        let count: usize = stmt.query_row([], |q| q.get(0))?;
-        Ok(count)
-    }
-
-    fn save_config(&self, config: Config) -> Result<()> {
-        let fields = config
-            .into_fields()
-            .ok_or_else(|| eyre::eyre!("Could not create fields from config"))?;
-        self.insert_config_fields(fields)
-    }
-
+impl DatabaseQuery for Database {
     fn query(&self, query: &Query) -> Result<Vec<QueryResult>> {
         use rusqlite::params_from_iter;
         let c = match &self.connection {
@@ -98,6 +59,54 @@ impl DatabaseLike for Database {
             }
         }
         Ok(query_results)
+    }
+}
+
+impl DatabaseLike for Database {
+    /// Open database at path `Path`.
+    fn new(path: impl AsRef<Path>) -> Result<Self> {
+        #[allow(unused_mut)]
+        let mut connection = Connection::open(path.as_ref())?;
+
+        // Improve the insertion performance.
+        connection.pragma_update(None, "journal_mode", &"memory")?;
+        connection.pragma_update(None, "synchronous", &"OFF")?;
+
+        Self::create_tables(&connection)?;
+
+        #[cfg(feature = "trace-sql")]
+        connection.trace(Some(|query| {
+            tracing::trace!("SQL: {}", &query);
+        }));
+
+        Ok(Database {
+            connection: Some(connection),
+            path: path.as_ref().into(),
+        })
+    }
+
+    /// Open a database and try to retrieve a config from the information stored in there
+    fn config(path: impl AsRef<Path>) -> Result<Config> {
+        let database = Self::new(path.as_ref())?;
+        let fields = database.select_config_fields()?;
+        Config::from_fields(path.as_ref(), fields)
+    }
+
+    fn total_mails(&self) -> Result<usize> {
+        let connection = match &self.connection {
+            Some(n) => n,
+            None => bail!("No connection to database available in query"),
+        };
+        let mut stmt = connection.prepare(QUERY_COUNT_MAILS)?;
+        let count: usize = stmt.query_row([], |q| q.get(0))?;
+        Ok(count)
+    }
+
+    fn save_config(&self, config: Config) -> Result<()> {
+        let fields = config
+            .into_fields()
+            .ok_or_else(|| eyre::eyre!("Could not create fields from config"))?;
+        self.insert_config_fields(fields)
     }
 
     /// Begin the data import.
@@ -171,13 +180,6 @@ impl DatabaseLike for Database {
 }
 
 impl Database {
-    /// Open a database and try to retrieve a config from the information stored in there
-    pub fn config<P: AsRef<Path>>(path: P) -> Result<Config> {
-        let database = Self::new(path.as_ref())?;
-        let fields = database.select_config_fields()?;
-        Config::from_fields(path.as_ref(), fields)
-    }
-
     fn create_tables(connection: &Connection) -> Result<()> {
         connection.execute(TBL_EMAILS, params![])?;
         connection.execute(TBL_ERRORS, params![])?;

@@ -14,8 +14,6 @@ pub use main::{MainUI, UIState};
 pub use startup::StartupUI;
 
 use ps_core::{Config, DatabaseLike, FormatType};
-// FIXME: Abstract away with a trait?
-use ps_database::Database;
 
 pub enum StateUIAction {
     CreateDatabase {
@@ -60,7 +58,11 @@ impl StateUI {
 
     /// This proxies the `update` call to the individual calls in
     /// the `app_state` types
-    pub fn update(&mut self, ctx: &egui::CtxRef, textures: &Option<Textures>) {
+    pub fn update<Database: DatabaseLike>(
+        &mut self,
+        ctx: &egui::CtxRef,
+        textures: &Option<Textures>,
+    ) {
         let response = match self {
             StateUI::Startup(panel) => panel.update_panel(ctx, textures),
             StateUI::Import(panel) => panel.update_panel(ctx, textures),
@@ -74,14 +76,18 @@ impl StateUI {
                 sender_emails,
                 format,
             } => {
-                *self =
-                    self.create_database(database_path, emails_folder_path, sender_emails, format)
+                *self = self.create_database::<Database>(
+                    database_path,
+                    emails_folder_path,
+                    sender_emails,
+                    format,
+                )
             }
             StateUIAction::OpenDatabase { database_path } => {
-                *self = self.open_database(database_path)
+                *self = self.open_database::<Database>(database_path)
             }
             StateUIAction::ImportDone { config, total } => {
-                *self = match main::MainUI::new(config.clone(), total) {
+                *self = match main::MainUI::new::<Database>(config.clone(), total) {
                     Ok(n) => StateUI::Main(n),
                     Err(e) => StateUI::Error(ErrorUI::new(e, Some(config))),
                 };
@@ -98,11 +104,17 @@ impl StateUI {
 }
 
 impl StateUI {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new() -> StateUI {
         StateUI::Startup(startup::StartupUI::default())
     }
 
-    pub fn create_database(
+    #[cfg(target_arch = "wasm32")]
+    pub fn new<Database: DatabaseLike>(config: Config, total: usize) -> StateUI {
+        StateUI::Main(main::MainUI::new::<Database>(config, total).unwrap())
+    }
+
+    pub fn create_database<Database: DatabaseLike>(
         &self,
         database_path: Option<PathBuf>,
         emails_folder_path: PathBuf,
@@ -124,7 +136,7 @@ impl StateUI {
         self.importer_with_config(config, database)
     }
 
-    pub fn open_database(&mut self, database_path: PathBuf) -> StateUI {
+    pub fn open_database<Database: DatabaseLike>(&mut self, database_path: PathBuf) -> StateUI {
         let config = match Database::config(&database_path) {
             Ok(config) => config,
             Err(report) => return StateUI::Error(error::ErrorUI::new(report, None)),
@@ -135,13 +147,17 @@ impl StateUI {
             Err(report) => return StateUI::Error(error::ErrorUI::new(report, None)),
         };
 
-        match main::MainUI::new(config.clone(), total) {
+        match main::MainUI::new::<Database>(config.clone(), total) {
             Ok(n) => StateUI::Main(n),
             Err(e) => StateUI::Error(ErrorUI::new(e, Some(config))),
         }
     }
 
-    fn importer_with_config(&self, config: Config, database: Database) -> StateUI {
+    fn importer_with_config<Database: DatabaseLike>(
+        &self,
+        config: Config,
+        database: Database,
+    ) -> StateUI {
         let importer = match import::ImporterUI::new(config.clone(), database) {
             Ok(n) => n,
             Err(e) => {

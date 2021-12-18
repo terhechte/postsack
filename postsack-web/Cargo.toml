@@ -1,0 +1,17 @@
+[package]
+name = "postsack-web"
+version = "0.2.0"
+edition = "2021"
+description = "Provides a high level visual overview of swaths of email"
+
+[lib]
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ps-gui = { path = "../ps-gui" }
+ps-core = { path = "../ps-core" }
+serde = { version = "1.0.131", features = ["derive"]}
+wasm-bindgen = "*"
+console_error_panic_hook = "0.1.7"

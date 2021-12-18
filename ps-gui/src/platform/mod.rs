@@ -15,6 +15,12 @@ mod linux;
 #[cfg(target_os = "linux")]
 pub use linux::{initial_update, navigation_button};
 
+#[cfg(target_arch = "wasm32")]
+mod web;
+
+#[cfg(target_arch = "wasm32")]
+pub use web::{initial_update, navigation_button};
+
 #[cfg(target_os = "macos")]
 mod macos;
 
@@ -62,6 +68,9 @@ pub fn setup(ctx: &egui::CtxRef, theme: Theme) {
 
     #[cfg(target_os = "macos")]
     use macos as module;
+
+    #[cfg(target_arch = "wasm32")]
+    use web as module;
 
     INSTANCE
         .set(module::platform_colors(theme))

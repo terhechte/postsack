@@ -1,7 +1,7 @@
 use ps_core::{
     self,
     model::{self, Engine, Rect},
-    Config, DatabaseLike, Field, Filter, FormatType, Importerlike, ValueField,
+    Config, DatabaseLike, DatabaseQuery, Field, Filter, FormatType, Importerlike, ValueField,
 };
 use ps_database::Database;
 use ps_importer::mbox_importer;
