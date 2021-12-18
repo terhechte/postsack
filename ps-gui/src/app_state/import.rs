@@ -3,8 +3,8 @@ use std::thread::JoinHandle;
 
 use eframe::egui::epaint::Shadow;
 use eframe::egui::{self, Color32, Pos2, Rect, Response, Stroke};
-use eyre::Result;
-use rand::seq::SliceRandom;
+use ps_core::eyre::{self, Result};
+use ps_core::rand::{self, seq::SliceRandom};
 
 use super::super::platform::platform_colors;
 use super::super::widgets::background::{shadow_background, AnimatedBackground};

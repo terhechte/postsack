@@ -1,6 +1,6 @@
-use eyre::{bail, Result};
+use ps_core::eyre::{bail, Result};
+use ps_core::tracing::{self, trace};
 use rayon::prelude::*;
-use tracing::trace;
 
 use std::path::{Path, PathBuf};
 

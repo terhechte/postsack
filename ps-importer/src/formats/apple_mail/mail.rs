@@ -1,9 +1,9 @@
 use emlx::parse_emlx;
-use eyre::Result;
 
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
+use ps_core::eyre::Result;
 use ps_core::EmailMeta;
 
 use super::super::shared::parse::ParseableEmail;

@@ -2,11 +2,12 @@
 //! recursively drill down into the appropriate folder
 //! until we find `emlx` files and return those.
 
-use eyre::{eyre, Result};
 use rayon::prelude::*;
 use walkdir::WalkDir;
 
 use super::super::shared::filesystem::emails_in;
+use ps_core::eyre::{eyre, Result};
+use ps_core::tracing;
 use ps_core::{Config, Message, MessageSender};
 
 use super::mail::Mail;

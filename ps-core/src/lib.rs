@@ -8,13 +8,17 @@ pub use database::database_like::{DatabaseLike, DatabaseQuery};
 pub use database::db_message::DBMessage;
 pub use database::query::{Field, Filter, OtherQuery, Query, ValueField, AMOUNT_FIELD_NAME};
 pub use database::query_result::{QueryResult, QueryRow};
+pub use importer::{Importerlike, Message, MessageReceiver, MessageSender};
 pub use types::{Config, EmailEntry, EmailMeta, FormatType};
 
+// Re-Export some dependencies so they don't
+// need to be listed again in other Cargo tomls
+pub use chrono;
 pub use crossbeam_channel;
 pub use eyre;
-pub use importer::{Importerlike, Message, MessageReceiver, MessageSender};
-
-pub use serde_json::Value;
+pub use rand;
+pub use serde_json::{self, Value};
+pub use tracing;
 
 // Tracing
 

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::convert::TryInto;
 
-use eyre::{bail, eyre, Result};
+use ps_core::eyre::{bail, eyre, Result};
+use ps_core::Value;
 use rusqlite::{self, types, Row};
-use serde_json::Value;
 
 use ps_core::{EmailMeta, Field, QueryResult, ValueField, AMOUNT_FIELD_NAME};
 

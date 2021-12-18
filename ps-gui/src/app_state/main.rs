@@ -1,5 +1,5 @@
 use eframe::egui::{self, Stroke};
-use eyre::{Report, Result};
+use ps_core::eyre::{Report, Result};
 
 use super::super::widgets::{FilterState, Spinner};
 use super::Textures;

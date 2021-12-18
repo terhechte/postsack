@@ -1,5 +1,6 @@
-use eyre::{eyre, Result};
 use flate2::read::GzDecoder;
+use ps_core::eyre::{eyre, Result};
+use ps_core::tracing;
 
 use std::borrow::Cow;
 use std::io::Read;

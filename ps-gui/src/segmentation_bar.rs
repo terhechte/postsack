@@ -1,5 +1,5 @@
 use eframe::egui::{self, Widget};
-use eyre::Report;
+use ps_core::eyre::Report;
 use ps_core::model::{segmentations, Engine};
 
 pub struct SegmentationBar<'a> {

@@ -1,10 +1,9 @@
-use chrono::prelude::*;
-
-use eyre::{bail, Result};
-use serde::Deserialize;
-use serde_json;
-
 use super::raw_email::RawEmailEntry;
+use serde::Deserialize;
+
+use ps_core::chrono::prelude::*;
+use ps_core::eyre::{bail, Result};
+use ps_core::serde_json;
 use ps_core::EmailMeta;
 
 #[derive(Deserialize, Debug, Clone)]

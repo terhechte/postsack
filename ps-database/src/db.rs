@@ -1,5 +1,3 @@
-use chrono::Datelike;
-use eyre::{bail, Report, Result};
 use rusqlite::{self, params, Connection, Statement};
 
 use std::path::PathBuf;
@@ -7,6 +5,10 @@ use std::{collections::HashMap, path::Path, thread::JoinHandle};
 
 use super::sql::*;
 use super::{value_from_field, RowConversion};
+use ps_core::chrono::Datelike;
+use ps_core::eyre::{self, bail, Report, Result};
+use ps_core::tracing;
+use ps_core::Value;
 use ps_core::{
     crossbeam_channel::{unbounded, Sender},
     Config, DBMessage, DatabaseLike, DatabaseQuery, EmailEntry, OtherQuery, Query, QueryResult,
@@ -187,7 +189,7 @@ impl Database {
         Ok(())
     }
 
-    fn select_config_fields(&self) -> Result<HashMap<String, serde_json::Value>> {
+    fn select_config_fields(&self) -> Result<HashMap<String, Value>> {
         let connection = match &self.connection {
             Some(n) => n,
             None => bail!("No connection to database available in query"),
@@ -196,10 +198,7 @@ impl Database {
         let mut query_results = HashMap::new();
         let mut rows = stmt.query([])?;
         while let Some(row) = rows.next()? {
-            let (k, v) = match (
-                row.get::<_, String>("key"),
-                row.get::<_, serde_json::Value>("value"),
-            ) {
+            let (k, v) = match (row.get::<_, String>("key"), row.get::<_, Value>("value")) {
                 (Ok(k), Ok(v)) => (k, v),
                 (a, b) => {
                     tracing::error!("Invalid row data. Missing fields key and or value:\nkey: {:?}\nvalue: {:?}\n", a, b);
@@ -211,7 +210,7 @@ impl Database {
         Ok(query_results)
     }
 
-    fn insert_config_fields(&self, fields: HashMap<String, serde_json::Value>) -> Result<()> {
+    fn insert_config_fields(&self, fields: HashMap<String, Value>) -> Result<()> {
         let connection = match &self.connection {
             Some(n) => n,
             None => bail!("No connection to database available in query"),
