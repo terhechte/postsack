@@ -7,6 +7,9 @@ use ps_gui::{eframe, PostsackApp};
 mod database;
 
 #[cfg(target_arch = "wasm32")]
+mod generated;
+
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
