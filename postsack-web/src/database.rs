@@ -85,6 +85,10 @@ impl Hash for HashedValue {
 pub struct FakeDatabase;
 
 impl FakeDatabase {
+    pub fn total_item_count() -> usize {
+        ENTRIES.len()
+    }
+
     fn query_normal(
         &self,
         fields: &Vec<Field>,
@@ -179,8 +183,6 @@ impl FakeDatabase {
             }
             true
         })
-        //.cloned()
-        //.collect()
     }
 }
 
