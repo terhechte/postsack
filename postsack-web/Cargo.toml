@@ -12,5 +12,6 @@ crate-type = ["cdylib"]
 [dependencies]
 ps-gui = { path = "../ps-gui" }
 ps-core = { path = "../ps-core" }
+serde = { version = "1.0.131", features = ["derive"]}
 wasm-bindgen = "*"
 console_error_panic_hook = "0.1.7"
