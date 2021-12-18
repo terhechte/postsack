@@ -1,7 +1,7 @@
 #![cfg(target_os = "windows")]
 
 use eframe::egui::{self, Color32};
-use eyre::Result;
+use ps_core::eyre::Result;
 
 use super::{PlatformColors, Theme};
 
