@@ -1557,7 +1557,7 @@ dependencies = [
 
 [[package]]
 name = "postsack"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "ps-core",
  "ps-database",
@@ -1567,7 +1567,7 @@ dependencies = [
 
 [[package]]
 name = "postsack-web"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "console_error_panic_hook",
  "ps-core",
@@ -1618,7 +1618,7 @@ dependencies = [
 
 [[package]]
 name = "ps-core"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "chrono",
  "crossbeam-channel",
@@ -1639,7 +1639,7 @@ dependencies = [
 
 [[package]]
 name = "ps-database"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "ps-core",
  "rusqlite",
@@ -1647,7 +1647,7 @@ dependencies = [
 
 [[package]]
 name = "ps-gui"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "chrono",
  "cocoa",
@@ -1664,7 +1664,7 @@ dependencies = [
 
 [[package]]
 name = "ps-importer"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "email-parser",
  "emlx",

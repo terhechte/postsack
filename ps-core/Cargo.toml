@@ -1,8 +1,7 @@
 [package]
 name = "ps-core"
-version = "0.2.0"
+version = "1.0.0"
 edition = "2021"
-description = "Provides a high level visual overview of swaths of email"
 
 [dependencies]
 eyre = "0.6.5"
