@@ -200,5 +200,5 @@ fn random_filename() -> String {
     use rand::Rng;
     let number: u32 = rand::thread_rng().gen();
     let filename = format!("{}.sqlite", number);
-    return filename;
+    filename
 }

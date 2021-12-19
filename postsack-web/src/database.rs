@@ -55,8 +55,8 @@ impl Entry {
     fn as_row(&self, fields: &[Field]) -> QueryRow {
         let mut row = QueryRow::new();
         for field in fields {
-            let value = self.value(&field);
-            let value_field = ValueField::new(&field, value);
+            let value = self.value(field);
+            let value_field = ValueField::new(field, value);
             row.insert(*field, value_field);
         }
         row
@@ -66,6 +66,7 @@ impl Entry {
 #[derive(Debug, PartialEq, Eq)]
 struct HashedValue(Value);
 
+#[allow(clippy::derive_hash_xor_eq)]
 impl Hash for HashedValue {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match &self.0 {
@@ -85,14 +86,15 @@ impl Hash for HashedValue {
 pub struct FakeDatabase;
 
 impl FakeDatabase {
+    #[allow(unused)]
     pub fn total_item_count() -> usize {
         ENTRIES.len()
     }
 
     fn query_normal(
         &self,
-        fields: &Vec<Field>,
-        filters: &Vec<Filter>,
+        fields: &[Field],
+        filters: &[Filter],
         range: &Range<usize>,
     ) -> Vec<QueryResult> {
         let entries = self.filtered(filters);
@@ -103,7 +105,7 @@ impl FakeDatabase {
         result
     }
 
-    fn query_grouped(&self, filters: &Vec<Filter>, group_by: &Field) -> Vec<QueryResult> {
+    fn query_grouped(&self, filters: &[Filter], group_by: &Field) -> Vec<QueryResult> {
         let mut map = HashMap::<HashedValue, usize>::new();
         for entry in self
             .filtered(filters)
@@ -139,7 +141,7 @@ impl FakeDatabase {
         result
     }
 
-    fn filtered<'a>(&'a self, filters: &'a Vec<Filter>) -> impl Iterator<Item = &'a Entry> {
+    fn filtered<'a>(&'a self, filters: &'a [Filter]) -> impl Iterator<Item = &'a Entry> {
         ENTRIES.iter().filter(move |entry| {
             for filter in filters {
                 // Go through all filters and escape early if they don't match

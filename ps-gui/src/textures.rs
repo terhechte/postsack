@@ -12,9 +12,6 @@ use eframe::{self, epi};
 #[cfg(target_os = "macos")]
 use eframe::{self, egui, epi};
 
-#[cfg(target_os = "macos")]
-use image;
-
 /// Pre-loaded textures
 pub struct Textures {
     #[cfg(target_os = "macos")]

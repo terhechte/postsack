@@ -1,7 +1,7 @@
 #![cfg(target_arch = "wasm32")]
 
 use eframe::egui::{self, Color32};
-use eyre::Result;
+use ps_core::eyre::Result;
 
 use super::{PlatformColors, Theme};
 

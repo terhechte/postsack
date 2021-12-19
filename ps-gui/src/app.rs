@@ -19,6 +19,7 @@ pub struct PostsackApp<Database: DatabaseLike> {
 }
 
 impl<Database: DatabaseLike> PostsackApp<Database> {
+    #[allow(clippy::new_without_default)]
     #[cfg(not(target_arch = "wasm32"))]
     pub fn new() -> Self {
         let state = StateUI::new();

@@ -42,6 +42,7 @@ pub struct Adapter {
 }
 
 impl Adapter {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let rw_lock = Arc::new(RwLock::default());
         // FIXME: Look up this warning. It looks like the clones are necessary?

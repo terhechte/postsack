@@ -1,4 +1,3 @@
-use crossbeam_channel;
 use eyre::Result;
 use std::thread::JoinHandle;
 

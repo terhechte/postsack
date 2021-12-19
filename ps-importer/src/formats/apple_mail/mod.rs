@@ -1,7 +1,6 @@
 mod filesystem;
 mod mail;
 
-use shellexpand;
 use std::{path::PathBuf, str::FromStr};
 
 use super::{ImporterFormat, Result};

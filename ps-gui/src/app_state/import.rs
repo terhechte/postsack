@@ -15,9 +15,6 @@ use ps_core::{
     Config, DatabaseLike, FormatType,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
-use ps_importer;
-
 pub struct ImporterUI {
     /// The config for this configuration
     config: Config,
