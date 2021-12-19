@@ -1,3 +1,6 @@
+# TODO
+- [ ] generate binaries and draft a release
+
 <p align="center">
 <img src="resources/github_logo.png" width="241" height="287" />
 </p>
@@ -8,64 +11,81 @@
 
 # Postsack
 
-## Provides a high level visual overview of swaths of email
+## A high level visual overview of swaths of email
 
-### Performance
+[TLDR! A web demo that shows how Postsack clusters a set of 10.000 fake emails](https://terhech.de/postsack_demo)
 
-It currently parses 632383 emails in ~160 seconds, so roughly `4.000` emails per second. This excludes (for now) attachments.
-Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` emails per second. This excludes (for now) attachments. (on M1)
+Do you have a lot of mail? I have a lot of mail. There're inbox zero or archive zero people. I'm not one of them. I recently realized that my gmail account contains roughly 650.000 emails. I looked at that and I began
+to wonder.. *Why?*..
+Sure, I've been using Gmail since 2004 but still, that's 38.000 Emails per year which strikes me as a bit
+on the crazy side of things. Curious as I am I wanted to figure out where all these mails came from.
 
-## Open Issues
+Turns out that is a tricky problem because Gmail doesn't offer any tooling for such a use case. Hence I
+build my own. This tool (lovingly named `Postsack` which is German for a bag full of mail) parses all your
+emails and allows you to dig into them with a treemap (see screenshot below):
 
-- [ ] Add some more code documentation to the different files / crates
-- [x] Logo
-- [ ] Screenshots
-- [x] ci build buttons
-- [ ] Web demo
-- [ ] Demo Video
-- [x] run clippy again
-- [ ] Documentation
-  - [ ] briefly mention the email parser fork
-  - [ ] explain how to use by exporting mails to mbox or google downloader
-  - [ ] http://gmvault.org
-  - [ ] web version / wasm
-  - [ ] cargo bundle
-  - [ ] native version / dependencies
-  - [ ] Speed
-  - [ ] (show the importer for 650k mails?)
-  - [ ] add brief website to terhech.de
-  - [ ] not on crates yet because of the PR
+- Import all your local mails (currently, only MBox, Apple Mail and Gmail Backups are supported)
+- Build up clustered visualizations of your mails to see and understand what kind of emails you have
+- Cluster the emails by sender domain / name, month, day, year, name, and some more
+- Additional filters for seen mails or tags / labels
+- See all the mails for the current set of filters / current cluster
+- Save the generated database as a SQLite file so you can do additional queries yourself (or open it again)
+- Very fast email parsing / import. My **650k mails are imported in ~1 Minute** on a Macbook M1 Pro Max and ~ 2 Minutes on a Intel Core i7-8700B 3.2 Ghz.
+- Cross platform (macOS, Windows, Linux and a [Web Demo](https://terhech.de/postsack_demo))
 
-## Development
+## It looks like this
 
-Generate a macOS bundle (requires [Cargo Bundle](https://github.com/burtonageo/cargo-bundle))
+![Example](resources/animation.gif)
+<img src="resources/github_logo.png" width="600" height="481" />
 
-``` sh
-./build_mac.sh
-```
+The look is similar on all platforms as it uses the [Rust egui](https://github.com/emilk/egui) GUI library.
 
-### Linux Dependencies
+## Videos
 
-In order to build (and or run) on Linux, the following dependencies are needed:
+Here's a video showing the UI in action (e.g. me selecting some mail clusters)
 
-#### Fedora
+<a href="resources/postsack_video.mp4"><img src="resources/screenshot_app.jpg" width="50%" height="50%" />
 
-``` sh
-# Development
-sudo dnf install @development-tools glib cairo-devel pango-devel gdk-pixbux2-devel atk-devel gtk3 gtk3-devel libsqlite3x-devel
-```
+Here's another video where you can see the importer importer 650k mails (it is a bit boring but.)
 
-#### Ubuntu
+<a href="resources/postsack_importer_video.mp4"><img src="resources/screenshot_importer.jpg" width="50%" height="50%" />
 
-``` sh
-# Development
-sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev libsqlite3-dev
-```
+## Web Demo
 
-#### Windows
+In addition to that, you can also [play around with some fake data in this Postsack Web Demo](https://terhech.de/postsack_demo)
 
-Windows supor is a bit shaky.
+## Using It
 
-- [cargo bundle](https://github.com/burtonageo/cargo-bundle/issues/77) doesn't currently work on Windows
-- [cargo wix should work](https://github.com/volks73/cargo-wix), but I could not get it to work
-- `cargo build --release` works, but then the binary has no icon.
+Currently, Postsack supports three different types of mail storage:
+
+- MBox files [though with some issues](https://github.com/terhechte/postsack/issues/19)
+- Apple Mail
+- [GMVault](http://gmvault.org) GMail backups [though that could also be included natively](https://github.com/terhechte/postsack/issues/23)
+
+There're open issues for other formats such as [maildir](https://github.com/terhechte/postsack/issues/18), [notmuch](https://github.com/terhechte/postsack/issues/17) or [Outlook](https://github.com/terhechte/postsack/issues/3) but if you use one of these formats your best bet would be to export your emails as MBox which seems to be something most mail apps support. Alternatively, I'd be more than happy for PR's implementing additional Mail Storage Formats.
+
+If you have mails in any of the archives above, you can start Postsack select the folder with the emails
+and it will do the rest.
+
+## Current State
+
+I've created issues for some of the missing functionality. Most importantly more email formats (as explained above). Beyond that, there're probably bugs, there's a certain lack of tests and documentation, the [windows build is on shaky grounds](https://github.com/terhechte/postsack/issues/20), [the light theme is wonky](https://github.com/terhechte/postsack/issues/15), [some parts need a healthy refactoring to be useful beyond Postsack](https://github.com/terhechte/postsack/issues/11), [and it would be great if the binaries could be generated from the Github actions](https://github.com/terhechte/postsack/issues/10).
+
+## Deploying to crates.io for `cargo install`
+
+One of the issues I ran into was that many of the emails I had received over the years were not
+properly standards compliant. I forked [`email-parser`, email parser that Postsack is using](https://github.com/Mubelotix/email-parser/pull/11) in order to support all the weird issues I encountered. However,
+this PR still needs a couple of enhancements before it will be merged into `email-parser`. Therefore,
+Postsack is currently dependent on a fork of a crates.io crate. This means that I can't deploy this to
+crates yet. Once The aforementioned pull request has been improved and merged, I will subsequently draft
+a crates.io release.
+
+## Overview
+
+Here's an overview of the different crates in the Postsack Workspace:
+
+- [ps-core](ps-core/src/lib.rs): Core types, traits and imports
+- [ps-importer](ps-importer/src/lib.rs): Import different email formats into a database
+- [ps-database](ps-database/src/lib.rs): Implemts the `ps-core::DatabaseLike` trait on top of SQLite
+- [postsack-native](postsack-native): Builds the native (macOS, Linux, Windows) versions of Postsack
+- [postsack-web](postsack-web): Builds [the web demo of Postsack](https://terhech.de/postsack_demo)
