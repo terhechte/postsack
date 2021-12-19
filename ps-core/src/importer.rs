@@ -23,7 +23,7 @@ pub enum Message {
     ReadTotal(usize),
     /// Whenever an item out of the total is read, this message will be emitted
     ReadOne,
-    /// Similar to [`ReadTotal`]
+    /// Similar to [`Message::ReadTotal`]
     WriteTotal(usize),
     /// Similar to `ReadOne`
     WriteOne,

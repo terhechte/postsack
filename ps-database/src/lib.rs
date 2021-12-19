@@ -1,3 +1,7 @@
+//! # Database
+//!
+//! A implementation of the [`ps_core::DatabaseLike`] trait on top of SQLite.
+
 mod conversion;
 mod db;
 mod sql;

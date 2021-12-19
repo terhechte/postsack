@@ -2,16 +2,21 @@
 //!
 //! `Segmentations` are collections of `Segments` based on an aggregation of `Items`.
 //!
-//! A `Segmentation` can be changed to be aggregated on a different `Field.
-//! - [`aggregations`]
-//! - [`aggregated_by`]
-//! - [`set_aggregation`]
+//! A `Segmentation` can be changed to be aggregated on a different `Field`.
+//!
+//! - [`crate::model::segmentations::aggregation_fields`]
+//! - [`crate::model::segmentations::aggregated_by`]
+//! - [`crate::model::segmentations::set_aggregation`]
+//!
 //! A `Segmentation` can be changed to only return a `Range` of segments.
-//! - [`current_range`]
-//! - [`set_current_range`]
-//! A `Segmentation` has multiple `Segments` which each can be layouted
+//!
+//! - [`crate::model::segmentations::segments_range`]
+//! - [`crate::model::segmentations::set_segments_range`]
+//!
+//! A [`crate::model::Segmentation`] has multiple [`crate::model::Segment`]s which each can be layouted
 //! to fit into a rectangle.
-//! - [`layouted_segments]
+//!
+//! - [`crate::model::segmentations::layouted_segments]
 
 use eyre::{eyre, Result};
 
@@ -140,7 +145,7 @@ pub fn aggregated_by(engine: &Engine) -> Vec<Aggregation> {
 /// The `Aggregation` will identify the `Segmentation` to use. So this function
 /// can be used to change the way a `Segmentation` is the aggregated.
 ///
-/// Retrieve the available aggregations with [`segmentation::aggregated_by`].
+/// Retrieve the available aggregations with [`crate::model::segmentations::aggregated_by`].
 ///
 /// # Arguments
 ///
@@ -179,8 +184,7 @@ pub fn layouted_segments(engine: &mut Engine, bounds: types::Rect) -> Option<&[S
     Some(segmentation.items())
 }
 
-/// Can another level of aggregation be performed? Based on
-/// [`Engine::default_group_by_stack`]
+/// Can another level of aggregation be performed?
 pub fn can_aggregate_more(engine: &Engine) -> bool {
     let index = engine.group_by_stack.len();
     super::engine::default_group_by_stack(index).is_some()

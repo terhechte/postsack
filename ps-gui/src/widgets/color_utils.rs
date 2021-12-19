@@ -1,5 +1,5 @@
 //! Some functions to generate beautiful colors based on a hash.
-//! loosely based on https://github.com/BrandtM/colourado/blob/master/src/lib.rs
+//! loosely based on <https://github.com/BrandtM/colourado/blob/master/src/lib.rs>
 
 use eframe::egui::Color32;
 

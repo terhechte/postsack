@@ -1,6 +1,6 @@
 //! A popover is a popup that only closes when clicking outside.
 //! It is lifted from:
-//! https://github.com/emilk/egui/blob/a1bf5aff47a7f6f3d698e6ccfb7b62b65ef2de5b/egui/src/widgets/color_picker.rs
+//! <https://github.com/emilk/egui/blob/a1bf5aff47a7f6f3d698e6ccfb7b62b65ef2de5b/egui/src/widgets/color_picker.rs>
 //! Line 355.
 //!
 use eframe::egui::{self, Id, Response, Ui};

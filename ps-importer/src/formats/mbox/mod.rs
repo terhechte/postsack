@@ -1,9 +1,3 @@
-//! FIXME: Implement our own Mailbox reader that better implements the spec.
-//! use jetsci for efficient searching:
-//! https://github.com/shepmaster/jetscii
-//! (or aho corasick)
-//! MBox parsing is also not particularly fast as it currently doesn't use parallelism
-
 use ps_core::eyre::eyre;
 use ps_core::tracing;
 use rayon::prelude::*;

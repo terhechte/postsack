@@ -1,4 +1,4 @@
-//! This is a fork of `https://raw.githubusercontent.com/sagebind/smplinfo/master/src/ui/widgets/table.rs` with
+//! This is a fork of <https://raw.githubusercontent.com/sagebind/smplinfo/master/src/ui/widgets/table.rs> with
 //! some modifications.
 
 use std::ops::Range;
