@@ -1,3 +1,11 @@
+<p align="center">
+<img src="resources/github_logo.png" width="241" height="287" />
+</p>
+
+[![license](https://shields.io/badge/license-MIT-green)](https://github.com/terhechte/postsack/blob/main/LICENSE.md)
+![Rust](https://github.com/<OWNER>/<REPOSITORY>/actions/workflows/rust.yml/badge.svg)
+
+
 # Postsack
 
 ## Provides a high level visual overview of swaths of email
@@ -9,39 +17,23 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
 
 ## Open Issues
 
-- [ ] check for unused dependencies in each crate
-- [ ] `pub use ...` some deps in core so that they don't need to be re-imported
-- [ ] check the feature.lru to see if it compiles without LRU
-- [ ] build static linux binary via docker: Via Github Actions?
-- [ ] try to build a static windows binary: Via Github Actions?
-- [ ] try to build a macos binary: Via Github Actions?
+- [ ] Add some more code documentation to the different files / crates
+- [ ] Logo
+- [ ] Screenshots
+- [ ] ci build buttons
+- [ ] Web demo
 - [ ] Demo Video
+- [ ] run clippy again
 - [ ] Documentation
-- [ ] wasm build?
-
-
-## Windows Issues
-
-- [ ] No Outlook support
-- [ ] The `apple importer` fails
-- [ ] Very much untested (it does run though)
-
-## Future Options
-
-- [ ] Add additional UI based on Druid, Iced or Native Cocoa
-- [ ] maybe add blocking versions of the calls, too (in model)
-- [ ] abstract over `Fields` and backend to have a generic way to display groupable information
-- [ ] apply the window changes (no status etc) on startup, not just when loading main
-- [ ] split up into multiple crates
-- [ ] action when clicking an email?
-- [ ] support light theme
-- [ ] allow diving into splits/segments until there're no gropu bys anymore, but the last split can be opened full (to see the mails)
-- [ ] remove unneeded dependencies and features
-- [ ] add support for generating mail deletion rules based on the visible mails
-- [ ] support more mail formats:
-  - [ ] outlook
-  - [ ] notmuch
-  - [ ] maildir
+  - [ ] briefly mention the email parser fork
+  - [ ] explain how to use by exporting mails to mbox or google downloader
+  - [ ] http://gmvault.org
+  - [ ] web version / wasm
+  - [ ] cargo bundle
+  - [ ] native version / dependencies
+  - [ ] Speed
+  - [ ] (show the importer for 650k mails?)
+  - [ ] add brief website to terhech.de
 
 ## Development
 
@@ -68,7 +60,6 @@ sudo dnf install @development-tools glib cairo-devel pango-devel gdk-pixbux2-dev
 # Development
 sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev libsqlite3-dev
 ```
-
 
 #### Windows
 
