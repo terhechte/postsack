@@ -33,7 +33,7 @@ pub struct State {
     pub missing_permissions: bool,
 }
 
-/// This can be initialized with a [`MessageSender`] and it will
+/// This can be initialized with a [`crate::MessageSender`] and it will
 /// automatically tally up the information into a thread-safe
 /// datastructure
 pub struct Adapter {
@@ -57,7 +57,7 @@ impl Adapter {
     }
 
     /// Starts up a thread that handles the `MessageReceiver` messages
-    /// into state that can be accessed via [`read_count`], [`write_count`] and [`finished`]
+    /// into state that can be accessed via [`Adapter::read_count`], [`Adapter::write_count`] and [`Adapter::finished`]
     pub fn process<Database: DatabaseLike + 'static, Importer: Importerlike + 'static>(
         &self,
         database: Database,

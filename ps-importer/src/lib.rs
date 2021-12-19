@@ -1,3 +1,24 @@
+//! # Importer
+//!
+//! This crate is responsible for importing different email formats (or email storage formats)
+//! by reading and parsing the data and writing it into a database (which is defined as a
+//! generic type but most probably the `ps-database` module).
+//!
+//! Currently, the importer requires the construction of a specific type as well as the
+//! configuration of the importer format in a configuration.
+//!
+//! ``` rs
+//! https://github.com/terhechte/postsack/issues/11
+//! let path = "tests/resources/mbox";
+//! let config =
+//!     ps_core::Config::new(None, path, vec!["".to_string()], ps_core::FormatType::Mbox).expect("Config");
+//! let importer = mbox_importer(config.clone());
+//!
+//! // Next, crate a database and run the importer
+//! // let database = Database::new(&config.database_path).unwrap();
+//! // let (_receiver, handle) = importer.import(database).unwrap();
+//! ```
+
 use ps_core::eyre::Result;
 
 pub(crate) mod formats;

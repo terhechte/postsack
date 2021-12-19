@@ -3,7 +3,7 @@
 </p>
 
 [![license](https://shields.io/badge/license-MIT-green)](https://github.com/terhechte/postsack/blob/main/LICENSE.md)
-![Rust](https://github.com/<OWNER>/<REPOSITORY>/actions/workflows/rust.yml/badge.svg)
+![Rust CI](https://github.com/terhechte/postsack/actions/workflows/rust.yml/badge.svg)
 
 
 # Postsack
@@ -18,12 +18,12 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
 ## Open Issues
 
 - [ ] Add some more code documentation to the different files / crates
-- [ ] Logo
+- [x] Logo
 - [ ] Screenshots
-- [ ] ci build buttons
+- [x] ci build buttons
 - [ ] Web demo
 - [ ] Demo Video
-- [ ] run clippy again
+- [x] run clippy again
 - [ ] Documentation
   - [ ] briefly mention the email parser fork
   - [ ] explain how to use by exporting mails to mbox or google downloader
@@ -34,6 +34,7 @@ Update: It currently parses 632115 emails in ~56 seconds, so roughly `11.000` em
   - [ ] Speed
   - [ ] (show the importer for 650k mails?)
   - [ ] add brief website to terhech.de
+  - [ ] not on crates yet because of the PR
 
 ## Development
 

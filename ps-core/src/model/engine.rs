@@ -2,8 +2,8 @@
 //! displayed in Segmentations.
 //! See [`Engine`] for more information.
 //! See also:
-//! - [`segmentations::`]
-//! - [`items::`]
+//! - [`crate::model::segmentations`]
+//! - [`crate::model::items`]
 use eyre::{bail, Result};
 
 use lru::LruCache;
@@ -139,7 +139,7 @@ impl Engine {
     }
 
     /// Pop the current `Segmentation` from the stack.
-    /// The opposite of [`engine::push`]
+    /// The opposite of [`crate::model::Engine::push`]
     pub fn pop(&mut self) {
         if self.group_by_stack.is_empty()
             || self.segmentations.is_empty()
@@ -169,7 +169,7 @@ impl Engine {
     }
 
     /// Call this continously to retrieve calculation results and apply them.
-    /// Any mutating function on [`Engine`], such as [`Engine::push`] or [`items::items`]
+    /// Any mutating function on [`crate::model::Engine`], such as [`crate::model::Engine::push`] or [`crate::model::items`]
     /// require calling this method to apply there results once they're
     /// available from the asynchronous backend.
     /// This method is specifically non-blocking for usage in
