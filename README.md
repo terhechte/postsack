@@ -1,6 +1,3 @@
-# TODO
-- [ ] generate binaries and draft a release
-
 <p align="center">
 <img src="resources/github_logo.png" width="241" height="287" />
 </p>
@@ -36,7 +33,6 @@ emails and allows you to dig into them with a treemap (see screenshot below):
 ## It looks like this
 
 ![Example](resources/animation.gif)
-<img src="resources/github_logo.png" width="600" height="481" />
 
 The look is similar on all platforms as it uses the [Rust egui](https://github.com/emilk/egui) GUI library.
 
@@ -44,11 +40,11 @@ The look is similar on all platforms as it uses the [Rust egui](https://github.c
 
 Here's a video showing the UI in action (e.g. me selecting some mail clusters)
 
-<a href="resources/postsack_video.mp4"><img src="resources/screenshot_app.jpg" width="50%" height="50%" />
+<a href="resources/postsack_video.mp4"><img src="resources/screenshot_app.jpg" width="50%" height="50%" /></a>
 
 Here's another video where you can see the importer importer 650k mails (it is a bit boring but.)
 
-<a href="resources/postsack_importer_video.mp4"><img src="resources/screenshot_importer.jpg" width="50%" height="50%" />
+<a href="resources/postsack_importer_video.mp4"><img src="resources/screenshot_importer.jpg" width="50%" height="50%" /></a>
 
 ## Web Demo
 
