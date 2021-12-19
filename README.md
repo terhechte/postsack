@@ -29,6 +29,7 @@ emails and allows you to dig into them with a treemap (see screenshot below):
 - Save the generated database as a SQLite file so you can do additional queries yourself (or open it again)
 - Very fast email parsing / import. My **650k mails are imported in ~1 Minute** on a Macbook M1 Pro Max and ~ 2 Minutes on a Intel Core i7-8700B 3.2 Ghz.
 - Cross platform (macOS, Windows, Linux and a [Web Demo](https://terhech.de/postsack_demo))
+- The app is 13MB big and consumes ~150MB of memory on macOS
 
 ## It looks like this
 
@@ -40,11 +41,11 @@ The look is similar on all platforms as it uses the [Rust egui](https://github.c
 
 Here's a video showing the UI in action (e.g. me selecting some mail clusters)
 
-<a href="resources/postsack_video.mp4"><img src="resources/screenshot_app.jpg" width="50%" height="50%" /></a>
+resources/postsack_video.mp4
 
 Here's another video where you can see the importer importer 650k mails (it is a bit boring but.)
 
-<a href="resources/postsack_importer_video.mp4"><img src="resources/screenshot_importer.jpg" width="50%" height="50%" /></a>
+resources/postsack_importer_video.mp4
 
 ## Web Demo
 

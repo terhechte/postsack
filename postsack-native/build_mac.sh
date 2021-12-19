@@ -27,3 +27,6 @@ mv ./postsack ../target/release/bundle/osx/Postsack.app/Contents/MacOS/
 
 /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable Postsack" "../target/release/bundle/osx/Postsack.app/Contents/Info.plist"
 
+# Create a zip file
+/usr/bin/zip -5 -r ../target/postsack.zip ../target/release/bundle/osx/Postsack.app
+echo "Wrote zip file ../target/postsack.zip"
