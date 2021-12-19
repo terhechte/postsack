@@ -41,7 +41,7 @@ The look is similar on all platforms as it uses the [Rust egui](https://github.c
 
 Here's a video showing the UI in action (e.g. me selecting some mail clusters)
 
-resources/postsack_video.mp4
+https://github.com/terhechte/postsack/blob/main/resources/postsack_video.mp4
 
 Here's another video where you can see the importer importer 650k mails (it is a bit boring but.)
 
