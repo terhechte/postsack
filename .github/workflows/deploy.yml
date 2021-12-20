@@ -31,7 +31,7 @@ jobs:
             command: |
                 cd postsack-native
                 .\build_windows.bat
-            binary: target\release\postsack
+            binary: target\release\postsack.exe
     steps:
       - name: Production Build
         uses: actions/checkout@v2

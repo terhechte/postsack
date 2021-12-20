@@ -25,13 +25,13 @@ build my own. It parses all your mails and shows configurable clusters of mails 
 
 ## Features
 
+- Written in Rust: Very fast email parsing / import. My **650k mails are imported in ~1 Minute** on a Macbook M1 Pro Max and ~ 2 Minutes on a Intel Core i7-8700B 3.2 Ghz.
 - Import all your local mails (currently, only MBox, Apple Mail and Gmail Backups are supported)
 - Build up clustered visualizations of your mails to see and understand what kind of emails you have
 - Cluster the emails by sender domain / name, month, day, year, name, and some more
 - Additional filters for seen mails or tags / labels
 - See all the mails for the current set of filters / current cluster
 - Save the generated database as a SQLite file so you can do additional queries yourself (or open it again)
-- Very fast email parsing / import. My **650k mails are imported in ~1 Minute** on a Macbook M1 Pro Max and ~ 2 Minutes on a Intel Core i7-8700B 3.2 Ghz.
 - Cross platform (macOS, Windows, Linux and a [Web Demo](https://terhech.de/postsack_demo))
 - The app is 13MB big and consumes ~150MB of memory on macOS
 
