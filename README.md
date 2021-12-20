@@ -5,21 +5,25 @@
 [![license](https://shields.io/badge/license-MIT-green)](https://github.com/terhechte/postsack/blob/main/LICENSE.md)
 ![Rust CI](https://github.com/terhechte/postsack/actions/workflows/rust.yml/badge.svg)
 
-
 # Postsack
 
 ## A high level visual overview of swaths of email
 
 [TLDR! A web demo that shows how Postsack clusters a set of 10.000 fake emails](https://terhech.de/postsack_demo)
 
-Do you have a lot of mail? I have a lot of mail. There're inbox zero or archive zero people. I'm not one of them. I recently realized that my gmail account contains roughly 650.000 emails. I looked at that and I began
+Do you have many emails? I have a lot of emails. I'm not a inbox zero person. I recently realized that my Gmail account contains roughly 650.000 emails. I looked at that and I began
 to wonder.. *Why?*..
 Sure, I've been using Gmail since 2004 but still, that's 38.000 Emails per year which strikes me as a bit
-on the crazy side of things. Curious as I am I wanted to figure out where all these mails came from.
+on the crazy side of things. I wanted to know where these mails came from.
 
-Turns out that is a tricky problem because Gmail doesn't offer any tooling for such a use case. Hence I
-build my own. This tool (lovingly named `Postsack` which is German for a bag full of mail) parses all your
-emails and allows you to dig into them with a treemap (see screenshot below):
+Gmail did not offer an easy way of visualizing all my emails, I also couldn't find a tool for it. Hence I
+build my own. It parses all your mails and shows configurable clusters of mails in a nice visualization.
+
+## It looks like this
+
+![Example](resources/animation.gif)
+
+## Features
 
 - Import all your local mails (currently, only MBox, Apple Mail and Gmail Backups are supported)
 - Build up clustered visualizations of your mails to see and understand what kind of emails you have
@@ -30,10 +34,6 @@ emails and allows you to dig into them with a treemap (see screenshot below):
 - Very fast email parsing / import. My **650k mails are imported in ~1 Minute** on a Macbook M1 Pro Max and ~ 2 Minutes on a Intel Core i7-8700B 3.2 Ghz.
 - Cross platform (macOS, Windows, Linux and a [Web Demo](https://terhech.de/postsack_demo))
 - The app is 13MB big and consumes ~150MB of memory on macOS
-
-## It looks like this
-
-![Example](resources/animation.gif)
 
 The look is similar on all platforms as it uses the [Rust egui](https://github.com/emilk/egui) GUI library.
 
@@ -94,3 +94,18 @@ Here's an overview of the different crates in the Postsack Workspace:
 - [ps-database](ps-database/src/lib.rs): Implemts the `ps-core::DatabaseLike` trait on top of SQLite
 - [postsack-native](postsack-native): Builds the native (macOS, Linux, Windows) versions of Postsack
 - [postsack-web](postsack-web): Builds [the web demo of Postsack](https://terhech.de/postsack_demo)
+
+## Why Egui?
+
+I had build an app in [Druid](https://github.com/linebender/druid) last year and I liked the experience.
+This time I wanted to try out a different Rust gui library. Between [Iced](https://github.com/iced-rs/iced) 
+and [Egui](https://github.com/emilk/egui) I went with the latter because the terse code examples were
+tempting. Also, I had heard good things about it.
+
+I might want to try to re-implement the postsack ui in another UI library. However something I really dig
+about egui is how quickly it allows building a simple UI for a specific task (say you want to automate
+a certain bash script). The main downside was that it is currently very limited in what it can do (e.g. available widgets, configuration, layout options, etc).
+
+## What does `Postsack` mean?
+
+[`Postsack` (or Postbeutel) is German](https://de.wikipedia.org/wiki/Postbeutel) for a bag full of mail

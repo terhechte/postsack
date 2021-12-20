@@ -21,12 +21,13 @@ cargo bundle --release
 
 rm ../target/release/bundle/osx/Postsack.app/Contents/MacOS/postsack
 
-mv ./postsack ../target/release/bundle/osx/Postsack.app/Contents/MacOS/
+mv ./postsack ../target/release/bundle/osx/Postsack.app/Contents/MacOS/Postsack
 
 # Tell the Info.plist or binary is capitalized
 
 /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable Postsack" "../target/release/bundle/osx/Postsack.app/Contents/Info.plist"
 
 # Create a zip file
-/usr/bin/zip -5 -r ../target/postsack.zip ../target/release/bundle/osx/Postsack.app
+cd ../target/release/bundle/osx/
+/usr/bin/zip -5 -r ../../../postsack.zip ./Postsack.app
 echo "Wrote zip file ../target/postsack.zip"

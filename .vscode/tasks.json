@@ -7,13 +7,7 @@
 			"problemMatcher": [
 				"$rustc"
 			],
-			"args": [
-				"--bin",
-				"gui",
-				"--",
-				"/tmp/",
-				"/tmp/db2.sql"
-			],
+			"args": [],
 			"label": "rust: cargo run gui",
 			"group": {
 				"kind": "build",

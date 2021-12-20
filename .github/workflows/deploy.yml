@@ -18,7 +18,7 @@ jobs:
                 cd postsack-native
                 cargo install cargo-bundle
                 ./build_linux.sh
-            binary: target/release/bundle/deb/postsack_1.0.0._amd64.deb
+            binary: target/release/bundle/deb/postsack_1.0.0_amd64.deb
           - os: macOS-latest
             command: |
                 cd postsack-native
