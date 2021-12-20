@@ -16,13 +16,13 @@ jobs:
             command: |
                 sudo apt-get update && sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev libgtk-3-dev
                 cd postsack-native
-                cargo install bundle
+                cargo install cargo-bundle
                 ./build_linux.sh
             binary: target/release/bundle/deb/postsack_1.0.0._x86_64.deb
           - os: macOS-latest
             command: |
                 cd postsack-native
-                cargo install bundle
+                cargo install cargo-bundle
                 ./build_mac.sh
             binary: target/postsack.zip
           - os: windows-2019
