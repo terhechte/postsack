@@ -18,7 +18,7 @@ jobs:
                 cd postsack-native
                 cargo install cargo-bundle
                 ./build_linux.sh
-            binary: target/release/bundle/deb/postsack_1.0.0._x86_64.deb
+            binary: target/release/bundle/deb/postsack_1.0.0._amd64.deb
           - os: macOS-latest
             command: |
                 cd postsack-native
@@ -31,7 +31,7 @@ jobs:
             command: |
                 cd postsack-native
                 .\build_windows.bat
-            binary: target/release/postsack
+            binary: target\release\postsack
     steps:
       - name: Production Build
         uses: actions/checkout@v2
