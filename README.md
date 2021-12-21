@@ -109,3 +109,7 @@ a certain bash script). The main downside was that it is currently very limited 
 ## What does `Postsack` mean?
 
 [`Postsack` (or Postbeutel) is German](https://de.wikipedia.org/wiki/Postbeutel) for a bag full of mail
+
+## Can I also delete the selected clusters?
+
+Currently you can't. I wanted to add this as a feature but it is quite involved. I might start working on this next.
