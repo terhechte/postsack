@@ -32,7 +32,7 @@ build my own. It parses all your mails and shows configurable clusters of mails 
 - Additional filters for seen mails or tags / labels
 - See all the mails for the current set of filters / current cluster
 - Save the generated database as a SQLite file so you can do additional queries yourself (or open it again)
-- Cross platform (macOS, Windows, Linux and a [Web Demo](https://terhech.de/postsack_demo))
+- Cross platform (macOS (from 10.12 onward), Windows, Linux and a [Web Demo](https://terhech.de/postsack_demo))
 - The app is 13MB big and consumes ~150MB of memory on macOS
 
 The look is similar on all platforms as it uses the [Rust egui](https://github.com/emilk/egui) GUI library.

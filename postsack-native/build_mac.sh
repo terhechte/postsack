@@ -2,6 +2,10 @@
 
 set -e
 
+# Compile for older macOS Versions
+# See: https://users.rust-lang.org/t/compile-rust-binary-for-older-versions-of-mac-osx/38695/2
+export MACOSX_DEPLOYMENT_TARGET=10.10
+
 rm -rf ../target/release/bundle/osx/Postsack.app
 
 # Build for x86 and ARM

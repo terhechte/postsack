@@ -14,7 +14,7 @@ version = "1.0.0"
 copyright = "Copyright (c) Benedikt Terhechte (2021). All rights reserved."
 category = "Developer Tool"
 short_description = "Provides a high level visual overview of swaths of email"
-osx_minimum_system_version = "10.14"
+osx_minimum_system_version = "10.12"
 
 [dependencies]
 ps-gui = { path = "../ps-gui" }
