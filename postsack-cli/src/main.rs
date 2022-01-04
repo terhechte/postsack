@@ -21,9 +21,12 @@ mod options {
         Import {
             /// The path to which to write the database containing all imported data.
             /// 
-            /// Note that it will be overwritten unconditionally.
+            /// Note that we won't refuse an existing database unless --overwrite-database is specified.
             #[clap(short = 's', long, default_value = "./postsack.sqlite")]
             database: PathBuf,
+
+            #[clap(short = 'f', long)]
+            overwrite_database: bool,
 
             /// Emails to be considered your own emails for filtering by Sender.
             #[clap(
@@ -67,6 +70,7 @@ fn main() -> eyre::Result<()> {
     match args.cmds {
         SubCommands::Import {
             database,
+            overwrite_database,
             sender_email,
             email_format,
             emails_folder,
@@ -75,6 +79,13 @@ fn main() -> eyre::Result<()> {
             if !emails_folder.is_dir() {
                 eyre::bail!("The mails directory at '{}' isn't accessible", emails_folder.display())
             }
+
+            if overwrite_database {
+                std::fs::remove_file(&database).ok();
+            } else {
+                eyre::bail!("Refusing to overwrite existing database at '{}'", database.display());
+            }
+
             let config = ps_core::Config::new(
                 Some(database.clone()),
                 emails_folder,

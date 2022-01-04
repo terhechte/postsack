@@ -5,7 +5,7 @@ edition = "2021"
 description = "Interface with the Postsack mail processing engine from the command-line."
 
 [[bin]]
-name = "postsack"
+name = "postsack-man"
 path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
