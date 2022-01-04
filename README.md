@@ -9,7 +9,7 @@
 
 ## A high level visual overview of swaths of email
 
-[TLDR! A web demo that shows how Postsack clusters a set of 10.000 fake emails](https://terhech.de/postsack_demo)
+[TLDR! A web demo that shows how Postsack clusters a set of 10.000 fake emails](https://terhech.de/web_demo)
 
 Do you have many emails? I have a lot of emails. I'm not a inbox zero person. I recently realized that my Gmail account contains roughly 650.000 emails. I looked at that and I began
 to wonder.. *Why?*..
@@ -32,7 +32,7 @@ build my own. It parses all your mails and shows configurable clusters of mails 
 - Additional filters for seen mails or tags / labels
 - See all the mails for the current set of filters / current cluster
 - Save the generated database as a SQLite file so you can do additional queries yourself (or open it again)
-- Cross platform (macOS (from 10.12 onward), Windows, Linux and a [Web Demo](https://terhech.de/postsack_demo))
+- Cross platform (macOS (from 10.12 on), Windows, Linux and a [Web Demo](https://terhech.de/web_demo))
 - The app is 13MB big and consumes ~150MB of memory on macOS
 
 The look is similar on all platforms as it uses the [Rust egui](https://github.com/emilk/egui) GUI library.
@@ -57,7 +57,7 @@ https://user-images.githubusercontent.com/132234/146691534-6aa35159-0f77-472a-b5
 
 ## Web Demo
 
-In addition to that, you can also [play around with some fake data in this Postsack Web Demo](https://terhech.de/postsack_demo)
+In addition to that, you can also [play around with some fake data in this Postsack Web Demo](https://terhech.de/web_demo)
 
 ## Using It
 
@@ -93,7 +93,7 @@ Here's an overview of the different crates in the Postsack Workspace:
 - [ps-importer](ps-importer/src/lib.rs): Import different email formats into a database
 - [ps-database](ps-database/src/lib.rs): Implemts the `ps-core::DatabaseLike` trait on top of SQLite
 - [postsack-native](postsack-native): Builds the native (macOS, Linux, Windows) versions of Postsack
-- [postsack-web](postsack-web): Builds [the web demo of Postsack](https://terhech.de/postsack_demo)
+- [postsack-web](postsack-web): Builds [the web demo of Postsack](https://terhech.de/web_demo)
 
 ## Why Egui?
 
@@ -109,3 +109,7 @@ a certain bash script). The main downside was that it is currently very limited 
 ## What does `Postsack` mean?
 
 [`Postsack` (or Postbeutel) is German](https://de.wikipedia.org/wiki/Postbeutel) for a bag full of mail
+
+## Can I also delete the selected clusters?
+
+Currently you can't. I wanted to add this as a feature but it is quite involved. I might start working on this next.
