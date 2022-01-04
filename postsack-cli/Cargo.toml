@@ -1,6 +1,6 @@
 [package]
 name = "postsack-cli"
-version = "1.0.0"
+version = "0.0.1"
 edition = "2021"
 description = "Interface with the Postsack mail processing engine from the command-line."
 
@@ -14,3 +14,5 @@ path = "src/main.rs"
 ps-core = { path = "../ps-core" }
 ps-importer = { path = "../ps-importer" }
 ps-database = { path = "../ps-database" }
+
+clap = { version = "3.0.1", features = ["cargo", "derive"] }
