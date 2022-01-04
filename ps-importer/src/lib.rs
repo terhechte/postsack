@@ -28,7 +28,7 @@ use formats::{shared, ImporterFormat};
 use std::{path::PathBuf, thread::JoinHandle};
 
 use ps_core::{
-    crossbeam_channel::unbounded, Config, DatabaseLike, FormatType, Importerlike, Message,
+    crossbeam_channel::unbounded, Config, DatabaseLike, FormatType, ImporterLike, Message,
     MessageReceiver,
 };
 
@@ -43,7 +43,7 @@ impl<Format: ImporterFormat + 'static> Importer<Format> {
     }
 }
 
-impl<Format: ImporterFormat + 'static> Importerlike for Importer<Format> {
+impl<Format: ImporterFormat + 'static> ImporterLike for Importer<Format> {
     fn import<Database: DatabaseLike + 'static>(
         self,
         database: Database,

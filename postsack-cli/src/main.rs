@@ -75,7 +75,7 @@ fn main() -> eyre::Result<()> {
             email_format,
             emails_folder,
         } => {
-            use ps_core::{Importerlike, DatabaseLike};
+            use ps_core::{ImporterLike, DatabaseLike};
             if !emails_folder.is_dir() {
                 eyre::bail!("The mails directory at '{}' isn't accessible", emails_folder.display())
             }
