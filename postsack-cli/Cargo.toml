@@ -1,0 +1,16 @@
+[package]
+name = "postsack-cli"
+version = "1.0.0"
+edition = "2021"
+description = "Interface with the Postsack mail processing engine from the command-line."
+
+[[bin]]
+name = "postsack"
+path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ps-core = { path = "../ps-core" }
+ps-importer = { path = "../ps-importer" }
+ps-database = { path = "../ps-database" }
