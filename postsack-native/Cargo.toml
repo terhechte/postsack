@@ -1,6 +1,6 @@
 [package]
 name = "postsack"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 description = "Provides a high level visual overview of swaths of email"
 
