@@ -20,7 +20,7 @@ mod options {
         /// Import emails and store them into a database.
         Import {
             /// The path to which to write the database containing all imported data.
-            /// 
+            ///
             /// Note that we won't refuse an existing database unless --overwrite-database is specified.
             #[clap(short = 's', long, default_value = "./postsack.sqlite")]
             database: PathBuf,
@@ -57,9 +57,12 @@ mod options {
     }
 }
 
+use std::thread::JoinHandle;
+
 use clap::Parser;
 use options::{Args, SubCommands};
-use ps_core::eyre;
+use ps_core::{eyre, FormatType, ImporterLike, MessageReceiver};
+use ps_database::Database;
 
 fn main() -> eyre::Result<()> {
     let args = Args::parse();
@@ -75,15 +78,21 @@ fn main() -> eyre::Result<()> {
             email_format,
             emails_folder,
         } => {
-            use ps_core::{ImporterLike, DatabaseLike};
+            use ps_core::DatabaseLike;
             if !emails_folder.is_dir() {
-                eyre::bail!("The mails directory at '{}' isn't accessible", emails_folder.display())
+                eyre::bail!(
+                    "The mails directory at '{}' isn't accessible",
+                    emails_folder.display()
+                )
             }
 
             if overwrite_database {
                 std::fs::remove_file(&database).ok();
             } else {
-                eyre::bail!("Refusing to overwrite existing database at '{}'", database.display());
+                eyre::bail!(
+                    "Refusing to overwrite existing database at '{}'",
+                    database.display()
+                );
             }
 
             let config = ps_core::Config::new(
@@ -92,11 +101,23 @@ fn main() -> eyre::Result<()> {
                 sender_email,
                 email_format,
             )?;
-            let importer = ps_importer::mbox_importer(config);
-            let database = ps_database::Database::new(&database)?;
-            let (_messages_ignored_tb_revised_once_there_is_more_feedback, handle) = importer.import(database).unwrap();
+
+            let db = Database::new(&database)?;
+            let (_messages_ignored_tb_revised_once_there_is_more_feedback, handle) =
+                new_importer(config, db)?;
             handle.join().expect("no panic")?;
         }
     };
     Ok(())
+}
+
+fn new_importer(
+    config: ps_core::Config,
+    db: Database,
+) -> eyre::Result<(MessageReceiver, JoinHandle<eyre::Result<()>>)> {
+    match config.format {
+        FormatType::AppleMail => ps_importer::applemail_importer(config).import(db),
+        FormatType::GmailVault => ps_importer::gmail_importer(config).import(db),
+        FormatType::Mbox => ps_importer::mbox_importer(config).import(db),
+    }
 }
