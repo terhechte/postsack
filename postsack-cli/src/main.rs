@@ -103,8 +103,7 @@ fn main() -> eyre::Result<()> {
             )?;
 
             let db = Database::new(&database)?;
-            let (_messages_ignored_tb_revised_once_there_is_more_feedback, handle) =
-                new_importer(config, db)?;
+            let (_messages, handle) = new_importer(config, db)?;
             handle.join().expect("no panic")?;
         }
     };
