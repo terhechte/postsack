@@ -76,6 +76,10 @@ and it will do the rest.
 
 I've created issues for some of the missing functionality. Most importantly more email formats (as explained above). Beyond that, there're probably bugs, there's a certain lack of tests and documentation, the [windows build is on shaky grounds](https://github.com/terhechte/postsack/issues/20), [the light theme is wonky](https://github.com/terhechte/postsack/issues/15), [some parts need a healthy refactoring to be useful beyond Postsack](https://github.com/terhechte/postsack/issues/11), [and it would be great if the binaries could be generated from the Github actions](https://github.com/terhechte/postsack/issues/10).
 
+## Installation
+
+For macOS, Linux or Windows install instructions, [please refer to the Readme in the postsack-native folder](postsack-native/Readme.md)
+
 ## Deploying to crates.io for `cargo install`
 
 One of the issues I ran into was that many of the emails I had received over the years were not

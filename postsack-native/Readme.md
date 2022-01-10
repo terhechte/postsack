@@ -33,6 +33,19 @@ sudo dnf install @development-tools glib cairo-devel pango-devel gdk-pixbux2-dev
 sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev libsqlite3-dev
 ```
 
+### Arch based
+
+Thanks to Emilio Reggi, [there's an Arch package here](https://aur.archlinux.org/packages/postsack-bin/)
+
+### NixOS
+
+There's a `shell.nix` in this directory. It can be used to run Postsack on NixOS via:
+
+``` sh
+> nix-shell shell.nix
+$ cargo run
+```
+
 ### Building
 
 ``` sh
