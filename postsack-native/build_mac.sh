@@ -31,6 +31,9 @@ mv ./postsack ../target/release/bundle/osx/Postsack.app/Contents/MacOS/Postsack
 
 /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable Postsack" "../target/release/bundle/osx/Postsack.app/Contents/Info.plist"
 
+# Tell the Info.plist that we are allowed to use the integrated GPU instead of the dedicated
+/usr/libexec/PlistBuddy -c "Add :NSSupportsAutomaticGraphicsSwitching bool true" "../target/release/bundle/osx/Postsack.app/Contents/Info.plist"
+
 # Create a zip file
 cd ../target/release/bundle/osx/
 /usr/bin/zip -5 -r ../../../postsack.zip ./Postsack.app
