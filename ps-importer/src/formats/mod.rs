@@ -4,11 +4,13 @@ pub use ps_core::eyre::Result;
 
 mod apple_mail;
 mod gmailbackup;
+mod maildir_mail;
 mod mbox;
 pub mod shared;
 
 pub use apple_mail::AppleMail;
 pub use gmailbackup::Gmail;
+pub use maildir_mail::Maildir;
 pub use mbox::Mbox;
 
 use shared::parse::ParseableEmail;

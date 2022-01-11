@@ -90,6 +90,10 @@ impl ImporterUI {
                 let importer = ps_importer::mbox_importer(config);
                 adapter.process(database, importer)?
             }
+            FormatType::Maildir => {
+                let importer = ps_importer::maildir_importer(config);
+                adapter.process(database, importer)?
+            }
         };
 
         #[cfg(target_arch = "wasm32")]
