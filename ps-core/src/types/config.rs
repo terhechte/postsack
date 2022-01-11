@@ -135,7 +135,7 @@ impl Config {
 
     pub fn new<A: AsRef<Path>>(
         db: Option<A>,
-        mails: A,
+        emails_folder_path: A,
         sender_emails: Vec<String>,
         format: FormatType,
     ) -> eyre::Result<Self> {
@@ -162,7 +162,7 @@ impl Config {
         };
         Ok(Config {
             database_path,
-            emails_folder_path: mails.as_ref().to_path_buf(),
+            emails_folder_path: emails_folder_path.as_ref().to_path_buf(),
             sender_emails: HashSet::from_iter(sender_emails.into_iter()),
             format,
             persistent,

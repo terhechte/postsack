@@ -76,6 +76,7 @@ fn inner_emails(config: &Config, sender: MessageSender) -> Result<Vec<Mail>> {
                             return None;
                         }
                     };
+                    sender.send(Message::ReadOne).ok();
                     Some(Mail {
                         path: mbox_file.clone(),
                         content: content.to_owned(),

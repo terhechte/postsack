@@ -3,7 +3,7 @@ use eyre::{bail, eyre, Report, Result};
 use std::sync::{Arc, RwLock};
 use std::thread::JoinHandle;
 
-use crate::{DatabaseLike, Importerlike, Message};
+use crate::{DatabaseLike, ImporterLike, Message};
 
 #[derive(Debug, Default)]
 struct Data {
@@ -58,7 +58,7 @@ impl Adapter {
 
     /// Starts up a thread that handles the `MessageReceiver` messages
     /// into state that can be accessed via [`Adapter::read_count`], [`Adapter::write_count`] and [`Adapter::finished`]
-    pub fn process<Database: DatabaseLike + 'static, Importer: Importerlike + 'static>(
+    pub fn process<Database: DatabaseLike + 'static, Importer: ImporterLike + 'static>(
         &self,
         database: Database,
         importer: Importer,

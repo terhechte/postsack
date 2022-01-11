@@ -53,7 +53,7 @@ pub use database::database_like::{DatabaseLike, DatabaseQuery};
 pub use database::db_message::DBMessage;
 pub use database::query::{Field, Filter, OtherQuery, Query, ValueField, AMOUNT_FIELD_NAME};
 pub use database::query_result::{QueryResult, QueryRow};
-pub use importer::{Importerlike, Message, MessageReceiver, MessageSender};
+pub use importer::{ImporterLike, Message, MessageReceiver, MessageSender};
 pub use types::{Config, EmailEntry, EmailMeta, FormatType};
 
 // Re-Export some dependencies so they don't

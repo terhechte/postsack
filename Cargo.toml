@@ -6,6 +6,7 @@ members = [
     "ps-gui",
     "postsack-native",
     "postsack-web",
+    "postsack-cli",
 ]
 
 [profile.dev]

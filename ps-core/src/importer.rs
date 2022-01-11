@@ -3,7 +3,7 @@ use std::thread::JoinHandle;
 
 use crate::DatabaseLike;
 
-pub trait Importerlike {
+pub trait ImporterLike {
     fn import<Database: DatabaseLike + 'static>(
         self,
         database: Database,
