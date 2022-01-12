@@ -65,10 +65,15 @@ pub fn value_from_field<'stmt>(field: &Field, row: &Row<'stmt>) -> Result<ValueF
     use Field::*;
     // Use type safety when unpacking
     match field {
-        Path | SenderDomain | SenderLocalPart | SenderName | ToGroup | ToName | ToAddress
-        | Subject => {
+        // String Fields
+        Path | SenderDomain | SenderLocalPart | SenderName | Subject => {
             let string: String = row.get::<&str, String>(field.as_str())?;
             Ok(ValueField::string(field, &string))
+        }
+        // Optional String Fields
+        ToGroup | ToName | ToAddress => {
+            let string: Option<String> = row.get::<&str, Option<String>>(field.as_str())?;
+            Ok(ValueField::string(field, &string.unwrap_or("".to_string())))
         }
         Year | Month | Day | Timestamp => {
             return Ok(ValueField::usize(

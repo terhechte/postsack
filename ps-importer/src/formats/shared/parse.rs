@@ -178,8 +178,15 @@ fn emaildatetime_to_chrono(
     datetime: Option<&mail_parser::DateTime>,
 ) -> Option<chrono::DateTime<Utc>> {
     let dt = datetime?;
-    Some(
-        Utc.ymd(dt.year as i32, dt.month as u32, dt.day as u32)
-            .and_hms(dt.hour as u32, dt.minute as u32, dt.second as u32),
-    )
+    match Utc
+        .ymd_opt(dt.year as i32, dt.month as u32, dt.day as u32)
+        .and_hms_opt(dt.hour as u32, dt.minute as u32, dt.second as u32)
+    {
+        chrono::LocalResult::Ambiguous(n, _) => Some(n),
+        chrono::LocalResult::Single(n) => Some(n),
+        chrono::LocalResult::None => {
+            tracing::error!("Could not convert date {:?}", dt);
+            return None;
+        }
+    }
 }

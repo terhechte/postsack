@@ -53,11 +53,12 @@ pub fn into_database<Mail: ParseableEmail + 'static, Database: DatabaseLike + 's
                 Ok(mail) => sender.send(DBMessage::Mail(Box::new(mail))),
                 Err(e) => sender.send(DBMessage::Error(e)),
             } {
-                tracing::error!("Error Inserting into Database: {:?}", &e);
+                tracing::info!("Error Inserting into Database: {:?}", &e);
+                return;
             }
             // Signal the write
             if let Err(e) = tx.send(Message::WriteOne) {
-                tracing::error!("Channel Failure: {:?}", &e);
+                tracing::info!("Channel Failure: {:?}", &e);
             }
         });
 

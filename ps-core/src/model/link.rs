@@ -151,8 +151,20 @@ fn inner_loop<Context: Send + Sync + 'static, Database: DatabaseQuery>(
     output_sender: Sender<Result<Response<Context>>>,
 ) -> Result<()> {
     loop {
-        let (query, context) = input_receiver.recv()?;
-        let result = database.query(&query)?;
+        let (query, context) = match input_receiver.recv() {
+            Ok(n) => n,
+            Err(e) => {
+                tracing::error!("Could not receive: {:?}", &e);
+                continue;
+            }
+        };
+        let result = match database.query(&query) {
+            Ok(n) => n,
+            Err(e) => {
+                tracing::error!("Query Error: {:?}", &e);
+                continue;
+            }
+        };
         let response = process_query(query, result, context);
         output_sender.send(response)?;
     }
