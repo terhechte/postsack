@@ -52,7 +52,7 @@ mod tests {
                 _ => panic!(),
             })
             .collect();
-        assert!(subjects.contains(&" check bogus body header (from)".into()));
+        assert!(subjects.contains(&"check bogus body header (from)".into()));
     }
 
     /// Test that the AppleMail importer works
