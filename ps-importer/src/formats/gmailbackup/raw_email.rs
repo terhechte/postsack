@@ -6,7 +6,7 @@ use std::borrow::Cow;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use super::super::shared::parse::ParseableEmail;
+use super::super::shared::parse::{MessageKind, ParseableEmail};
 use ps_core::EmailMeta;
 
 /// Raw representation of an email.
@@ -101,8 +101,11 @@ impl ParseableEmail for RawEmailEntry {
     fn prepare(&mut self) -> Result<()> {
         Ok(())
     }
-    fn message(&self) -> Result<Cow<'_, [u8]>> {
-        Ok(Cow::Owned(self.read()?))
+    fn kind(&self) -> MessageKind<'_> {
+        match self.read() {
+            Ok(n) => MessageKind::Data(Cow::Owned(n)),
+            Err(e) => return MessageKind::Error(e),
+        }
     }
 
     fn path(&self) -> &Path {

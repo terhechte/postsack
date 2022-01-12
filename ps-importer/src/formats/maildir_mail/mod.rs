@@ -5,7 +5,7 @@ use walkdir::{DirEntry, WalkDir};
 
 use super::{Config, ImporterFormat, Message, MessageSender, Result};
 
-use super::shared::parse::ParseableEmail;
+use super::shared::parse::{MessageKind, ParseableEmail};
 use maildir;
 use ps_core::EmailMeta;
 
@@ -153,8 +153,8 @@ impl ParseableEmail for Mail {
     fn prepare(&mut self) -> Result<()> {
         Ok(())
     }
-    fn message(&self) -> Result<Cow<'_, [u8]>> {
-        Ok(Cow::Borrowed(self.data.as_slice()))
+    fn kind(&self) -> MessageKind<'_> {
+        MessageKind::Data(Cow::Borrowed(self.data.as_slice()))
     }
     fn path(&self) -> &Path {
         self.path.as_path()

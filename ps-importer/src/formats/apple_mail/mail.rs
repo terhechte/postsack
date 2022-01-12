@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use ps_core::eyre::Result;
 use ps_core::EmailMeta;
 
-use super::super::shared::parse::ParseableEmail;
+use super::super::shared::parse::{MessageKind, ParseableEmail};
 
 pub struct Mail {
     path: PathBuf,
@@ -50,8 +50,8 @@ impl ParseableEmail for Mail {
         self.data = parsed.message.to_vec();
         Ok(())
     }
-    fn message(&self) -> Result<Cow<'_, [u8]>> {
-        Ok(Cow::Borrowed(self.data.as_slice()))
+    fn kind(&self) -> MessageKind<'_> {
+        MessageKind::Data(Cow::Borrowed(self.data.as_slice()))
     }
     fn path(&self) -> &Path {
         self.path.as_path()
