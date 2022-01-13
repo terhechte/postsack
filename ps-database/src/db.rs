@@ -230,8 +230,8 @@ fn insert_mail(statement: &mut Statement, entry: &EmailEntry) -> Result<()> {
     let day = entry.datetime.date().day();
     let timestamp = entry.datetime.timestamp();
     let e = entry;
-    let to_name = e.to_first.as_ref().map(|e| &e.0);
-    let to_address = e.to_first.as_ref().map(|e| &e.1);
+    let to_name = e.to_first.as_ref().map(|e| &e.1);
+    let to_address = e.to_first.as_ref().map(|e| &e.0);
     let meta_tags = e.meta.as_ref().map(|e| e.tags_string());
     let meta_is_seen = e.meta.as_ref().map(|e| e.is_seen);
     let p = params![

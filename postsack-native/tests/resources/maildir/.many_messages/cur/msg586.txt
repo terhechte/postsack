@@ -1,0 +1,20 @@
+From philippe@freehackers.org  Mon Apr  6 12:16:05 2020
+Return-Path: <philippe@freehackers.org>
+X-Original-To: phil@freehackers.org
+Delivered-To: phil@freehackers.org
+Received: from www.sylphide-consulting.com (web-php.lxc [10.11.8.20])
+	by mail.freehackers.org (Postfix) with ESMTP id 31ADE9F505
+	for <phil@freehackers.org>; Mon,  6 Apr 2020 12:16:05 +0200 (CEST)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII;
+ format=flowed
+Content-Transfer-Encoding: 7bit
+Date: Mon, 06 Apr 2020 12:16:05 +0200
+From: philippe <philippe@freehackers.org>
+To: phil@freehackers.org
+Subject: tutu 586 read
+Message-ID: <408b219da6e6ebae943d26a1be595197@freehackers.org>
+X-Sender: philippe@freehackers.org
+User-Agent: Roundcube Webmail/1.3.5
+
+tutu read

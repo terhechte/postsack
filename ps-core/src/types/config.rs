@@ -16,6 +16,8 @@ pub enum FormatType {
     AppleMail,
     GmailVault,
     Mbox,
+    #[cfg(not(target_os = "windows"))]
+    Maildir,
 }
 
 impl FormatType {
@@ -28,6 +30,8 @@ impl FormatType {
             FormatType::AppleMail => "Apple Mail",
             FormatType::GmailVault => "Gmail Vault Download",
             FormatType::Mbox => "Mbox",
+            #[cfg(not(target_os = "windows"))]
+            FormatType::Maildir => "Maildir",
         }
     }
 }
@@ -35,12 +39,16 @@ impl FormatType {
 impl Default for FormatType {
     /// We return a different default, based on the platform we're on
     /// FIXME: We don't have support for Outlook yet, so on windows we go with Mbox as well
+    #[allow(unreachable_code)]
     fn default() -> Self {
         #[cfg(target_os = "macos")]
         return FormatType::AppleMail;
 
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(target_os = "windows")]
         return FormatType::Mbox;
+
+        #[cfg(unix)]
+        return FormatType::Maildir;
     }
 }
 
@@ -56,6 +64,8 @@ impl From<&str> for FormatType {
             "apple" => FormatType::AppleMail,
             "gmailvault" => FormatType::GmailVault,
             "mbox" => FormatType::Mbox,
+            #[cfg(not(target_os = "windows"))]
+            "maildir" => FormatType::Maildir,
             _ => panic!("Unknown format: {}", &format),
         }
     }
@@ -67,6 +77,8 @@ impl From<FormatType> for String {
             FormatType::AppleMail => "apple".to_owned(),
             FormatType::GmailVault => "gmailvault".to_owned(),
             FormatType::Mbox => "mbox".to_owned(),
+            #[cfg(not(target_os = "windows"))]
+            FormatType::Maildir => "maildir".to_owned(),
         }
     }
 }

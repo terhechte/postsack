@@ -75,6 +75,12 @@ pub fn setup_tracing() {
         std::env::set_var("RUST_LOG", "error")
     }
 
+    println!(
+        "Set logging to {}",
+        std::env::var("RUST_LOG").unwrap_or("Nothing".to_string())
+    );
+    tracing::info!("Logging initialized");
+
     let collector = tracing_subscriber::registry().with(fmt::layer().with_writer(std::io::stdout));
 
     tracing::subscriber::set_global_default(collector).expect("Unable to set a global collector");

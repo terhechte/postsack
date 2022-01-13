@@ -1,7 +1,8 @@
-use email_parser::address::{Address, EmailAddress, Mailbox};
+use email_address_parser::EmailAddress;
+use mail_parser::{self, Addr, HeaderValue};
 use ps_core::chrono;
 use ps_core::chrono::prelude::*;
-use ps_core::eyre::{eyre, Result};
+use ps_core::eyre::{eyre, Report, Result};
 use ps_core::tracing;
 
 use std::borrow::Cow;
@@ -16,8 +17,13 @@ pub trait ParseableEmail: Send + Sized + Sync {
     /// This will be called once before `message`, `path` and `meta`
     /// are called. It can be used to perform parsing operations
     fn prepare(&mut self) -> Result<()>;
-    /// The message content as bytes
-    fn message(&self) -> Result<Cow<'_, [u8]>>;
+    /// The message, either as raw bytes for already parsed.
+    /// If the importer supports getting the data this has the benefit
+    /// of being parsed concurrently already. Some importers types might already
+    /// return a fully parsed mail in which case it is easier to
+    /// just use the parsed type instead of parsing it all again
+    fn kind(&self) -> MessageKind<'_>;
+    //fn message(&self) -> Result<Cow<'_, [u8]>>;
     /// The original path of the email in the filesystem
     fn path(&self) -> &Path;
     /// Optional meta information if they're available.
@@ -25,46 +31,51 @@ pub trait ParseableEmail: Send + Sized + Sync {
     fn meta(&self) -> Result<Option<EmailMeta>>;
 }
 
-pub fn parse_email<Entry: ParseableEmail>(
-    entry: &mut Entry,
+#[derive(Debug)]
+pub enum MessageKind<'a> {
+    Data(Cow<'a, [u8]>),
+    #[allow(unused)]
+    Parsed(ps_core::EmailEntry),
+    Error(Report),
+}
+
+pub fn parse_email(
+    data: &[u8],
+    path: &Path,
+    meta: Option<EmailMeta>,
     sender_emails: &HashSet<String>,
 ) -> Result<EmailEntry> {
-    if let Err(e) = entry.prepare() {
-        tracing::error!("Prepare Error: {:?}", e);
-        return Err(e);
-    }
-    let content = entry.message()?;
-    match email_parser::email::Email::parse(&content) {
-        Ok(email) => {
-            let path = entry.path();
-            tracing::trace!("Parsing {}", path.display());
-            let (sender_name, _, sender_local_part, sender_domain) =
-                mailbox_to_string(&email.sender);
+    match mail_parser::Message::parse(&data) {
+        Some(email) => {
+            tracing::info!("Parsing {}", path.display());
 
-            let datetime = emaildatetime_to_chrono(&email.date);
-            let subject = email.subject.map(|e| e.to_string()).unwrap_or_default();
+            // For the `sender` we take the sender field and if that doesn't exist the `from` field.
+            // This allows also parsing mailing list message dumps where sender -> from.
+            let sender_header = email.get_sender();
+            let (sender_name, address, sender_local_part, sender_domain) = match sender_header {
+                HeaderValue::Empty => split_single_address_header(&email.get_from()),
+                _ => split_single_address_header(sender_header),
+            }
+            .ok_or(eyre!("Could not parse address: {:?}", email.get_sender()))?;
 
-            let to_count = match email.to.as_ref() {
-                Some(n) => n.len(),
-                None => 0,
-            };
-            let to = match email.to.as_ref().map(|v| v.first()).flatten() {
-                Some(n) => address_to_name_string(n),
-                None => None,
-            };
-            let to_group = to.as_ref().map(|e| e.0.clone()).flatten();
-            let to_first = to.as_ref().map(|e| (e.1.clone(), e.2.clone()));
+            let datetime =
+                emaildatetime_to_chrono(email.get_date()).ok_or(eyre!("Could not parse date"))?;
 
-            let is_reply = email.in_reply_to.map(|v| !v.is_empty()).unwrap_or(false);
+            let subject = email.get_subject().unwrap_or_default().to_string();
 
-            let meta = entry.meta()?;
+            let (to_count, to_group, to_first) =
+                split_multi_address_header(email.get_to()).unwrap_or((0, None, None));
 
-            // In order to determine the sender, we have to
-            // build up the address again :-(
-            let is_send = {
-                let email = format!("{}@{}", sender_local_part, sender_domain);
-                sender_emails.contains(&email)
-            };
+            let mut is_reply = false;
+            match split_single_address_header(&email.get_reply_to()) {
+                Some(_) => is_reply = true,
+                None => match split_single_address_header(&email.get_in_reply_to()) {
+                    Some(_) => is_reply = true,
+                    None => (),
+                },
+            }
+
+            let is_send = sender_emails.contains(&address);
 
             Ok(EmailEntry {
                 path: path.to_path_buf(),
@@ -81,14 +92,12 @@ pub fn parse_email<Entry: ParseableEmail>(
                 is_send,
             })
         }
-        Err(error) => {
+        None => {
             let error = eyre!(
-                "Could not parse email (trace to see contents): {:?} [{}]",
-                &error,
-                entry.path().display()
+                "Could not parse email (trace to see contents): [{}]",
+                path.display()
             );
-            tracing::error!("{:?}", &error);
-            if let Ok(content_string) = String::from_utf8(content.into_owned()) {
+            if let Ok(content_string) = String::from_utf8(data.to_vec()) {
                 tracing::trace!("Contents:\n{}\n---\n", content_string);
             } else {
                 tracing::trace!("Contents:\nInvalid UTF8\n---\n");
@@ -98,60 +107,86 @@ pub fn parse_email<Entry: ParseableEmail>(
     }
 }
 
-/// Returns a conversion from address to the fields we care about:
-/// ([group name], display name, email address)
-fn address_to_name_string(address: &Address) -> Option<(Option<String>, String, String)> {
-    match address {
-        Address::Group((names, boxes)) => match (names.first(), boxes.first()) {
-            (group_name, Some(mailbox)) => {
-                let group = group_name.map(|e| e.to_string());
-                let (display_name, address, _, _) = mailbox_to_string(mailbox);
-                Some((group, display_name, address))
-            }
-            _ => None,
-        },
-        Address::Mailbox(mailbox) => {
-            let (display_name, address, _, _) = mailbox_to_string(mailbox);
-            Some((None, display_name, address))
-        }
-    }
+/// Parse an `Addr` into its constituents
+/// Returns (display name, email address, local part, domain)
+/// Returns none if the address in the email can't be parsed
+fn parse_address(addr: &Addr) -> Option<(String, String, String, String)> {
+    let name = addr
+        .name
+        .as_ref()
+        .map(|e| e.to_string())
+        .unwrap_or("".to_owned());
+    let address = addr.address.as_ref()?.to_string();
+
+    // Parse the address, support invalid mails
+    let parsed_address = EmailAddress::parse(&address, None)?;
+
+    let local_part = parsed_address.get_local_part().to_owned();
+    let domain = parsed_address.get_domain().to_owned();
+
+    Some((name, address, local_part, domain))
 }
 
 /// Returns (display name, email address, local part, domain)
-fn mailbox_to_string(mailbox: &Mailbox) -> (String, String, String, String) {
-    let names = match mailbox.name.as_ref() {
-        Some(n) => n
-            .iter()
-            .map(|e| e.as_ref())
-            .collect::<Vec<&str>>()
-            .join(" "),
-        None => "".to_owned(),
+fn split_single_address_header(value: &HeaderValue) -> Option<(String, String, String, String)> {
+    let addr = match value {
+        HeaderValue::Address(addr) => addr,
+        HeaderValue::AddressList(addrs) if !addrs.is_empty() => &addrs[0],
+        HeaderValue::Group(grp) if !grp.addresses.is_empty() => &grp.addresses[0],
+        HeaderValue::GroupList(grps) if !grps.is_empty() && !&grps[0].addresses.is_empty() => {
+            &grps[0].addresses[0]
+        }
+        _ => {
+            tracing::error!("Invalid mail data in address field: {:?}", &value);
+            return None;
+        }
     };
-    (
-        names,
-        emailaddress_to_string(&mailbox.address),
-        mailbox.address.local_part.to_string(),
-        mailbox.address.domain.to_string(),
-    )
+    parse_address(addr)
 }
 
-fn emailaddress_to_string(address: &EmailAddress) -> String {
-    format!(
-        "{}@{}",
-        address.local_part.to_string(),
-        address.domain.to_string()
-    )
+/// Returns `(amount of to addresses, optional name of to group, (optional address or first address in group, optional name of first address in group))`
+fn split_multi_address_header(
+    value: &HeaderValue,
+) -> Option<(usize, Option<String>, Option<(String, String)>)> {
+    let (addr, count, name) = match value {
+        HeaderValue::Address(addr) => (addr, 1, None),
+        HeaderValue::AddressList(addrs) if !addrs.is_empty() => (&addrs[0], addrs.len(), None),
+        HeaderValue::Group(grp) if !grp.addresses.is_empty() => {
+            (&grp.addresses[0], grp.addresses.len(), grp.name.as_ref())
+        }
+        HeaderValue::GroupList(grps) if !grps.is_empty() && !&grps[0].addresses.is_empty() => {
+            let total: usize = grps.iter().fold(0, |a, b| a + b.addresses.len());
+            (
+                &grps[0].addresses[0],
+                total,
+                grps.first().and_then(|e| e.name.as_ref()),
+            )
+        }
+        _ => {
+            tracing::error!("Invalid mail data in address field: {:?}", &value);
+            return None;
+        }
+    };
+
+    let name = name.map(|e| e.to_string());
+
+    let (display_name, address, _, _) = parse_address(addr)?;
+    Some((count, name, Some((address, display_name))))
 }
 
-fn emaildatetime_to_chrono(dt: &email_parser::time::DateTime) -> chrono::DateTime<Utc> {
-    Utc.ymd(
-        dt.date.year as i32,
-        dt.date.month_number() as u32,
-        dt.date.day as u32,
-    )
-    .and_hms(
-        dt.time.time.hour as u32,
-        dt.time.time.minute as u32,
-        dt.time.time.second as u32,
-    )
+fn emaildatetime_to_chrono(
+    datetime: Option<&mail_parser::DateTime>,
+) -> Option<chrono::DateTime<Utc>> {
+    let dt = datetime?;
+    match Utc
+        .ymd_opt(dt.year as i32, dt.month as u32, dt.day as u32)
+        .and_hms_opt(dt.hour as u32, dt.minute as u32, dt.second as u32)
+    {
+        chrono::LocalResult::Ambiguous(n, _) => Some(n),
+        chrono::LocalResult::Single(n) => Some(n),
+        chrono::LocalResult::None => {
+            tracing::error!("Could not convert date {:?}", dt);
+            return None;
+        }
+    }
 }

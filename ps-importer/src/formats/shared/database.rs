@@ -1,4 +1,4 @@
-use super::parse::{parse_email, ParseableEmail};
+use super::parse::{parse_email, MessageKind, ParseableEmail};
 use ps_core::{Config, DBMessage, DatabaseLike, Message, MessageSender};
 
 use ps_core::eyre::{self, bail, Result};
@@ -33,7 +33,19 @@ pub fn into_database<Mail: ParseableEmail + 'static, Database: DatabaseLike + 's
         // in paralell..
         .par_iter_mut()
         // parsing them
-        .map(|raw_mail| parse_email(raw_mail, &config.sender_emails))
+        .map(|raw_mail| {
+            raw_mail.prepare()?;
+            match raw_mail.kind() {
+                MessageKind::Data(data) => parse_email(
+                    &data,
+                    raw_mail.path(),
+                    raw_mail.meta()?,
+                    &config.sender_emails,
+                ),
+                MessageKind::Parsed(mail) => Ok(mail),
+                MessageKind::Error(e) => Err(e),
+            }
+        })
         // and inserting them into SQLite
         .for_each(|entry| {
             // Try to write the message into the database
@@ -41,11 +53,12 @@ pub fn into_database<Mail: ParseableEmail + 'static, Database: DatabaseLike + 's
                 Ok(mail) => sender.send(DBMessage::Mail(Box::new(mail))),
                 Err(e) => sender.send(DBMessage::Error(e)),
             } {
-                tracing::error!("Error Inserting into Database: {:?}", &e);
+                tracing::info!("Error Inserting into Database: {:?}", &e);
+                return;
             }
             // Signal the write
             if let Err(e) = tx.send(Message::WriteOne) {
-                tracing::error!("Channel Failure: {:?}", &e);
+                tracing::info!("Channel Failure: {:?}", &e);
             }
         });
 

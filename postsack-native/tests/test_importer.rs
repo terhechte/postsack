@@ -52,7 +52,7 @@ mod tests {
                 _ => panic!(),
             })
             .collect();
-        assert!(subjects.contains(&" check bogus body header (from)".into()));
+        assert!(subjects.contains(&"check bogus body header (from)".into()));
     }
 
     /// Test that the AppleMail importer works
@@ -80,5 +80,24 @@ mod tests {
         });
         let mails = mails.expect("Expected Mails");
         assert_eq!(mails.len(), 4);
+    }
+
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    /// Test that the maildir importer works
+    fn test_maildir_import() {
+        initialize();
+        let path = "tests/resources/maildir";
+        let config =
+            Config::new(None, path, vec!["".to_string()], FormatType::Maildir).expect("Config");
+        let importer = ps_importer::maildir_importer(config.clone());
+        let database = Database::new(&config.database_path).unwrap();
+        let (_receiver, handle) = importer.import(database).unwrap();
+        handle.join().expect("").expect("");
+
+        let db = Database::new(&config.database_path).unwrap();
+
+        let total_mails = db.total_mails().expect("Expected total mails");
+        assert_eq!(total_mails, 6);
     }
 }
