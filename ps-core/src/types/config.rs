@@ -39,6 +39,7 @@ impl FormatType {
 impl Default for FormatType {
     /// We return a different default, based on the platform we're on
     /// FIXME: We don't have support for Outlook yet, so on windows we go with Mbox as well
+    #[allow(unreachable_code)]
     fn default() -> Self {
         #[cfg(target_os = "macos")]
         return FormatType::AppleMail;
@@ -46,7 +47,7 @@ impl Default for FormatType {
         #[cfg(target_os = "windows")]
         return FormatType::Mbox;
 
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(unix)]
         return FormatType::Maildir;
     }
 }
