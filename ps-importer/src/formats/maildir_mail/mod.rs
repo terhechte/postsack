@@ -93,7 +93,6 @@ fn inner_emails(path: &PathBuf, sender: MessageSender) -> Result<Vec<Mail>> {
             let mail_entry = match m {
                 Ok(n) => n,
                 Err(e) => {
-                    //tracing::error!("Could not parse mail: {}", e);
                     if let Err(e) = sender.send(Message::Error(eyre!("Could parse mail: {:?}", e)))
                     {
                         tracing::error!("Error sending error {}", e);
