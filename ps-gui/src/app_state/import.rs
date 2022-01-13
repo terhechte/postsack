@@ -90,6 +90,7 @@ impl ImporterUI {
                 let importer = ps_importer::mbox_importer(config);
                 adapter.process(database, importer)?
             }
+            #[cfg(not(target_os = "windows"))]
             FormatType::Maildir => {
                 let importer = ps_importer::maildir_importer(config);
                 adapter.process(database, importer)?

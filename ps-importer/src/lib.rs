@@ -88,6 +88,7 @@ pub fn mbox_importer(config: Config) -> Importer<formats::Mbox> {
     Importer::new(config, formats::Mbox::default())
 }
 
+#[cfg(not(target_os = "windows"))]
 pub fn maildir_importer(config: Config) -> Importer<formats::Maildir> {
     Importer::new(config, formats::Maildir::default())
 }
@@ -97,6 +98,7 @@ pub fn default_path(format: &FormatType) -> Option<PathBuf> {
         FormatType::AppleMail => formats::AppleMail::default_path(),
         FormatType::GmailVault => formats::Gmail::default_path(),
         FormatType::Mbox => formats::Mbox::default_path(),
+        #[cfg(not(target_os = "windows"))]
         FormatType::Maildir => formats::Maildir::default_path(),
     }
 }

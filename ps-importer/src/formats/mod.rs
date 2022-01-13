@@ -4,12 +4,14 @@ pub use ps_core::eyre::Result;
 
 mod apple_mail;
 mod gmailbackup;
+#[cfg(not(target_os = "windows"))]
 mod maildir_mail;
 mod mbox;
 pub mod shared;
 
 pub use apple_mail::AppleMail;
 pub use gmailbackup::Gmail;
+#[cfg(not(target_os = "windows"))]
 pub use maildir_mail::Maildir;
 pub use mbox::Mbox;
 
