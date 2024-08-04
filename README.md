@@ -80,7 +80,12 @@ I've created issues for some of the missing functionality. Most importantly more
 
 For macOS, Linux or Windows install instructions, [please refer to the Readme in the postsack-native folder](postsack-native/Readme.md)
 
-## Deploying to crates.io for `cargo install`
+## Building from source with `cargo install`
+Postsack is not yet deployed to crates.io (see reason below), but you can build and install it directly from the git repository using
+
+`cargo install --git https://github.com/terhechte/postsack.git`
+
+## Deploying to crates.io
 
 One of the issues I ran into was that many of the emails I had received over the years were not
 properly standards compliant. I forked [`email-parser`, email parser that Postsack is using](https://github.com/Mubelotix/email-parser/pull/11) in order to support all the weird issues I encountered. However,
